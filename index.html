@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test dossier Google Drive</title>
+<!--
+  Page de test pour LIFE PANEL (26/09/2026) : peut-on lister et ouvrir les fichiers d'un dossier Google Drive
+  depuis une page locale, sur PC et sur Android ? Indépendante de LIFE PANEL : base du navigateur à part
+  (« test-dossier-drive »), rien n'est écrit dans le dossier choisi. Aucune connexion externe.
+-->
+<style>
+:root{color-scheme:dark;--fond:#1b1b1d;--carte:#232326;--champ:#19191c;--trait:#34343a;--trait-doux:#2b2b30;
+  --texte:#f1f1f2;--texte-doux:#a9a9b1;--texte-faible:#7d7d86;--bleu:#3987e5;--i-vert:#4ec89b;--i-jaune:#e5b54a;--i-rouge:#ff6b6b;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fond);color:var(--texte);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:22px;margin:0 0 4px}
+.sous{color:var(--texte-doux);margin:0 0 18px;font-size:14px}
+.carte{background:var(--carte);border:1px solid var(--trait-doux);border-radius:14px;padding:16px;margin:0 0 14px}
+.carte h2{font-size:15px;margin:0 0 10px}
+ol.etapes{margin:0;padding-left:20px;color:var(--texte-doux);font-size:14px}
+ol.etapes li{margin:3px 0}
+.boutons{display:flex;flex-wrap:wrap;gap:8px}
+button{font:inherit;font-size:14px;cursor:pointer;border-radius:10px;border:1px solid var(--trait);background:#2c2c31;color:var(--texte);padding:9px 14px;min-height:40px}
+button.p{background:var(--bleu);border-color:var(--bleu);color:#fff;font-weight:600}
+button:disabled{opacity:.5;cursor:default}
+.etat{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;color:var(--texte-doux);margin-top:12px}
+.ok{color:var(--i-vert)} .ko{color:var(--i-rouge)} .att{color:var(--i-jaune)}
+.chemin{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:14px;margin:0 0 8px}
+.chemin button{min-height:32px;padding:3px 10px;font-size:13px}
+.chemin .sep{color:var(--texte-faible)}
+.stat{font-size:13px;color:var(--texte-doux);margin:0 0 6px}
+ul.liste{list-style:none;margin:0;padding:0}
+ul.liste li{display:flex;align-items:center;gap:10px;padding:8px 4px;border-top:1px solid var(--trait-doux);min-width:0;border-radius:8px}
+ul.liste li:first-child{border-top:0}
+ul.liste li.cliquable{cursor:pointer}
+@media (hover:hover){ul.liste li.cliquable:hover{background:#ffffff08}}
+.ic{flex-shrink:0;width:36px;height:36px;border-radius:8px;display:grid;place-items:center;font:700 9.5px/1 var(--mono);color:#fff;background:#4a4a52;text-transform:uppercase;overflow:hidden}
+.ic.dossier{background:#34343a;color:var(--i-jaune)}
+.ic.pdf{background:#c9372c} .ic.doc,.ic.docx,.ic.odt,.ic.gdoc{background:#2b63c6}
+.ic.xls,.ic.xlsx,.ic.ods,.ic.csv,.ic.gsheet{background:#1e8e4e} .ic.ppt,.ic.pptx,.ic.gslides{background:#d5782a}
+.ic.jpg,.ic.jpeg,.ic.png,.ic.heic,.ic.webp,.ic.gif{background:#8a5cc6} .ic.txt,.ic.md{background:#5a5a63}
+.corps{flex:1;min-width:0}
+.nom{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta{display:block;font-size:12.5px;color:var(--texte-faible);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+li button{flex-shrink:0;min-height:34px;padding:5px 10px;font-size:13px}
+.vide{color:var(--texte-faible);font-size:14px;padding:8px 4px}
+textarea{display:block;width:100%;min-height:230px;background:var(--champ);color:var(--texte);border:1px solid var(--trait);border-radius:10px;padding:10px;font:12.5px/1.5 var(--mono);resize:vertical}
+</style>
+</head>
+<body>
+<main>
+  <h1>Test dossier Google Drive</h1>
+  <p class="sous">Page de test indépendante de LIFE PANEL : elle ne touche pas à tes données et n'écrit rien dans le dossier choisi.</p>
+
+  <section class="carte">
+    <h2>Étapes</h2>
+    <ol class="etapes">
+      <li>Appuie sur « Choisir un dossier » et choisis un dossier de ton Google Drive.</li>
+      <li>Entre dans un sous-dossier, puis ouvre quelques fichiers (un PDF, une photo, un Google Docs si tu en as).</li>
+      <li>Ferme la page, rouvre-la et appuie sur « Rouvrir » (le dossier est mémorisé).</li>
+      <li>Appuie sur « Copier le rapport » et colle-le dans la conversation, en disant ce qui s'est passé à l'ouverture des fichiers.</li>
+    </ol>
+    <div class="boutons" style="margin-top:12px">
+      <button class="p" id="choisir" type="button">Choisir un dossier</button>
+      <button id="rouvrir" type="button" hidden>Rouvrir</button>
+    </div>
+    <div class="etat" id="etat"></div>
+  </section>
+
+  <section class="carte" id="zone" hidden>
+    <div class="chemin" id="chemin"></div>
+    <p class="stat" id="stat"></p>
+    <ul class="liste" id="liste"></ul>
+  </section>
+
+  <section class="carte">
+    <h2>Rapport</h2>
+    <textarea id="rapport" readonly aria-label="Rapport du test"></textarea>
+    <div class="boutons" style="margin-top:10px"><button id="copier" type="button">Copier le rapport</button></div>
+  </section>
+</main>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
+const dispo = 'showDirectoryPicker' in window;
+const journalLignes = [];
+let pile = [], generation = 0;   /* pile : chemin affiché, du dossier choisi au sous-dossier courant ({nom, h}) */
+
+/* ---------- Rapport ---------- */
+function navigateur(){
+  const u = navigator.userAgent; let m, n = 'navigateur inconnu';
+  if((m = u.match(/OPR\/(\d+)/))) n = 'Opera ' + m[1];
+  else if((m = u.match(/EdgA?\/(\d+)/))) n = 'Edge ' + m[1];
+  else if((m = u.match(/SamsungBrowser\/(\d+)/))) n = 'Samsung Internet ' + m[1];
+  else if((m = u.match(/Chrome\/(\d+)/))) n = 'Chrome ' + m[1];
+  else if((m = u.match(/Firefox\/(\d+)/))) n = 'Firefox ' + m[1];
+  const moteur = (u.match(/Chrome\/(\d+)/) || [])[1];
+  const os = (m = u.match(/Android ([\d.]+)/)) ? 'Android ' + m[1] : /Windows/.test(u) ? 'Windows' : /Mac OS X/.test(u) ? 'macOS' : /Linux/.test(u) ? 'Linux' : 'système inconnu';
+  return n + (moteur && !/^Chrome/.test(n) ? ' (moteur Chromium ' + moteur + ')' : '') + ' sur ' + os;
+}
+const heure = () => new Date().toLocaleTimeString('fr-FR');
+function journal(t){ journalLignes.push(heure() + '  ' + t); majRapport(); }
+function majRapport(){
+  $('rapport').value = [
+    'TEST DOSSIER GOOGLE DRIVE — ' + new Date().toLocaleDateString('fr-FR'),
+    'Navigateur : ' + navigateur(),
+    'Page : ' + location.protocol + ' · contexte sécurisé : ' + (window.isSecureContext ? 'oui' : 'NON'),
+    'Choix de dossier disponible : ' + (dispo ? 'oui' : 'NON'),
+    'Agent : ' + navigator.userAgent,
+    '',
+    ...journalLignes
+  ].join('\n');
+}
+$('copier').onclick = async () => {
+  const b = $('copier'), t = $('rapport').value; let ok = false;
+  try { await navigator.clipboard.writeText(t); ok = true; } catch(e){
+    try { $('rapport').focus(); $('rapport').select(); ok = document.execCommand('copy'); } catch(e2){ ok = false; }
+  }
+  b.textContent = ok ? 'Copié !' : 'Copie impossible : sélectionne le texte à la main';
+  setTimeout(() => { b.textContent = 'Copier le rapport'; }, 2500);
+};
+window.addEventListener('error', e => journal('Erreur de la page : ' + e.message));
+window.addEventListener('unhandledrejection', e => journal('Erreur de la page : ' + (e.reason && (e.reason.name + ' — ' + e.reason.message) || e.reason)));
+
+/* ---------- Mémorisation du dossier (base à part, pas celle de LIFE PANEL) ---------- */
+function idb(mode, fn){
+  return new Promise((ok, ko) => {
+    const r = indexedDB.open('test-dossier-drive', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('h');
+    r.onerror = () => ko(r.error);
+    r.onsuccess = () => {
+      const db = r.result; let q;
+      try { const tx = db.transaction('h', mode); q = fn(tx.objectStore('h'));
+        tx.oncomplete = () => { db.close(); ok(q ? q.result : undefined); };
+        tx.onerror = () => { db.close(); ko(tx.error); }; tx.onabort = () => { db.close(); ko(tx.error); };
+      } catch(e){ db.close(); ko(e); }
+    };
+  });
+}
+const memoriser = h => idb('readwrite', st => st.put(h, 'dossier'));
+const lireMemorise = () => idb('readonly', st => st.get('dossier'));
+
+/* ---------- Choix et réouverture ---------- */
+$('choisir').onclick = async () => {
+  let h;
+  try { h = await window.showDirectoryPicker({id:'test-drive', mode:'read'}); }
+  catch(e){ journal(e.name === 'AbortError' ? 'Choix du dossier annulé.' : 'Choix du dossier : ÉCHEC (' + e.name + ' — ' + e.message + ')'); return; }
+  journal('Dossier choisi : « ' + h.name + ' »');
+  try { await memoriser(h); journal('Mémorisation pour la prochaine ouverture : OK'); }
+  catch(e){ journal('Mémorisation pour la prochaine ouverture : ÉCHEC (' + e.name + ' — ' + e.message + ')'); }
+  pile = [{nom:h.name, h}]; afficher(); boutonRouvrir(h, 'granted');
+};
+/* Bouton « Rouvrir » : toujours le dernier dossier choisi */
+function boutonRouvrir(h, p){
+  const b = $('rouvrir'); b.hidden = false; b.textContent = 'Rouvrir « ' + h.name + ' »';
+  b.onclick = async () => {
+    let q = p;
+    try { q = await h.queryPermission({mode:'read'}); if(q !== 'granted') q = await h.requestPermission({mode:'read'}); } catch(e){ q = 'erreur ' + e.name + ' — ' + e.message; }
+    journal('Réouverture du dossier mémorisé : ' + (q === 'granted' ? 'OK' : 'refusée (' + q + ')'));
+    if(q === 'granted'){ p = q; pile = [{nom:h.name, h}]; afficher(); }
+  };
+}
+async function preparerReouverture(){
+  let h = null;
+  try { h = await lireMemorise(); } catch(e){ journal('Lecture du dossier mémorisé : ÉCHEC (' + e.name + ' — ' + e.message + ')'); return; }
+  if(!h) return;
+  let p;
+  try { p = await h.queryPermission({mode:'read'}); } catch(e){ p = 'erreur ' + e.name; }
+  journal('Au démarrage : dossier mémorisé « ' + h.name + ' », autorisation ' + (p === 'granted' ? 'toujours accordée → ouvert sans rien demander' : p === 'prompt' ? 'à redemander' : '« ' + p + ' »'));
+  boutonRouvrir(h, p);
+  if(p === 'granted'){ pile = [{nom:h.name, h}]; afficher(); }
+}
+
+/* ---------- Liste d'un dossier ---------- */
+const extension = nom => { const m = /\.([a-z0-9]{1,7})$/i.exec(nom); return m ? m[1].toLowerCase() : ''; };
+const GOOGLE = {gdoc:'Google Docs', gsheet:'Google Sheets', gslides:'Google Slides', gdraw:'Google Drawings', gform:'Google Forms', gmap:'Google My Maps', gsite:'Google Sites'};
+const ETIQUETTE = {gdoc:'docs', gsheet:'sheet', gslides:'slide', gdraw:'draw', gform:'form', gmap:'map', gsite:'site'};
+const typeGoogle = x => GOOGLE[extension(x.nom)] || (x.f && x.f.type.startsWith('application/vnd.google-apps') ? x.f.type.replace('application/vnd.google-apps.', 'Google ') : '');
+function taille(o){
+  if(o < 1024) return o + ' o';
+  if(o < 1048576) return (o / 1024).toLocaleString('fr-FR', {maximumFractionDigits:0}) + ' ko';
+  return (o / 1048576).toLocaleString('fr-FR', {maximumFractionDigits:1}) + ' Mo';
+}
+const cheminTexte = () => pile.map(x => x.nom).join(' / ');
+const ICONE_DOSSIER = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h4l2 2.2h7A2.5 2.5 0 0 1 21 8.7v8.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>';
+
+async function afficher(){
+  const g = ++generation, dir = pile[pile.length - 1].h;
+  $('zone').hidden = false;
+  $('chemin').innerHTML = pile.map((x, i) => i < pile.length - 1
+    ? `<button type="button" data-niveau="${i}">${esc(x.nom)}</button><span class="sep">›</span>` : `<b>${esc(x.nom)}</b>`).join('');
+  $('stat').textContent = 'Lecture du dossier…';
+  $('liste').innerHTML = '';
+  const t0 = performance.now(), items = [];
+  try { for await (const [nom, h] of dir.entries()){ if(g !== generation) return; items.push({nom, h, dossier:h.kind === 'directory'}); } }
+  catch(e){
+    if(g !== generation) return;
+    $('stat').innerHTML = `<span class="ko">Lecture impossible : ${esc(e.name)} — ${esc(e.message)}</span>`;
+    journal('Lecture de « ' + cheminTexte() + ' » : ÉCHEC (' + e.name + ' — ' + e.message + ')'); return;
+  }
+  if(g !== generation) return;
+  const duree = Math.round(performance.now() - t0);
+  items.sort((a, b) => (b.dossier - a.dossier) || a.nom.localeCompare(b.nom, 'fr', {numeric:true, sensitivity:'base'}));
+  const nd = items.filter(x => x.dossier).length, nf = items.length - nd;
+  $('stat').textContent = `${nd} dossier${nd > 1 ? 's' : ''} · ${nf} fichier${nf > 1 ? 's' : ''} · liste lue en ${duree} ms`;
+  journal('Lecture de « ' + cheminTexte() + ' » : ' + nd + ' dossier(s), ' + nf + ' fichier(s) en ' + duree + ' ms');
+  $('liste').innerHTML = items.length ? items.map((x, i) => x.dossier
+    ? `<li class="cliquable" data-i="${i}"><span class="ic dossier">${ICONE_DOSSIER}</span><span class="corps"><span class="nom">${esc(x.nom)}</span><span class="meta">Dossier</span></span></li>`
+    : `<li class="cliquable" data-i="${i}" title="Ouvrir"><span class="ic ${esc(extension(x.nom))}">${esc(ETIQUETTE[extension(x.nom)] || extension(x.nom).slice(0, 4) || '?')}</span>
+        <span class="corps"><span class="nom">${esc(x.nom)}</span><span class="meta" id="meta-${i}">…</span></span>
+        <button type="button" data-telecharger="${i}">Télécharger</button></li>`).join('')
+    : '<li class="vide">Dossier vide.</li>';
+  $('liste').onclick = ev => {
+    const bt = ev.target.closest('[data-telecharger]');
+    if(bt){ ev.stopPropagation(); telecharger(items[+bt.dataset.telecharger]); return; }
+    const li = ev.target.closest('li[data-i]'); if(!li) return;
+    const x = items[+li.dataset.i];
+    if(x.dossier){ pile.push({nom:x.nom, h:x.h}); afficher(); } else ouvrir(x);
+  };
+  $('chemin').onclick = ev => { const b = ev.target.closest('[data-niveau]'); if(b){ pile.length = +b.dataset.niveau + 1; afficher(); } };
+
+  /* Détails (taille, date, type), 8 fichiers à la fois, 300 au plus */
+  const fichiers = items.filter(x => !x.dossier).slice(0, 300), t1 = performance.now(); let erreurs = 0;
+  for(let k = 0; k < fichiers.length; k += 8){
+    await Promise.all(fichiers.slice(k, k + 8).map(async x => {
+      try { x.f = await x.h.getFile(); } catch(e){ x.erreur = e.name; erreurs++; }
+    }));
+    if(g !== generation) return;
+    fichiers.slice(k, k + 8).forEach(x => {
+      const el = $('meta-' + items.indexOf(x)); if(!el) return;
+      if(x.erreur){ el.innerHTML = `<span class="ko">détails illisibles (${esc(x.erreur)})</span>`; return; }
+      const gg = typeGoogle(x);
+      el.textContent = [gg ? gg + ' (raccourci)' : '', taille(x.f.size), x.f.lastModified ? new Date(x.f.lastModified).toLocaleDateString('fr-FR', {day:'numeric', month:'short', year:'numeric'}) : ''].filter(Boolean).join(' · ');
+    });
+  }
+  if(!fichiers.length) return;
+  const types = {};
+  fichiers.forEach(x => { const t = x.f ? (typeGoogle(x) || x.f.type || '.' + (extension(x.nom) || '?')) : 'illisible'; types[t] = (types[t] || 0) + 1; });
+  journal('Détails des fichiers : ' + (fichiers.length - erreurs) + ' lus, ' + erreurs + ' en échec, en ' + Math.round(performance.now() - t1) + ' ms · types : '
+    + Object.entries(types).map(([t, n]) => t + ' ×' + n).join(', '));
+}
+
+/* ---------- Ouvrir / télécharger un fichier ---------- */
+async function lireFichier(x){
+  const t0 = performance.now(); let f;
+  try { f = x.f || await x.h.getFile(); x.f = f; } catch(e){ journal('Fichier « ' + x.nom + ' » : accès impossible (' + e.name + ' — ' + e.message + ')'); return null; }
+  try { await f.slice(0, 65536).arrayBuffer(); }
+  catch(e){ journal('Fichier « ' + x.nom + ' » : contenu illisible (' + e.name + ' — ' + e.message + ')'); return null; }
+  return {f, ms:Math.round(performance.now() - t0)};
+}
+function lancer(url, nom){
+  const a = document.createElement('a'); a.href = url; a.rel = 'noopener';
+  if(nom) a.download = nom; else a.target = '_blank';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+async function ouvrir(x){
+  const r = await lireFichier(x); if(!r) return;
+  const gg = typeGoogle(x);
+  if(gg){   /* raccourci Google (Docs, Sheets…) : il contient l'identifiant du document en ligne */
+    let url = '';
+    try { const j = JSON.parse(await r.f.text()); url = j.url || (j.doc_id ? 'https://drive.google.com/open?id=' + encodeURIComponent(j.doc_id) : ''); } catch(e){ url = ''; }
+    journal('Raccourci ' + gg + ' « ' + x.nom + ' » : ' + (url ? 'adresse trouvée, ouverture dans Google' : 'pas d\'adresse lisible (type ' + (r.f.type || 'inconnu') + ', ' + taille(r.f.size) + ')'));
+    if(/^https:\/\/(docs|drive)\.google\.com\//.test(url)){ lancer(url); return; }
+  }
+  const u = URL.createObjectURL(r.f);
+  lancer(u); setTimeout(() => URL.revokeObjectURL(u), 120000);
+  journal('Ouvrir « ' + x.nom + ' » : contenu lu en ' + r.ms + ' ms, envoyé au navigateur (type ' + (r.f.type || 'inconnu') + ', ' + taille(r.f.size) + ')');
+}
+async function telecharger(x){
+  const r = await lireFichier(x); if(!r) return;
+  const u = URL.createObjectURL(r.f);
+  lancer(u, x.nom); setTimeout(() => URL.revokeObjectURL(u), 120000);
+  journal('Télécharger « ' + x.nom + ' » : contenu lu en ' + r.ms + ' ms, téléchargement lancé');
+}
+
+/* ---------- Démarrage ---------- */
+$('etat').innerHTML = [
+  'Choix de dossier : ' + (dispo ? '<span class="ok">disponible</span>' : '<span class="ko">non disponible dans ce navigateur</span>'),
+  'Contexte sécurisé : ' + (window.isSecureContext ? '<span class="ok">oui</span>' : '<span class="ko">non</span>'),
+  esc(navigateur())
+].map(t => `<span>${t}</span>`).join('');
+if(!dispo) $('choisir').disabled = true;
+journal('Page ouverte');
+if(dispo) preparerReouverture();
+</script>
+</body>
+</html>
