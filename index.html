@@ -3017,7 +3017,7 @@ function ouvrirModale(html, {large = false, taille = '', saisie = true} = {}){
   $('#voile').classList.add('on');
   pousserHisto();
   const cible = m.querySelector('[autofocus]') || (saisie && m.querySelector('input:not([type=radio]):not([type=checkbox]):not([type=hidden]), textarea, select')) || (saisie && m.querySelector('.btn.p')) || m;
-  setTimeout(() => cible.focus({preventScroll:true}), 20);
+  setTimeout(() => { if(!m.contains(document.activeElement) || document.activeElement === m) cible.focus({preventScroll:true}); }, 20);   /* jamais repris à un champ déjà en cours de saisie */
 }
 /* historique : false quand la fermeture vient déjà d'un changement d'adresse ou du bouton Retour */
 function fermerModale({historique = true} = {}){
