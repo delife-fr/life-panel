@@ -1,0 +1,16 @@
+{
+  "name": "LIFE PANEL",
+  "short_name": "LIFE PANEL",
+  "description": "Ma vie, un seul endroit : tâches, projets, notes, finances, documents, contacts.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1b1b1d",
+  "theme_color": "#1b1b1d",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
