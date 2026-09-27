@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.18
+  LIFE PANEL — v3.18.1
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -87,6 +87,8 @@
   « Archivé(e)s N » y mène (plus de blocs ni de dossiers d'archives dans les pages).
   v3.18 : appli installée sur Android : raccourcis de l'icône (appui long) « Inbox » (capture rapide) et
   « Nouvelle dépense » ; « Partager → LIFE PANEL » depuis n'importe quelle appli dépose le texte dans la capture.
+  v3.18.1 : le manifeste de l'appli n'est plus figé par le service worker : Chrome voit enfin les raccourcis
+  et le partage (ils n'apparaissaient pas après la mise à jour).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
   seule architecture :
@@ -2858,7 +2860,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.18 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.18.1 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 

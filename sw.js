@@ -1,18 +1,22 @@
-/* LIFE PANEL — service worker (v3.18)
+/* LIFE PANEL — service worker (v3.18.1)
    Permet d'installer LIFE PANEL comme une appli, de l'ouvrir sans réseau et d'afficher ses notifications.
    · La page (index.html) : le réseau d'abord, pour avoir toujours la dernière version ; sans réseau, ou si le
      réseau ne répond pas en 3 secondes (4G faible), la copie gardée — la copie est tout de même remise à jour
      quand la réponse finit par arriver.
-   · Icônes et manifeste : la copie gardée d'abord.
+   · Manifeste (raccourcis, partage, icônes de l'appli) : le réseau d'abord lui aussi, pour que Chrome voie tout
+     de suite une nouvelle version de l'appli installée ; la copie gardée sans réseau.
+   · Icônes : la copie gardée d'abord.
+   · À l'installation d'une nouvelle version, tout est rechargé depuis le réseau (jamais depuis le cache HTTP
+     du navigateur, qui pourrait rendre l'ancienne version pendant quelques minutes).
    · Notifications : un rappel envoyé par GitHub Actions (dépôt privé) arrive chiffré ; il est affiché comme la
      notification d'une appli, même LIFE PANEL fermée. Un appui ouvre LIFE PANEL à la bonne page.
    · Rien d'autre n'est touché : ni GitHub (tes données), ni aucun autre site. */
-const CACHE = 'lifepanel-v3.18';
+const CACHE = 'lifepanel-v3.18.1';
 const FICHIERS = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/badge-96.png', './icons/raccourci-inbox.png', './icons/raccourci-depense.png'];
 const DELAI_RESEAU = 3000;
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FICHIERS)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FICHIERS.map(f => new Request(f, {cache:'reload'})))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
@@ -25,7 +29,7 @@ self.addEventListener('fetch', e => {
   if(r.method !== 'GET') return;
   const u = new URL(r.url);
   if(u.origin !== self.location.origin) return;   /* GitHub, Google… : jamais interceptés */
-  const page = r.mode === 'navigate' || u.pathname.endsWith('/') || u.pathname.endsWith('.html');
+  const page = r.mode === 'navigate' || u.pathname.endsWith('/') || u.pathname.endsWith('.html') || u.pathname.endsWith('.webmanifest');
   if(page){
     const reseau = fetch(r).then(rep => {
       if(rep.ok){ const copie = rep.clone(); caches.open(CACHE).then(c => c.put(r, copie)); }
