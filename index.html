@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.17
+  LIFE PANEL — v3.18
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -85,6 +85,8 @@
   automatique sur une fiche contact tant qu'un élément « À répondre » n'est pas coché ; page Archives (volet) :
   tous les éléments archivés, filtrés par type, « Ouvrir » et « Sortir des archives » ; sur chaque page, un encart
   « Archivé(e)s N » y mène (plus de blocs ni de dossiers d'archives dans les pages).
+  v3.18 : appli installée sur Android : raccourcis de l'icône (appui long) « Inbox » (capture rapide) et
+  « Nouvelle dépense » ; « Partager → LIFE PANEL » depuis n'importe quelle appli dépose le texte dans la capture.
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
   seule architecture :
@@ -2856,7 +2858,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.17 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.18 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -5262,6 +5264,21 @@ function majPied(){
   p.innerHTML = `<span class="e"><span class="led"></span>${derniereSauvegarde ? 'Navigateur : enregistré à ' + heure(derniereSauvegarde) : 'Données dans ce navigateur'}</span>${g}${d}
     <span class="e droite"><span class="led"></span>${actif ? 'Synchro GitHub · dépôt privé' : 'Local · aucune connexion externe'} · <kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span>`;
 }
+/* Appli installée (Android) : raccourcis de l'icône (appui long) et « Partager → LIFE PANEL ».
+   Le lanceur ouvre « ./?action=inbox », « ./?action=depense » ou « ./?titre=…&texte=…&lien=… » (partage) ;
+   l'adresse est aussitôt nettoyée pour qu'un rechargement ne refasse pas l'action. */
+function ouvertureDepuisAndroid(){
+  const q = new URLSearchParams(location.search), action = q.get('action');
+  const partage = ['titre', 'texte', 'lien'].map(k => (q.get(k) || '').trim()).filter(Boolean);
+  if(!action && !partage.length) return;
+  const aller = h => { history.replaceState(null, '', location.pathname + h); rendre(); };
+  if(action === 'depense'){ aller('#/finances'); formMouvement({type:'depense'}); }
+  else if(action === 'inbox'){ aller('#/inbox'); ficheCapture(); }
+  else if(partage.length){   /* un texte partagé : titre, texte, lien sans doublon (le lien est souvent déjà dans le texte) */
+    const morceaux = partage.filter((m, i) => !partage.some((n, j) => j !== i && n.includes(m) && (n.length > m.length || j < i)));
+    aller('#/inbox'); ficheCapture(morceaux.join('\n'));
+  } else aller(location.hash || '#/accueil');
+}
 async function demarrer(){
   $('#logo').innerHTML = ico('maison', 18, '#fff', 2);
   $('#ic-recherche').innerHTML = ico('recherche', 14);
@@ -5292,6 +5309,7 @@ async function demarrer(){
 
   rendre();
   if(choix) ficheMigration(choix);
+  else ouvertureDepuisAndroid();
   initGitHub().then(() => initNotif()).catch(() => {});   /* synchronisation GitHub, si elle a été activée sur cet appareil, puis notifications */
   /* Appli installable (icône, plein écran, hors ligne) : seulement pour la version en ligne (https) */
   if(location.protocol === 'https:' || location.hostname === 'localhost'){
