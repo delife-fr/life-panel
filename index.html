@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.14
+  LIFE PANEL — v3.15
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -75,6 +75,9 @@
   CSV protégé contre les formules Excel, 29 février fêté le 28 les années non bissextiles. Recherche avec
   filtres (projet:, montant>, montant<, date:, avant:, après:). Règle de sécurité (CSP) : connexions limitées
   à l'API GitHub. Données VERSION 16 (date de modification des mouvements et de l'Inbox).
+  v3.15 : notifications (page Données) : résumé du matin, rappel des tâches à l'heure, anniversaires, documents,
+  envoyés par GitHub Actions depuis le dépôt privé (notifications/rappels.js, toutes les 30 min) et affichés par
+  Android ou Windows même LIFE PANEL fermée ; heures calmes 0 h – 6 h, à l'heure de chaque appareil.
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
   seule architecture :
@@ -2776,6 +2779,7 @@ function pageDonnees(){
           : (dossierMemorise ? btnAction('dossier-reconnecter', `Reconnecter « ${esc(dossierMemorise.name)} »`, 'btn p') : '') + btnAction('dossier-relier', 'Relier un dossier', dossierMemorise ? 'btn' : 'btn p')}${
           ghActif() && (dossier || dossierMemorise) ? btnAction('dossier-oublier', 'Ne plus utiliser', 'btn f') : ''}</div>` : ''}</section>
       ${carteGitHub()}
+      ${carteNotif()}
       ${carteDrive()}
       <section class="carte c6 etire">${enteteCarte('reglages', 'gris', 'Paramètres')}
         <form data-form="reglages" class="form-grille">
@@ -2804,7 +2808,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.14 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.15 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -3644,6 +3648,13 @@ const ACTIONS = {
   'gh-deconnecter': () => ghDeconnecter(),
   'gh-cle': () => ghChangerCle(),
 
+  /* Notifications (rappels envoyés depuis le dépôt privé) */
+  'notif-preparer': () => actionNotif(notifPreparer),
+  'notif-activer': () => actionNotif(notifActiver),
+  'notif-desactiver': () => actionNotif(notifDesactiver),
+  'notif-tester': () => actionNotif(notifTester),
+  'notif-relire': () => { notif.erreur = ''; rendre(); initNotif(); },
+
   /* Dossier Google Drive (documents) */
   'drive-relier': () => relierDrive(),
   'drive-acces': () => accesDrive(),
@@ -3755,6 +3766,8 @@ document.addEventListener('change', e => {
     c[k] = k === 'projet' ? (v || null) : k === 'tags' ? nettoyerTags(v) : v; c.modif = maintenant();
     if(k === 'projet'){ toucherProjet(avant); toucherProjet(c.projet); }
     sauver(); rendre(); majFicheContact(c);
+  } else if(el.matches('[data-notif-mode]')){   /* notifications : ce que reçoit cet appareil */
+    actionNotif(notifMode, el.value);
   } else if(el.matches('[data-md-case]')){   /* case à cocher d'une note : coche/décoche la ligne « - [ ] » correspondante */
     const bloc = el.closest('[data-note]'), n = bloc && note(bloc.dataset.note); if(!n) return;
     n.contenu = basculerCaseMd(n.contenu, Number(el.dataset.mdCase), el.checked); n.modif = maintenant();
@@ -4934,7 +4947,7 @@ async function ghConnecter(v){
   gh.cfg = cfg; gh.erreur = ''; gh.hors = false; gh.etat = 'ok'; gh.faiteA = new Date();
   ghNouvelleBase(sha, base);
   try { await idbEcrire('github', cfg); } catch(e){ toast('Ce navigateur n’a pas pu garder la clé : il faudra la ressaisir à la prochaine ouverture.'); }
-  rendre(); toast('Synchronisation GitHub activée sur cet appareil (' + cfg.appareil + ')');
+  rendre(); toast('Synchronisation GitHub activée sur cet appareil (' + cfg.appareil + ')'); initNotif();
   if(JSON.stringify(normaliser(DB)) !== gh.base) planifierGitHub();
   return '';
 }
@@ -4961,6 +4974,7 @@ async function ghDeconnecter(){
   clearTimeout(gh.t);
   Object.assign(gh, {cfg:null, sha:null, base:null, lu:null, etat:'aucun', erreur:'', faiteA:null, attente:false, hors:false, apresModale:false});
   try { await idbSupprimer('github'); await idbSupprimer('github-base'); } catch(e){}
+  Object.assign(notif, {cle:'', entree:null, charge:false, perdu:false, erreur:''});
   rendre(); toast('Synchronisation arrêtée sur cet appareil');
 }
 function carteGitHub(){
@@ -4996,6 +5010,150 @@ function carteDrive(){
     : (e !== 'ok' ? btnAction('drive-acces', ico('dossierOuvert', 14) + 'Accéder aux documents', 'btn p') : `<a class="btn" href="#/documents" data-action="drive-voir">${ico('dossierOuvert', 14)}Parcourir</a>`) +
       btnAction('drive-relier', 'Changer de dossier', 'btn f') + btnAction('drive-oublier', 'Oublier', 'btn f');
   return `<section class="carte c6 etire">${enteteCarte('dossierOuvert', 'vert', 'Documents : dossier Google Drive')}<p class="aide">${texte}</p>${boutons ? `<div class="boutons">${boutons}</div>` : ''}</section>`;
+}
+
+/* ==========================================================================
+   Q. NOTIFICATIONS — rappels (résumé du matin, tâches à l'heure, anniversaires, documents)
+   Ils sont envoyés par GitHub Actions depuis le dépôt privé (notifications/rappels.js, toutes les 30 min),
+   et affichés par Android ou Windows comme ceux d'une appli, même LIFE PANEL fermée.
+   Ici : la clé de l'expéditeur (créée une fois : la partie publique va dans le dépôt, la partie secrète est
+   montrée une seule fois pour être rangée dans les secrets GitHub, jamais gardée), l'inscription de cet appareil
+   (notifications/appareils.json : adresse de notification, fuseau horaire, mode) et le fuseau tenu à jour.
+   ========================================================================== */
+const NOTIF = {cle:'notifications/cle-publique.txt', appareils:'notifications/appareils.json', workflow:'rappels.yml'};
+const notif = {id:null, cle:'', entree:null, charge:false, perdu:false, erreur:'', enCours:false};
+const notifDispo = () => location.protocol !== 'file:' && !!window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const b64urlVersOctets = s => { const t = String(s).replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(t + '==='.slice((t.length + 3) % 4)), c => c.charCodeAt(0)); };
+const octetsVersB64url = o => btoa(String.fromCharCode(...new Uint8Array(o))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const fuseauIci = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Paris'; } catch(e){ return 'Europe/Paris'; } };
+const MODES_NOTIF = [{v:'tout', t:'Tout : résumé du matin et rappels des tâches'}, {v:'resume', t:'Seulement le résumé du matin'}, {v:'rien', t:'Rien (en pause)'}];
+/* Fichiers texte du dépôt privé (à côté de donnees.json) */
+const ghContenu = chemin => ghDepot() + '/contents/' + chemin.split('/').map(encodeURIComponent).join('/');
+async function ghLireTexte(chemin){
+  const r = await ghAppel(ghContenu(chemin));
+  if(r.statut === 404) return null;
+  if(!r.ok || !r.donnees) throw erreurStatut(r);
+  return {sha:r.donnees.sha, texte:depuisBase64(r.donnees.content || '')};
+}
+async function ghEcrireTexte(chemin, texte, sha, message){
+  const corps = {message, content:versBase64(texte), branch:gh.cfg.branche || 'main'}; if(sha) corps.sha = sha;
+  const r = await ghAppel(ghContenu(chemin), {method:'PUT', corps});
+  if(r.statut === 409 || (r.statut === 422 && /sha/i.test(r.texte))) return false;   /* changé entre-temps */
+  if(!r.ok) throw erreurStatut(r);
+  return true;
+}
+/* Modifie la liste des appareils ; si elle a changé entre-temps (autre appareil, GitHub Actions), on relit et on recommence */
+async function majAppareils(f){
+  for(let essai = 0; essai < 4; essai++){
+    const l = await ghLireTexte(NOTIF.appareils); let liste = {appareils:[]};
+    if(l){ try { liste = JSON.parse(l.texte) || liste; } catch(e){} }
+    if(!Array.isArray(liste.appareils)) liste.appareils = [];
+    const avant = JSON.stringify(liste); f(liste);
+    if(JSON.stringify(liste) === avant) return liste;
+    if(await ghEcrireTexte(NOTIF.appareils, JSON.stringify(liste, null, 2) + '\n', l && l.sha, 'LIFE PANEL · notifications · ' + (gh.cfg.appareil || 'appareil'))) return liste;
+  }
+  throw new ErreurGitHub('conflits', 'La liste des appareils change sans arrêt sur GitHub : réessaie dans un instant.');
+}
+const abonnementDe = sub => { const j = sub.toJSON(); return {endpoint:j.endpoint, keys:{p256dh:j.keys.p256dh, auth:j.keys.auth}}; };
+/* À l'ouverture (et au retour sur la page après un voyage) : état de cet appareil, fuseau et adresse tenus à jour */
+async function initNotif(){
+  if(!notifDispo() || !ghActif()) return;
+  try {
+    if(!notif.id && stockage.idb) notif.id = await idbLire('notif-id');
+    const c = await ghLireTexte(NOTIF.cle); notif.cle = c ? c.texte.trim() : '';
+    const l = await ghLireTexte(NOTIF.appareils); let liste = [];
+    try { liste = l ? (JSON.parse(l.texte).appareils || []) : []; } catch(e){}
+    notif.entree = notif.id ? liste.find(a => a && a.id === notif.id) || null : null;
+    notif.charge = true; notif.erreur = ''; notif.perdu = false;
+    if(notif.entree){
+      const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
+      if(!sub || Notification.permission !== 'granted') notif.perdu = true;   /* autorisation retirée : on le signale */
+      else {
+        const ab = abonnementDe(sub), fuseau = fuseauIci(), nom = gh.cfg.appareil || notif.entree.nom;
+        if(notif.entree.fuseau !== fuseau || notif.entree.abonnement.endpoint !== ab.endpoint || notif.entree.nom !== nom){
+          await majAppareils(x => { const a = x.appareils.find(y => y.id === notif.id); if(a) Object.assign(a, {fuseau, abonnement:ab, nom, maj:maintenant()}); });
+          notif.entree = {...notif.entree, fuseau, abonnement:ab, nom};
+        }
+      }
+    }
+  } catch(e){ notif.erreur = (e && e.message) || String(e); }
+  if(lireRoute().nom === 'donnees' && !modaleOuverte() && !saisieEnCours()) rendre();
+}
+/* Une fois pour toutes : clé de l'expéditeur des notifications (ECDSA P-256, créée dans ce navigateur) */
+async function notifPreparer(){
+  if(notif.cle && !await confirmer({titre:'Créer une nouvelle clé ?', ok:'Créer une nouvelle clé',
+    texte:'Une clé existe déjà. Avec une nouvelle clé, il faudra remplacer le secret <code>VAPID_PRIVEE</code> sur GitHub et réactiver les notifications sur chaque appareil. À faire seulement si la clé secrète a été perdue.'})) return;
+  const k = await crypto.subtle.generateKey({name:'ECDSA', namedCurve:'P-256'}, true, ['sign', 'verify']);
+  const jwk = await crypto.subtle.exportKey('jwk', k.privateKey);
+  const publique = octetsVersB64url(new Uint8Array([4, ...b64urlVersOctets(jwk.x), ...b64urlVersOctets(jwk.y)]));
+  const l = await ghLireTexte(NOTIF.cle);
+  if(!await ghEcrireTexte(NOTIF.cle, publique + '\n', l && l.sha, 'LIFE PANEL · clé publique des notifications')) throw new ErreurGitHub('conflits', 'La clé vient d’être modifiée depuis un autre appareil : recharge la page.');
+  notif.cle = publique; notif.entree = null;
+  const c = gh.cfg, secrets = `https://github.com/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/settings/secrets/actions/new`;
+  ouvrirModale(teteModale('Dernière étape sur GitHub', 'alerte', 'jaune') + `<p class="texte">La clé publique est dans ton dépôt. Range maintenant la <b>clé secrète</b> ci-dessous dans les secrets du dépôt : elle ne sera plus jamais affichée, et LIFE PANEL ne la garde pas.</p>
+    <ol class="texte" style="padding-left:20px"><li>Ouvre <a href="${esc(secrets)}" target="_blank" rel="noopener noreferrer">Settings → Secrets → Actions → New repository secret</a>.</li>
+      <li><b>Name</b> : <code>VAPID_PRIVEE</code></li><li><b>Secret</b> : colle la clé, puis « Add secret ».</li></ol>
+    <label class="champ"><span>Clé secrète</span><input id="cle-secrete" readonly spellcheck="false" value="${esc(jwk.d)}" style="font-family:var(--mono);font-size:13px"></label>
+    <div class="actions"><button type="button" class="btn" id="copier-cle">${ico('check', 14)}Copier la clé</button><button type="button" class="btn p" data-action="fermer">C’est fait</button></div>`, {saisie:false});
+  $('#copier-cle').onclick = async () => { const i = $('#cle-secrete'); let ok = false;
+    try { await navigator.clipboard.writeText(i.value); ok = true; } catch(e){ i.select(); try { ok = document.execCommand('copy'); } catch(e2){} }
+    toast(ok ? 'Clé copiée : colle-la dans GitHub' : 'Sélectionne la clé et copie-la à la main'); };
+  surFermeture = () => rendre();
+}
+/* Inscription de cet appareil */
+async function notifActiver(){
+  if(!notif.cle){ toast('Prépare d’abord les notifications (une seule fois, depuis n’importe quel appareil).'); return; }
+  const p = await Notification.requestPermission();
+  if(p !== 'granted'){ toast(p === 'denied' ? 'Notifications bloquées : autorise-les dans les réglages du navigateur pour LIFE PANEL, puis réessaie.' : 'Notifications non autorisées.'); return; }
+  const reg = await navigator.serviceWorker.ready; let sub = await reg.pushManager.getSubscription();
+  if(sub){ const k = sub.options && sub.options.applicationServerKey; if(!k || octetsVersB64url(k) !== notif.cle){ await sub.unsubscribe(); sub = null; } }   /* inscrit avec une ancienne clé */
+  if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64urlVersOctets(notif.cle)});
+  if(!notif.id){ notif.id = uid(); if(stockage.idb) await idbEcrire('notif-id', notif.id); }
+  const entree = {id:notif.id, nom:gh.cfg.appareil || appareilParDefaut(), fuseau:fuseauIci(), mode:(notif.entree && notif.entree.mode) || 'tout', cle:notif.cle, abonnement:abonnementDe(sub), maj:maintenant()};
+  await majAppareils(l => { l.appareils = l.appareils.filter(a => a && a.id !== notif.id).concat([entree]); });
+  notif.entree = entree; notif.perdu = false; rendre();
+  toast('Notifications activées sur cet appareil');
+}
+async function notifMode(mode){
+  if(!notif.entree || !MODES_NOTIF.some(m => m.v === mode)) return;
+  await majAppareils(l => { const a = l.appareils.find(x => x && x.id === notif.id); if(a){ a.mode = mode; a.maj = maintenant(); } });
+  notif.entree = {...notif.entree, mode}; toast(MODES_NOTIF.find(m => m.v === mode).t);
+}
+async function notifDesactiver(){
+  if(!await confirmer({titre:'Désactiver les notifications ?', ok:'Désactiver', danger:false, texte:'Cet appareil ne recevra plus de rappels. Tes autres appareils continuent d’en recevoir.'})) return;
+  try { const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription(); if(sub) await sub.unsubscribe(); } catch(e){}
+  await majAppareils(l => { l.appareils = l.appareils.filter(a => a && a.id !== notif.id); });
+  notif.entree = null; notif.perdu = false; rendre(); toast('Notifications désactivées sur cet appareil');
+}
+async function notifTester(){
+  const reg = await navigator.serviceWorker.ready;
+  await reg.showNotification('LIFE PANEL · essai', {body:'Voici à quoi ressembleront tes rappels sur cet appareil.', icon:'icons/icon-192.png', badge:'icons/badge-96.png', tag:'essai', data:{url:'#/donnees'}, lang:'fr'});
+}
+/* Bouton : désactivé pendant l'opération, erreur annoncée clairement */
+async function actionNotif(f, ...a){
+  if(notif.enCours) return;
+  notif.enCours = true;
+  try { await f(...a); }
+  catch(e){ toast(e && e.name === 'HorsLigne' ? 'Pas de réseau : réessaie quand tu seras connecté.' : 'Notifications : ' + ((e && e.message) || e)); }
+  finally { notif.enCours = false; }
+}
+function carteNotif(){
+  const c = gh.cfg, lienActions = c ? `https://github.com/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/actions/workflows/${NOTIF.workflow}` : '#';
+  const regles = 'Résumé du matin vers 8 h (tâches du jour et en retard, anniversaires, documents), rappel d’une tâche 15 à 40 min avant son heure, rien entre 0 h et 6 h — à l’heure de l’appareil, même en voyage.';
+  const carte = (texte, boutons = '') => `<section class="carte c6 etire">${enteteCarte('alerte', 'orange', 'Notifications')}<p class="aide">${texte}</p>${boutons ? `<div class="boutons">${boutons}</div>` : ''}</section>`;
+  if(!notifDispo()) return carte(location.protocol === 'file:' ? 'Les notifications demandent la version en ligne de LIFE PANEL (adresse https), installée comme une appli sur le téléphone.' : 'Ce navigateur ne sait pas recevoir de notifications : utilise Chrome ou Opera.');
+  if(!ghActif()) return carte('Les rappels sont envoyés depuis ton dépôt GitHub privé : active d’abord la synchronisation GitHub (carte ci-dessus).');
+  if(!notif.charge) return carte(notif.erreur ? 'Lecture impossible pour le moment : ' + esc(notif.erreur) : 'Lecture de l’état des notifications…', notif.erreur ? btnAction('notif-relire', 'Réessayer', 'btn') : '');
+  if(!notif.cle) return carte(regles + '<br><br>Pour commencer (une seule fois, depuis n’importe quel appareil) : créer la clé qui signe tes notifications. Il faudra ensuite coller sa partie secrète dans les réglages de ton dépôt GitHub.',
+    btnAction('notif-preparer', ico('plus', 14) + 'Préparer les notifications', 'btn p'));
+  if(!notif.entree) return carte(regles + `<br><br>Cet appareil (<b>${esc(c.appareil || '?')}</b>) ne reçoit pas encore les rappels.`,
+    btnAction('notif-activer', ico('check', 14) + 'Activer sur cet appareil', 'btn p') + btnAction('notif-preparer', 'Nouvelle clé (clé secrète perdue)', 'btn f'));
+  const e = notif.entree;
+  return `<section class="carte c6 etire">${enteteCarte('alerte', 'orange', 'Notifications')}
+    <p class="aide">${notif.perdu ? '<b>L’autorisation a été retirée sur cet appareil</b> : clique sur « Réactiver ». ' : ''}Activées sur <b>${esc(e.nom)}</b>, à l’heure de <b>${esc(e.fuseau)}</b>. ${regles}</p>
+    <label class="champ" style="margin:0 0 12px"><span>Sur cet appareil</span><select data-notif-mode>${MODES_NOTIF.map(m => `<option value="${m.v}"${m.v === e.mode ? ' selected' : ''}>${esc(m.t)}</option>`).join('')}</select></label>
+    <div class="boutons">${notif.perdu ? btnAction('notif-activer', 'Réactiver', 'btn p') : btnAction('notif-tester', 'Essayer ici', 'btn')}<a class="btn" href="${esc(lienActions)}" target="_blank" rel="noopener noreferrer">${ico('externe', 14)}Test depuis GitHub</a>${btnAction('notif-desactiver', 'Désactiver', 'btn f')}</div>
+    <p class="aide" style="margin:10px 0 0">« Test depuis GitHub » : bouton « Run workflow », case « test » cochée — une notification arrive sur chaque appareil inscrit.</p></section>`;
 }
 
 /* ==========================================================================
@@ -5038,11 +5196,15 @@ async function demarrer(){
 
   rendre();
   if(choix) ficheMigration(choix);
-  initGitHub();   /* synchronisation GitHub, si elle a été activée sur cet appareil */
+  initGitHub().then(() => initNotif()).catch(() => {});   /* synchronisation GitHub, si elle a été activée sur cet appareil, puis notifications */
   /* Appli installable (icône, plein écran, hors ligne) : seulement pour la version en ligne (https) */
   if(location.protocol === 'https:' || location.hostname === 'localhost'){
     if(!$('link[rel="manifest"]')){ const l = document.createElement('link'); l.rel = 'manifest'; l.href = 'manifest.webmanifest'; document.head.appendChild(l); }
-    if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+      /* Appui sur une notification alors que LIFE PANEL est déjà ouvert : le service worker demande d'aller à la bonne page */
+      navigator.serviceWorker.addEventListener('message', e => { const u = e.data && e.data.aller; if(typeof u === 'string' && /^#\/[\w/?=&%.-]*$/.test(u)) location.hash = u; });
+    }
   }
 
   /* Dossier relié lors d'une session précédente : un clic suffit pour le reconnecter */
@@ -5074,7 +5236,7 @@ async function demarrer(){
      Retour sur la page : on regarde si l'autre appareil a modifié quelque chose. */
   document.addEventListener('visibilitychange', () => {
     if(document.visibilityState === 'hidden'){ if(dossier && ecr.nonEcrit) ecrireDossier(); if(ghActif() && gh.attente) ghSynchroniser('ecriture'); }
-    else if(ghActif() && Date.now() - gh.controle > 10000) ghSynchroniser('retour');
+    else { if(ghActif() && Date.now() - gh.controle > 10000) ghSynchroniser('retour'); if(notif.entree && notif.entree.fuseau !== fuseauIci()) initNotif(); }   /* fuseau changé (voyage) */
   });
   window.addEventListener('online', () => { if(ghActif()) ghSynchroniser('reseau'); });
   /* Vérification toutes les 30 s tant que la page est affichée (sauf si une synchro vient d'avoir lieu) */
