@@ -4874,7 +4874,12 @@ async function initGitHub(){
   try { cfg = await idbLire('github'); base = await idbLire('github-base'); } catch(e){ cfg = null; }
   if(!cfg || !cfg.jeton) return;
   gh.cfg = cfg; gh.etat = 'ok';
-  if(base && base.depot === cleDepot(cfg) && typeof base.texte === 'string'){ gh.sha = base.sha; gh.base = base.texte; }
+  if(base && base.depot === cleDepot(cfg) && typeof base.texte === 'string'){
+    /* Base gardée par une version précédente de LIFE PANEL : remise au format actuel, sinon elle ne ressemblerait
+       plus aux données relues (ex. v3.13 → v3.14 : « modif » ajouté aux mouvements) et tout passerait par une fusion */
+    let texte = base.texte; try { texte = JSON.stringify(normaliser(JSON.parse(base.texte))); } catch(e){}
+    gh.sha = base.sha; gh.base = texte;
+  }
   ghSynchroniser('ouverture');
 }
 /* Petite fenêtre à plusieurs choix : renvoie la valeur choisie, ou null (fermée) */
