@@ -1,4 +1,4 @@
-/* LIFE PANEL — service worker (v3.16)
+/* LIFE PANEL — service worker (v3.17)
    Permet d'installer LIFE PANEL comme une appli, de l'ouvrir sans réseau et d'afficher ses notifications.
    · La page (index.html) : le réseau d'abord, pour avoir toujours la dernière version ; sans réseau, ou si le
      réseau ne répond pas en 3 secondes (4G faible), la copie gardée — la copie est tout de même remise à jour
@@ -7,7 +7,7 @@
    · Notifications : un rappel envoyé par GitHub Actions (dépôt privé) arrive chiffré ; il est affiché comme la
      notification d'une appli, même LIFE PANEL fermée. Un appui ouvre LIFE PANEL à la bonne page.
    · Rien d'autre n'est touché : ni GitHub (tes données), ni aucun autre site. */
-const CACHE = 'lifepanel-v3.16';
+const CACHE = 'lifepanel-v3.17';
 const FICHIERS = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/badge-96.png'];
 const DELAI_RESEAU = 3000;
 
