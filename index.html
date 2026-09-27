@@ -3,12 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
+     aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.13
+  LIFE PANEL — v3.14
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -65,6 +68,13 @@
   Google Drive relié une fois par appareil (lecture seule) ; chaque projet peut afficher un sous-dossier ;
   onglet « Mon Drive » ; « Suivre l'échéance » crée une fiche ; une fiche peut pointer vers un fichier du
   Drive (lien « drive:chemin »). Données VERSION 15 (dossier des projets, versions remplacées).
+  v3.14 : synchro plus légère — conversion base64 native (la page ne se fige plus à l'envoi), vérification
+  « conditionnelle » (rien n'est téléchargé si le fichier n'a pas changé), gros fichier lu par sa version
+  exacte ; appli installée : copie gardée si le réseau ne répond pas en 3 s. Bouton Retour : il ferme la
+  fenêtre ouverte. Montants plafonnés à 1 000 000 €, dates impossibles refusées, durées négatives ignorées,
+  CSV protégé contre les formules Excel, 29 février fêté le 28 les années non bissextiles. Recherche avec
+  filtres (projet:, montant>, montant<, date:, avant:, après:). Règle de sécurité (CSP) : connexions limitées
+  à l'API GitHub. Données VERSION 16 (date de modification des mouvements et de l'Inbox).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
   seule architecture :
@@ -842,7 +852,7 @@ td.act{text-align:right;white-space:nowrap;width:1%}
 /* ==========================================================================
    A. DONNÉES — un seul modèle, une seule clé
    ========================================================================== */
-const VERSION = 15;  /* 8 : archives et corbeille · 9 : module Documents, tags communs · 10 : liste des comptes (statistiques, budgets) · 11 : couleur de chaque catégorie · 12 : téléphone et adresse des contacts · 13 : autre téléphone des contacts · 14 : e-mail des contacts · 15 : dossier Drive des projets, versions remplacées par la synchro (corbeille) */
+const VERSION = 16;  /* 8 : archives et corbeille · 9 : module Documents, tags communs · 10 : liste des comptes (statistiques, budgets) · 11 : couleur de chaque catégorie · 12 : téléphone et adresse des contacts · 13 : autre téléphone des contacts · 14 : e-mail des contacts · 15 : dossier Drive des projets, versions remplacées par la synchro (corbeille) · 16 : date de modification des mouvements et de l'Inbox (fusion de la synchro) */
 const CLE = 'lifepanel';                   /* copie légère dans localStorage (voir « Stockage dans le navigateur ») */
 const CLE_SECOURS = 'lifepanel.secours';   /* ancienne place de la copie de secours (v3.3 à v3.8), reprise dans IndexedDB */
 const MIROIR_MAX = 2e6;                    /* au-delà de 2 millions de caractères, pas de copie dans localStorage */
@@ -879,8 +889,11 @@ let derniereSauvegarde = null;
 const txt = v => (v === null || v === undefined) ? '' : String(v);
 const num = v => (v === '' || v === null || v === undefined || isNaN(Number(v))) ? null : Number(v);
 const itemsContact = a => Array.isArray(a) ? a.filter(i => i && i.t).map(i => ({t:txt(i.t), ok:!!i.ok})) : [];
+/* Date « AAAA-MM-JJ » (ou « JJ/MM/AAAA ») qui existe vraiment : « 31/02/2026 » ou « 2026-13-01 » sont refusées ('') */
+const dateReelle = (a, m, j) => { const d = new Date(Date.UTC(a, m - 1, j)); return d.getUTCFullYear() === a && d.getUTCMonth() === m - 1 && d.getUTCDate() === j; };
 const dateISO = v => { const s = txt(v).trim(), m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
-  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : ''; };
+  const r = /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : '';
+  return r && dateReelle(Number(r.slice(0, 4)), Number(r.slice(5, 7)), Number(r.slice(8, 10))) ? r : ''; };
 const archivage = x => x.archive ? {archive:true, archiveLe:txt(x.archiveLe) || maintenant()} : {archive:false, archiveLe:''};
 /* Tags : communs à toutes les listes. « #Révision, révision , permis de conduire » → ['Révision', 'permis-de-conduire']
    (sans #, sans doublon, casse gardée ; un espace devient un tiret pour que « #tag » se cherche d'un seul mot) */
@@ -893,6 +906,11 @@ function nettoyerTags(v){
 const propreNom = s => txt(s).trim().replace(/\s+/g, ' ');
 const cleNom = s => { const p = propreNom(s); return p ? norm(p) || p.toLowerCase() : ''; };   /* un nom fait d'un seul accent garde une clé */
 const MAX_BUDGET = 1e9;
+const MAX_MONTANT = 1e6;   /* une dépense ou une entrée d'argent : au plus 1 000 000 € */
+/* Montant d'un mouvement : positif, fini, au plus MAX_MONTANT (un « 1e400 » importé ne devient plus ∞) */
+const montantValide = v => { const n = Math.abs(Number(v)); return Number.isNaN(n) ? 0 : Math.min(MAX_MONTANT, n); };
+/* Nombre positif (budget d'un projet, durée estimée), au plus max ; sinon null */
+const positif = (v, max) => { const n = num(v); return n !== null && n >= 0 ? Math.min(max, n) : null; };
 const arrondiBudget = v => { const b = num(v); if(b === null) return null; const r = Math.min(MAX_BUDGET, Math.round(b * 100) / 100); return r > 0 ? r : null; };
 function formeCompte(c){
   const b = arrondiBudget(c.budget);
@@ -900,11 +918,11 @@ function formeCompte(c){
 }
 const FORMES = {
   projets:p => ({id:txt(p.id) || uid(), nom:txt(p.nom) || 'Sans nom', resume:txt(p.resume),
-    budget:num(p.budget), prochaineAction:txt(p.prochaineAction), echeance:dateISO(p.echeance),
+    budget:positif(p.budget, MAX_BUDGET), prochaineAction:txt(p.prochaineAction), echeance:dateISO(p.echeance),
     couleur:COULEURS.includes(p.couleur) ? p.couleur : '', dossier:cheminDrive(p.dossier), archive:!!p.archive, modif:txt(p.modif) || maintenant()}),
   taches:t => ({id:txt(t.id) || uid(), nom:txt(t.nom) || 'Sans titre', date:dateISO(t.date), heure:/^\d{2}:\d{2}$/.test(txt(t.heure)) ? txt(t.heure) : '',
     projet:t.projet || null, fait:!!t.fait, faitLe:t.fait ? txt(t.faitLe || t.modif) : '',
-    priorite:['p1','p2','p3'].includes(t.priorite) ? t.priorite : 'p2', estimation:num(t.estimation), tags:nettoyerTags(t.tags), modif:txt(t.modif) || maintenant(),
+    priorite:['p1','p2','p3'].includes(t.priorite) ? t.priorite : 'p2', estimation:positif(t.estimation, 100000), tags:nettoyerTags(t.tags), modif:txt(t.modif) || maintenant(),
     ...archivage({...t, archive:t.archive && t.fait})}),   /* seule une tâche terminée peut être archivée */
   notes:n => { const cree = txt(n.cree || n.modif) || maintenant();   /* une seule heure : une note neuve n'est pas « modifiée » */
     return {id:txt(n.id) || uid(), titre:txt(n.titre) || 'Sans titre', contenu:txt(n.contenu),
@@ -917,13 +935,14 @@ const FORMES = {
       tags:nettoyerTags(x.tags), projet:x.projet || null, note:txt(x.note),
       ajoute, modif:txt(x.modif) || ajoute, ...archivage(x)}; },
   mouvements:m => ({id:txt(m.id) || uid(), date:dateISO(m.date) || aujourdhui(),
-    montant:Math.abs(Number(m.montant) || 0), type:m.type === 'revenu' ? 'revenu' : 'depense',
-    libelle:txt(m.libelle), categorie:txt(m.categorie), projet:m.projet || null, compte:txt(m.compte), cree:txt(m.cree)}),
+    montant:montantValide(m.montant), type:m.type === 'revenu' ? 'revenu' : 'depense',
+    libelle:txt(m.libelle), categorie:txt(m.categorie), projet:m.projet || null, compte:txt(m.compte), cree:txt(m.cree),
+    modif:txt(m.modif) || txt(m.cree)}),   /* VERSION 16 : sans date de modification, celle de la saisie (vide pour un relevé importé) */
   contacts:c => ({id:txt(c.id) || uid(), nom:txt(c.nom) || 'Sans nom', telephone:txt(c.telephone), autreTelephone:txt(c.autreTelephone), email:txt(c.email), adresse:txt(c.adresse), anniversaire:dateISO(c.anniversaire),
     derniereConversation:dateISO(c.derniereConversation), nouvelles:txt(c.nouvelles), projet:c.projet || null,
     aDire:itemsContact(c.aDire), aRepondre:itemsContact(c.aRepondre), idees:itemsContact(c.idees), tags:nettoyerTags(c.tags), modif:txt(c.modif), ...archivage(c)}),
-  inbox:x => ({id:txt(x.id) || uid(), text:txt(x.text), created:txt(x.created) || maintenant(),
-    status:x.status === 'archived' ? 'archived' : 'open', archived:txt(x.archived)})
+  inbox:x => { const created = txt(x.created) || maintenant();
+    return {id:txt(x.id) || uid(), text:txt(x.text), created, status:x.status === 'archived' ? 'archived' : 'open', archived:txt(x.archived), modif:txt(x.modif) || created}; }
 };
 /* Crée un élément complet dans la liste voulue (en tête pour l'Inbox) et le renvoie */
 function ajouter(liste, brut){
@@ -1560,11 +1579,16 @@ function repartition(liste){
 }
 
 /* --- Contacts --- */
+/* Jour de l'anniversaire (« MM-JJ ») une année donnée : né un 29 février → fêté le 28 février les années non bissextiles
+   (la même règle pour les rappels, le calendrier de l'accueil et la fenêtre du jour) */
+const bissextile = a => (a % 4 === 0 && a % 100 !== 0) || a % 400 === 0;
+const jourAnniv = (s, annee) => { const md = String(s || '').slice(5); return md === '02-29' && !bissextile(Number(annee)) ? '02-28' : md; };
 function joursAvantAnniv(s){
-  const n = versDate(s); if(!n) return null;
+  if(!versDate(s)) return null;
   const h = new Date(); h.setHours(0,0,0,0);
-  const p = new Date(h.getFullYear(), n.getMonth(), n.getDate());
-  if(p < h) p.setFullYear(h.getFullYear() + 1);
+  const date = a => { const [m, j] = jourAnniv(s, a).split('-').map(Number); return new Date(a, m - 1, j); };
+  let p = date(h.getFullYear());
+  if(p < h) p = date(h.getFullYear() + 1);
   return Math.round((p - h) / 86400000);
 }
 const contactsActifs = () => DB.contacts.filter(c => !c.archive);
@@ -1705,7 +1729,7 @@ function marqueursMois(ym){
   const r = {taches:new Set(), mvts:new Set(), anniv:new Set(), docs:new Map()}, mm = ym.slice(5) + '-';
   DB.taches.forEach(t => { if(!t.fait && t.date && t.date.startsWith(ym)) r.taches.add(t.date); });
   mouvementsStats().forEach(m => { if(m.date && m.date.startsWith(ym)) r.mvts.add(m.date); });
-  contactsActifs().forEach(c => { if(c.anniversaire && c.anniversaire.slice(5).startsWith(mm)) r.anniv.add(c.anniversaire.slice(5)); });
+  contactsActifs().forEach(c => { const md = c.anniversaire ? jourAnniv(c.anniversaire, ym.slice(0, 4)) : ''; if(md.startsWith(mm)) r.anniv.add(md); });
   documentsActifs().forEach(x => { if(!x.echeance || !x.echeance.startsWith(ym)) return;
     const e = etatDocument(x).etat; if(e !== 'preavis' && e !== 'expire') return;   /* signalé dès l'entrée dans le préavis */
     if(!r.docs.has(x.echeance)) r.docs.set(x.echeance, []); r.docs.get(x.echeance).push({x, etat:e}); });
@@ -1716,7 +1740,7 @@ function evenementsJour(j){
   const md = j.slice(5);
   return {
     taches: trierTaches(DB.taches.filter(t => t.date === j)),
-    anniv: contactsActifs().filter(c => c.anniversaire && c.anniversaire.slice(5) === md),
+    anniv: contactsActifs().filter(c => c.anniversaire && jourAnniv(c.anniversaire, j.slice(0, 4)) === md),
     mvts: mouvementsStats().filter(m => m.date === j),
     notes: DB.notes.filter(n => jourDe(n.cree) === j),
     documents: DB.documents.filter(x => x.echeance === j && !x.archive)
@@ -2780,7 +2804,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.13 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.14 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -2881,6 +2905,24 @@ function ouvrirFicheDepuisLien(h){
    ========================================================================== */
 let surFermeture = null, focusAvant = null, retourFormulaire = null, ficheOuverte = null;
 const modaleOuverte = () => $('#voile').classList.contains('on');
+/* Bouton Retour (navigateur, geste retour d'Android) : il ferme la fenêtre ouverte au lieu de quitter la page.
+   À l'ouverture, une entrée d'historique (même adresse) est ajoutée ; Retour la retire et ferme la fenêtre.
+   Une fenêtre fermée autrement (croix, Échap, Enregistrer) retire elle-même son entrée (history.back) ;
+   une fenêtre rouverte avant la fin de ce retour attend qu'il soit fait pour ajouter la sienne. */
+const histo = {pousse:false, retourEnCours:false, aPousser:false};
+function pousserHisto(){
+  if(histo.pousse) return;
+  if(histo.retourEnCours){ histo.aPousser = true; return; }
+  try { history.pushState({lpFenetre:true}, ''); histo.pousse = true; } catch(e){}
+}
+window.addEventListener('popstate', () => {
+  if(histo.retourEnCours){   /* fin du retour demandé par fermerModale */
+    histo.retourEnCours = false;
+    if(histo.aPousser){ histo.aPousser = false; if(modaleOuverte()) pousserHisto(); }
+    return;
+  }
+  if(histo.pousse){ histo.pousse = false; if(modaleOuverte()) fermerModale({historique:false}); }
+});
 const teteModale = (titre, icone = 'plus', couleur = 'bleu') =>
   `<div class="modale-tete">${pastille(icone, couleur, 34, 17)}<h3 id="modale-titre">${titre}</h3><button class="icone-btn fermer" data-action="fermer" aria-label="Fermer">${ico('croix', 16)}</button></div>`;
 /* taille : '' | 'large' | 'fiche' (fenêtre agrandie des notes et contacts) ; saisie : placer le curseur dans le 1er champ */
@@ -2889,11 +2931,15 @@ function ouvrirModale(html, {large = false, taille = '', saisie = true} = {}){
   if(!modaleOuverte()) focusAvant = document.activeElement;
   const m = $('#modale'); m.className = 'modale' + (large ? ' large' : '') + (taille ? ' ' + taille : ''); m.innerHTML = html; m.scrollTop = 0;
   $('#voile').classList.add('on');
+  pousserHisto();
   const cible = m.querySelector('[autofocus]') || (saisie && m.querySelector('input:not([type=radio]):not([type=checkbox]):not([type=hidden]), textarea, select')) || (saisie && m.querySelector('.btn.p')) || m;
   setTimeout(() => cible.focus({preventScroll:true}), 20);
 }
-function fermerModale(){
+/* historique : false quand la fermeture vient déjà d'un changement d'adresse ou du bouton Retour */
+function fermerModale({historique = true} = {}){
   if(!modaleOuverte()) return;
+  histo.aPousser = false;
+  if(histo.pousse){ histo.pousse = false; if(historique){ histo.retourEnCours = true; history.back(); } }
   const m = $('#modale');
   if(m.contains(document.activeElement)) document.activeElement.blur();   /* enregistre un champ en cours de saisie */
   $('#voile').classList.remove('on'); m.innerHTML = ''; ficheOuverte = null; retourFormulaire = null;
@@ -2976,7 +3022,7 @@ function formTache(t0 = {}, apres){
     {n:'tags', l:'Tags', t:'tags', v:t0.tags || [], aide:'facultatif, séparés par des virgules'}
   ], onOk:v => {
     if(!v.nom) return 'Donne un nom à la tâche.';
-    const d = {nom:v.nom, date:v.date, heure:v.heure, priorite:v.priorite || 'p2', estimation:v.estimation ? Math.abs(Number(v.estimation)) : null, projet:v.projet || null, tags:nettoyerTags(v.tags), modif:maintenant()};
+    const d = {nom:v.nom, date:v.date, heure:v.heure, priorite:v.priorite || 'p2', estimation:v.estimation ? positif(Math.abs(Number(v.estimation.replace(',', '.'))), 100000) : null, projet:v.projet || null, tags:nettoyerTags(v.tags), modif:maintenant()};
     if(ex){ const avant = ex.projet; Object.assign(ex, d); toucherProjet(avant); toucherProjet(ex.projet); toast('Tâche modifiée'); }
     else { ajouter('taches', d); toucherProjet(d.projet); toast('Tâche créée'); }
     if(apres) apres();
@@ -2996,14 +3042,15 @@ function formMouvement(m0 = {}, apres){
     {n:'compte', l:'Compte', t:'select', o:comptes, v:cpt, demi:true, nouveau:'Nouveau compte'},
     {n:'projet', l:'Projet', t:'select', o:optionsProjets(m0.projet), v:m0.projet || ''}
   ], onOk:v => {
-    const montant = Math.abs(Number(String(v.montant).replace(',', '.')));
-    if(!montant) return 'Indique un montant supérieur à zéro.';
+    const montant = Math.abs(Number(String(v.montant).replace(/\s/g, '').replace(',', '.')));
+    if(!Number.isFinite(montant) || !montant) return 'Indique un montant supérieur à zéro.';
+    if(montant > MAX_MONTANT) return 'Un mouvement ne peut pas dépasser ' + eur(MAX_MONTANT) + '.';
     if(!v.date) return 'Indique une date.';
     if(v.categorie === NOUVEAU && !propreNom(v.categorieNouveau)) return 'Donne un nom à la nouvelle catégorie.';
     if(v.compte === NOUVEAU && !propreNom(v.compteNouveau)) return 'Donne un nom au nouveau compte.';
     const categorie = v.categorie === NOUVEAU ? assurerCategorie(v.categorieNouveau) : v.categorie;
     const compte = v.compte === NOUVEAU ? assurerCompte(v.compteNouveau) : v.compte;
-    const d = {type:v.type === 'revenu' ? 'revenu' : 'depense', montant, date:v.date, libelle:v.libelle, categorie, compte, projet:v.projet || null};
+    const d = {type:v.type === 'revenu' ? 'revenu' : 'depense', montant, date:v.date, libelle:v.libelle, categorie, compte, projet:v.projet || null, modif:maintenant()};
     if(ex){ const avant = ex.projet; Object.assign(ex, d); toucherProjet(avant); toucherProjet(ex.projet); toast('Mouvement modifié'); }
     else { ajouter('mouvements', {cree:maintenant(), ...d}); toucherProjet(d.projet); toast((d.type === 'revenu' ? 'Entrée' : 'Dépense') + ' de ' + eur(montant) + ' ajoutée'); }
     if(apres) apres();
@@ -3074,9 +3121,10 @@ function ficheGestion(type, brouillon = null){
     const vus = new Set(b.lignes.filter(x => x.orig !== null).map(x => x.orig));
     (comptes ? DB.comptes : DB.categories).forEach(c => { const nom = comptes ? c.nom : c;
       if(!vus.has(nom) && !groupes.has(cleNom(nom))) liste.push(c); });
-    const suivre = m => { if(m[champ] && renomme.has(m[champ])) m[champ] = renomme.get(m[champ]); };
-    DB.mouvements.forEach(suivre);
-    DB.corbeille.forEach(e => { if(e.type === 'mouvements') suivre(e.element); });   /* un mouvement restauré plus tard aura le bon nom */
+    const quand = maintenant(), suivre = (m, vivant) => { if(!m[champ] || !renomme.has(m[champ]) || renomme.get(m[champ]) === m[champ]) return;
+      m[champ] = renomme.get(m[champ]); if(vivant) m.modif = quand; };
+    DB.mouvements.forEach(m => suivre(m, true));
+    DB.corbeille.forEach(e => { if(e.type === 'mouvements') suivre(e.element, false); });   /* un mouvement restauré plus tard aura le bon nom */
     if(comptes){ DB.comptes = liste; if(b.sansStats !== undefined) DB.reglages.sansCompteStats = b.sansStats; }
     else {
       /* Couleurs : une catégorie gardée, renommée ou fusionnée garde celle de la ligne conservée ;
@@ -3117,7 +3165,7 @@ function formProjet(p0 = {}){
     {n:'budget', l:'Budget (€)', t:'nombre', v:p0.budget ?? '', demi:true, aide:'facultatif'}
   ], onOk:v => {
     if(!v.nom) return 'Donne un nom au projet.';
-    const d = {nom:v.nom, resume:v.resume, prochaineAction:v.prochaineAction, echeance:v.echeance, budget:v.budget ? Math.abs(Number(v.budget)) : null, modif:maintenant()};
+    const d = {nom:v.nom, resume:v.resume, prochaineAction:v.prochaineAction, echeance:v.echeance, budget:v.budget ? positif(Math.abs(Number(v.budget.replace(',', '.'))), MAX_BUDGET) : null, modif:maintenant()};
     if(ex){ Object.assign(ex, d); toast('Projet modifié'); }
     else { ajouter('projets', d); toast('Projet créé'); }
   }});
@@ -3300,7 +3348,7 @@ function ficheCategoriser(){
     <div class="actions"><button type="button" class="btn" data-action="fermer">Plus tard</button><button class="btn p" type="submit">Enregistrer</button></div></form>`, {large:true});
   $('#form-cat').onsubmit = e => {
     e.preventDefault(); let n = 0;
-    l.forEach(m => { const v = e.target.elements[m.id] && e.target.elements[m.id].value; if(v){ m.categorie = v; n++; toucherProjet(m.projet); } });
+    l.forEach(m => { const v = e.target.elements[m.id] && e.target.elements[m.id].value; if(v){ m.categorie = v; m.modif = maintenant(); n++; toucherProjet(m.projet); } });
     fermerModale(); sauver(); rendre(); toast(n ? pluriel(n, 'dépense catégorisée', 'dépenses catégorisées') : 'Rien de changé');
   };
 }
@@ -3540,7 +3588,7 @@ const ACTIONS = {
 
   /* Inbox */
   'inbox-traiter': el => { const x = DB.inbox.find(i => i.id === el.dataset.id); if(x) ficheCapture(x.text, x.id); },
-  'inbox-archiver': el => { const x = DB.inbox.find(i => i.id === el.dataset.id); if(!x) return; x.status = 'archived'; x.archived = maintenant(); sauver(); rendre(); toast('Archivé'); },
+  'inbox-archiver': el => { const x = DB.inbox.find(i => i.id === el.dataset.id); if(!x) return; x.status = 'archived'; x.archived = x.modif = maintenant(); sauver(); rendre(); toast('Archivé'); },
   'inbox-supprimer': async el => { const x = DB.inbox.find(i => i.id === el.dataset.id); if(!x) return;
     if(!await confirmerSuppression(x, {titre:'Supprimer cet élément ?', texte:`« ${esc(extrait(x.text, 80))} » sera mis à la corbeille.`})) return;
     retirerVersCorbeille('inbox', x); sauver(); rendre(); toast('Élément mis à la corbeille'); },
@@ -3875,6 +3923,8 @@ $('#palette').addEventListener('mousedown', e => { if(e.target.id === 'palette')
    L. RECHERCHE — un seul index, trié par pertinence.
       Panneau rapide sous la barre (/) et page complète (Entrée → #/recherche?q=…).
       « #tag » : tout ce qui porte ce tag, tous modules confondus.
+      Filtres (combinables avec des mots) : projet:maison (ou projet:"Achat maison"), montant>50, montant<=100,
+      montant:12,50, date:2026-09 (ou 2026, 2026-09-15, 09/2026, 15/09/2026), date>2026-06, avant:2026-01, après:2026-06-30.
    ========================================================================== */
 const MODULES_RECHERCHE = [['taches', 'Tâches', 'coche', 'bleu'], ['notes', 'Notes', 'doc', 'orange'], ['documents', 'Documents', 'document', 'bleu'], ['finances', 'Finances', 'euro', 'vert'],
   ['contacts', 'Contacts', 'personnes', 'rose'], ['projets', 'Projets', 'dossier', 'violet'], ['inbox', 'Inbox', 'ampoule', 'jaune']]
@@ -3888,21 +3938,27 @@ function indexRecherche(){
   const cle = versionDonnees + '|' + Math.floor(Date.now() / 60000);
   if(cacheIndex && cacheIndex.cle === cle && cacheIndex.db === DB) return cacheIndex.l;
   const l = [], noms = new Map(DB.projets.map(p => [p.id, p.nom])), nomDe = id => noms.get(id) || '';
-  const ajout = (m, o) => l.push({m, textes:[], long:'', sous:'', date:'', archive:false, tags:[], ...o});
-  DB.projets.forEach(p => ajout('projets', {titre:p.nom, textes:[p.resume, p.prochaineAction], h:href('projet', p.id), sous:p.archive ? 'projet archivé' : extrait(p.resume, 70), date:p.modif, archive:p.archive}));
+  /* projet : nom du projet (filtre projet:) · montant : mouvements seulement (filtre montant) · jour : date principale (filtre date) */
+  const ajout = (m, o) => l.push({m, textes:[], long:'', sous:'', date:'', archive:false, tags:[], projet:'', montant:null, jour:'', ...o});
+  DB.projets.forEach(p => ajout('projets', {titre:p.nom, textes:[p.resume, p.prochaineAction], h:href('projet', p.id), sous:p.archive ? 'projet archivé' : extrait(p.resume, 70), date:p.modif, archive:p.archive,
+    projet:p.nom, jour:p.echeance || jourDe(p.modif)}));
   DB.documents.forEach(x => ajout('documents', {titre:x.titre, textes:[x.url, nomDe(x.projet)], long:x.note, h:x.url && !estDrive(x.url) ? x.url : href('document', x.id), externe:!!x.url && !estDrive(x.url),
-    sous:[typeDocument(x.url).nom, x.echeance ? 'échéance ' + dateCourte(x.echeance) : '', nomDe(x.projet)].filter(Boolean).join(' · '), date:x.modif, archive:x.archive, tags:x.tags}));
+    sous:[typeDocument(x.url).nom, x.echeance ? 'échéance ' + dateCourte(x.echeance) : '', nomDe(x.projet)].filter(Boolean).join(' · '), date:x.modif, archive:x.archive, tags:x.tags,
+    projet:nomDe(x.projet), jour:x.echeance || jourDe(x.modif)}));
   DB.taches.forEach(t => ajout('taches', {titre:t.nom, textes:[nomDe(t.projet), t.date ? labelJour(t.date) : ''], h:'#/taches?q=' + encodeURIComponent(t.nom),
-    sous:[t.fait ? 'terminée ' + ilya(t.faitLe) : t.date ? labelJour(t.date) : 'sans date', nomDe(t.projet)].filter(Boolean).join(' · '), date:t.modif, archive:t.archive, tags:t.tags}));
+    sous:[t.fait ? 'terminée ' + ilya(t.faitLe) : t.date ? labelJour(t.date) : 'sans date', nomDe(t.projet)].filter(Boolean).join(' · '), date:t.modif, archive:t.archive, tags:t.tags,
+    projet:nomDe(t.projet), jour:t.date || jourDe(t.modif)}));
   DB.notes.forEach(n => ajout('notes', {titre:n.titre, textes:[nomDe(n.projet)], long:texteBrut(n.contenu), h:href('note', n.id),
-    sous:['modifiée ' + ilya(n.modif), nomDe(n.projet)].filter(Boolean).join(' · '), date:n.modif, archive:n.archive, tags:n.tags}));
+    sous:['modifiée ' + ilya(n.modif), nomDe(n.projet)].filter(Boolean).join(' · '), date:n.modif, archive:n.archive, tags:n.tags, projet:nomDe(n.projet), jour:jourDe(n.modif)}));
   DB.mouvements.forEach(m => ajout('finances', {titre:(m.libelle || m.categorie || 'Mouvement') + ' · ' + (m.type === 'revenu' ? '+' : '') + eur(m.montant),
     textes:[m.categorie, m.compte, nomDe(m.projet), String(m.montant).replace('.', ','), nomMois(m.date.slice(0, 7))],
-    h:'#/finances?q=' + encodeURIComponent(m.libelle || m.categorie || String(m.montant).replace('.', ',')), sous:[dateCourte(m.date), m.categorie, m.compte, nomDe(m.projet)].filter(Boolean).join(' · '), date:m.date}));
+    h:'#/finances?q=' + encodeURIComponent(m.libelle || m.categorie || String(m.montant).replace('.', ',')), sous:[dateCourte(m.date), m.categorie, m.compte, nomDe(m.projet)].filter(Boolean).join(' · '), date:m.date,
+    projet:nomDe(m.projet), montant:Number(m.montant) || 0, jour:m.date}));
   DB.contacts.forEach(c => ajout('contacts', {titre:c.nom, textes:[[...c.aDire, ...c.aRepondre, ...c.idees].map(i => i.t).join(' '), nomDe(c.projet), c.telephone, c.autreTelephone, c.email, c.adresse], long:c.nouvelles,
-    h:href('contact', c.id), sous:[c.anniversaire ? 'anniversaire le ' + dateCourte(c.anniversaire) : '', nomDe(c.projet)].filter(Boolean).join(' · '), date:c.modif, archive:c.archive, tags:c.tags}));
-  inboxOuverte().forEach(x => ajout('inbox', {titre:x.text, h:'#/inbox', sous:'capturé ' + ilya(x.created), date:x.created}));
-  l.forEach(e => { e.n = norm(e.titre); e.tn = e.tags.map(norm); e.r = norm(e.textes.join(' ') + ' ' + e.tags.join(' ') + ' ' + e.long); });
+    h:href('contact', c.id), sous:[c.anniversaire ? 'anniversaire le ' + dateCourte(c.anniversaire) : '', nomDe(c.projet)].filter(Boolean).join(' · '), date:c.modif, archive:c.archive, tags:c.tags,
+    projet:nomDe(c.projet), jour:c.derniereConversation || jourDe(c.modif)}));
+  inboxOuverte().forEach(x => ajout('inbox', {titre:x.text, h:'#/inbox', sous:'capturé ' + ilya(x.created), date:x.created, jour:jourDe(x.created)}));
+  l.forEach(e => { e.n = norm(e.titre); e.tn = e.tags.map(norm); e.r = norm(e.textes.join(' ') + ' ' + e.tags.join(' ') + ' ' + e.long); e.pn = norm(e.projet); });
   cacheIndex = {cle, db:DB, l};
   return l;
 }
@@ -3919,18 +3975,48 @@ function pertinence(e, mots, debuts){
   score += !q ? 1 : e.n === q ? 4 : e.n.startsWith(q) ? 2 : mots.length > 1 && e.n.includes(q) ? 1 : 0;
   return e.archive ? score - .5 : score;   /* à égalité, ce qui est archivé passe après */
 }
-/* « #tag » filtre sur les tags (exacts) ; les autres mots sont cherchés partout */
+/* Période d'un filtre de date : « 2026 », « 2026-09 », « 2026-09-15 », « 09/2026 », « 15/09/2026 » → [premier jour, dernier jour] */
+function periodeRecherche(v){
+  let m;
+  if((m = /^(\d{4})$/.exec(v))) return [m[1] + '-01-01', m[1] + '-12-31'];
+  if((m = /^(\d{4})-(\d{1,2})$/.exec(v)) || (m = /^(\d{1,2})\/(\d{4})$/.exec(v))){
+    const [a, mm] = m[1].length === 4 ? [m[1], m[2]] : [m[2], m[1]], ym = a + '-' + mm.padStart(2, '0');
+    return Number(mm) >= 1 && Number(mm) <= 12 ? [ym + '-01', ym + '-' + pad(joursDansMois(ym))] : null;
+  }
+  const j = dateISO(v); return j ? [j, j] : null;
+}
+/* Un mot « clé:valeur » ou « clé>valeur » reconnu devient un filtre ; sinon c'est un mot ordinaire */
+function filtreRecherche(brut){
+  const m = /^([a-zà-ÿ]+)(>=|<=|:|>|<)(.+)$/i.exec(brut); if(!m) return null;
+  const cle = norm(m[1]), op = m[2], v = m[3].replace(/^"|"$/g, '').trim(); if(!v) return null;
+  if(cle === 'projet' && op === ':'){ const n = norm(v); return e => !!e.pn && e.pn.includes(n); }
+  if(cle === 'montant'){
+    const x = Number(v.replace(/\s/g, '').replace(',', '.').replace(/€$/, '')); if(!Number.isFinite(x)) return null;
+    const t = {':':a => Math.abs(a - x) < .005, '>':a => a > x, '<':a => a < x, '>=':a => a >= x - .005, '<=':a => a <= x + .005}[op];
+    return e => e.montant !== null && t(e.montant);
+  }
+  if(cle === 'date' || cle === 'avant' || cle === 'apres'){
+    const p = periodeRecherche(v); if(!p) return null;
+    const [d, f] = p, sens = cle === 'avant' ? '<' : cle === 'apres' ? '>' : op;
+    const t = {':':j => j >= d && j <= f, '>':j => j > f, '<':j => j < d, '>=':j => j >= d, '<=':j => j <= f}[sens];
+    return t ? e => !!e.jour && t(e.jour) : null;
+  }
+  return null;
+}
+/* « #tag » filtre sur les tags (exacts) ; « projet:… », « montant>… », « date:… » sont des filtres ; les autres mots sont cherchés partout */
 function lireRequete(q){
-  const bruts = String(q || '').split(/\s+/).filter(Boolean);
-  const tags = bruts.filter(m => m.startsWith('#') && m.length > 1).map(m => norm(m.replace(/^#+/, ''))).filter(Boolean);
-  const mots = bruts.filter(m => !m.startsWith('#')).map(norm).filter(Boolean);
-  return {tags, mots, surligner:[...mots, ...tags]};
+  const bruts = String(q || '').match(/[^\s:"<>=]+(?:>=|<=|:|>|<)"[^"]*"?|\S+/g) || [];
+  const filtres = [], reste = [];
+  bruts.forEach(b => { const f = b.startsWith('#') ? null : filtreRecherche(b); if(f) filtres.push(f); else reste.push(b); });
+  const tags = reste.filter(m => m.startsWith('#') && m.length > 1).map(m => norm(m.replace(/^#+/, ''))).filter(Boolean);
+  const mots = reste.filter(m => !m.startsWith('#')).map(m => norm(m.replace(/"/g, ''))).filter(Boolean);
+  return {tags, mots, filtres, surligner:[...mots, ...tags]};
 }
 function rechercher(q){
-  const {tags, mots, surligner} = lireRequete(q);
+  const {tags, mots, filtres, surligner} = lireRequete(q);
   const debuts = mots.map(m => new RegExp('(^|[^a-z0-9])' + echapRegex(m)));   /* mot trouvé en début de mot */
-  const resultats = !(tags.length || mots.length) ? [] : indexRecherche()
-    .filter(e => tags.every(t => e.tn.includes(t))).map(e => ({...e, score:pertinence(e, mots, debuts)})).filter(e => e.score > 0)
+  const resultats = !(tags.length || mots.length || filtres.length) ? [] : indexRecherche()
+    .filter(e => tags.every(t => e.tn.includes(t)) && filtres.every(f => f(e))).map(e => ({...e, score:pertinence(e, mots, debuts)})).filter(e => e.score > 0)
     .sort((a, b) => b.score - a.score || String(b.date).localeCompare(String(a.date)));
   return {mots:surligner, tags, resultats};
 }
@@ -3972,9 +4058,9 @@ function resultatsGlobaux(q){
 let ongletRecherche = 'tout', limiteRecherche = 50;
 const PAR_PAGE = 50;
 function pageRecherche(){
-  const q = lireRoute().params.get('q') || '', {tags, mots} = lireRequete(q);
-  const seulTag = tags.length === 1 && !mots.length;
-  return titre(seulTag ? 'Tag #' + esc(q.trim().replace(/^#+/, '')) : 'Recherche', seulTag ? 'Tout ce qui porte ce tag, dans tous les modules.' : 'Tous les mots tapés doivent apparaître ; les accents et les majuscules ne comptent pas. « #tag » filtre sur un tag.') +
+  const q = lireRoute().params.get('q') || '', {tags, mots, filtres} = lireRequete(q);
+  const seulTag = tags.length === 1 && !mots.length && !filtres.length;
+  return titre(seulTag ? 'Tag #' + esc(q.trim().replace(/^#+/, '')) : 'Recherche', seulTag ? 'Tout ce qui porte ce tag, dans tous les modules.' : 'Tous les mots tapés doivent apparaître ; les accents et les majuscules ne comptent pas. « #tag » filtre sur un tag. Filtres : projet:maison, montant>50, montant<100, date:2026-09, avant:2026-01, après:2026-06.') +
     `<div class="barre-outils"><label class="filtre recherche-page">${ico('recherche', 16)}<input type="search" id="recherche-page" value="${esc(q)}" placeholder="Rechercher dans tout Life Panel…" autocomplete="off" aria-label="Rechercher" autofocus></label></div>
     <div id="resultats-page">${resultatsPage(q)}</div>`;
 }
@@ -3985,7 +4071,7 @@ function ligneResultat(r, mots){
     ${sous ? `<span class="s">${sous}</span>` : ''}${ext ? `<span class="extrait-r">${ext}</span>` : ''}</span></a></li>`;
 }
 function resultatsPage(q){
-  if(!q.trim()) return vide('Tape un ou plusieurs mots dans le champ ci-dessus (ou « #tag »).');
+  if(!q.trim()) return vide('Tape un ou plusieurs mots dans le champ ci-dessus (ou « #tag », « projet:… », « montant>… », « date:… »).');
   const {mots, resultats} = rechercher(q), groupes = groupesRecherche(resultats);
   if(ongletRecherche !== 'tout' && !groupes.some(g => g.m.id === ongletRecherche)) ongletRecherche = 'tout';
   /* Des boutons-filtres (et non des onglets au sens strict) : aria-pressed dit lequel est actif */
@@ -4051,7 +4137,8 @@ function telecharger(nom, contenu, type){
   a.download = nom; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1500);
 }
-const celluleCSV = v => { const s = String(v ?? ''); return /[;"\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+/* Une cellule qui commence par = + - @ (ou tabulation) serait lue comme une formule par Excel : on la préfixe d'une apostrophe */
+const celluleCSV = v => { let s = String(v ?? ''); if(/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[;"\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
 function csvFinances(){
   const l = ['date;type;montant;categorie;libelle;projet;compte'];
   DB.mouvements.slice().sort((a, b) => (a.date || '').localeCompare(b.date || '')).forEach(m =>
@@ -4151,9 +4238,9 @@ function rebaserDemo(src){
   L('projets').forEach(p => { p.echeance = J(p.echeance); p.modif = T(p.modif); });
   L('taches').forEach(t => { t.date = J(t.date); t.modif = T(t.modif); t.faitLe = T(t.faitLe); });
   L('notes').forEach(n => { n.cree = T(n.cree); n.modif = T(n.modif); });
-  L('mouvements').forEach(m => { m.date = J(m.date); m.cree = T(m.cree); });
+  L('mouvements').forEach(m => { m.date = J(m.date); m.cree = T(m.cree); m.modif = T(m.modif); });
   L('contacts').forEach(c => { c.derniereConversation = J(c.derniereConversation); c.modif = T(c.modif); });
-  L('inbox').forEach(x => { x.created = T(x.created); x.archived = T(x.archived); });
+  L('inbox').forEach(x => { x.created = T(x.created); x.archived = T(x.archived); x.modif = T(x.modif); });
   L('documents').forEach(x => { x.echeance = J(x.echeance); x.ajoute = T(x.ajoute); x.modif = T(x.modif); });
   if(d.reglages) d.reglages.lastReview = T(d.reglages.lastReview);
   return d;
@@ -4507,34 +4594,40 @@ function blocDriveProjet(p){
    dernière lecture (sha). On relit, on fusionne avec la « base » (dernière version synchronisée), on réessaie.
    ========================================================================== */
 const GH_API = window.__API_GITHUB__ || 'https://api.github.com';   /* __API_GITHUB__ : uniquement pour les tests */
-const gh = {cfg:null, sha:null, base:null, etat:'aucun', erreur:'', faiteA:null, enCours:null, aRefaire:false, t:null, controle:0,
+const gh = {cfg:null, sha:null, base:null, lu:null, etat:'aucun', erreur:'', faiteA:null, enCours:null, aRefaire:false, t:null, controle:0,
   attente:false, hors:false, apresModale:false, message:''};
 const ghActif = () => !!(gh.cfg && gh.cfg.jeton) && !DB.reglages.demo;
 const cleDepot = c => c.owner + '/' + c.repo + '/' + c.chemin;
 const appareilParDefaut = () => /Android|iPhone|iPad/i.test(navigator.userAgent) ? 'Téléphone' : 'PC';
 class ErreurGitHub extends Error { constructor(code, message){ super(message); this.code = code; } }
-/* Texte ↔ base64, en UTF-8 (accents, émojis) */
+/* Texte ↔ base64, en UTF-8 (accents, émojis). Fonctions natives du navigateur quand elles existent
+   (Chromium 140+ : ~35 fois plus rapides, la page ne se fige plus à l'envoi), sinon conversion à la main. */
 function versBase64(t){
-  const o = new TextEncoder().encode(t); let b = '';
+  const o = new TextEncoder().encode(t);
+  if(typeof o.toBase64 === 'function') return o.toBase64();
+  let b = '';
   for(let i = 0; i < o.length; i += 0x8000) b += String.fromCharCode.apply(null, o.subarray(i, i + 0x8000));
   return btoa(b);
 }
 function depuisBase64(b64){
-  const b = atob(String(b64).replace(/\s/g, '')), o = new Uint8Array(b.length);
+  const s = String(b64).replace(/\s/g, '');
+  if(typeof Uint8Array.fromBase64 === 'function') return new TextDecoder().decode(Uint8Array.fromBase64(s));
+  const b = atob(s), o = new Uint8Array(b.length);
   for(let i = 0; i < b.length; i++) o[i] = b.charCodeAt(i);
   return new TextDecoder().decode(o);
 }
-async function ghAppel(chemin, {method = 'GET', corps = null, brut = false, cfg = gh.cfg} = {}){
+async function ghAppel(chemin, {method = 'GET', corps = null, brut = false, cfg = gh.cfg, etag = ''} = {}){
   const ctrl = new AbortController(), minuterie = setTimeout(() => ctrl.abort(), 30000);
   try {
     const h = {'Authorization':'Bearer ' + cfg.jeton, 'Accept':brut ? 'application/vnd.github.raw+json' : 'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28'};
     if(corps) h['Content-Type'] = 'application/json';
+    if(etag) h['If-None-Match'] = etag;   /* GitHub répond 304 sans contenu si rien n'a changé (et ne le compte pas dans son quota) */
     let r;
-    try { r = await fetch(GH_API + chemin, {method, cache:'no-store', headers:h, body:corps ? JSON.stringify(corps) : null, signal:ctrl.signal}); }   /* jamais de cache : toujours la dernière version */
+    try { r = await fetch(GH_API + chemin, {method, cache:'no-store', headers:h, body:corps ? JSON.stringify(corps) : null, signal:ctrl.signal}); }   /* jamais de cache du navigateur : toujours la dernière version */
     catch(e){ const x = new Error('pas de réseau'); x.name = 'HorsLigne'; throw x; }
     const texte = await r.text(); let donnees = null;
     if(!brut){ try { donnees = texte ? JSON.parse(texte) : null; } catch(e){ donnees = null; } }
-    return {statut:r.status, ok:r.ok, donnees, texte};
+    return {statut:r.status, ok:r.ok, donnees, texte, etag:r.headers.get('ETag') || ''};
   } finally { clearTimeout(minuterie); }
 }
 const ghDepot = (c = gh.cfg) => '/repos/' + encodeURIComponent(c.owner) + '/' + encodeURIComponent(c.repo);
@@ -4545,20 +4638,27 @@ function erreurStatut(r){
   if(r.statut === 403 || r.statut === 404) return new ErreurGitHub('acces', 'GitHub refuse l’accès : vérifie le dépôt et que la clé a le droit « Contents : Read and write ».');
   return new ErreurGitHub('reponse', 'Réponse inattendue de GitHub (' + r.statut + ').');
 }
-/* {absent} ou {sha, d (données normalisées), par ({appareil, le} : qui a écrit)} ; au-delà de 1 Mo, lecture « brute » */
+/* {absent} ou {sha, d (données normalisées), R (d en texte), par ({appareil, le} : qui a écrit)}.
+   Dernière lecture gardée en mémoire (gh.lu) : si GitHub répond « inchangé » (304), on la réutilise sans rien télécharger.
+   Au-delà de 1 Mo, GitHub ne joint pas le contenu : on le lit par l'identifiant (sha) de cette version précise,
+   jamais « la dernière version » (un autre appareil a pu écrire entre les deux demandes). */
 async function ghLire(cfg = gh.cfg){
-  const r = await ghAppel(ghFichier(cfg), {cfg});
-  if(r.statut === 404) return {absent:true};
+  const lu = gh.lu && gh.lu.cle === cleDepot(cfg) ? gh.lu : null;
+  const r = await ghAppel(ghFichier(cfg), {cfg, etag:lu ? lu.etag : ''});
+  if(r.statut === 304 && lu) return {sha:lu.sha, d:JSON.parse(lu.R), R:lu.R, par:lu.par};
+  if(r.statut === 404){ gh.lu = null; return {absent:true}; }
   if(!r.ok || !r.donnees) throw erreurStatut(r);
   let texte = r.donnees.content ? depuisBase64(r.donnees.content) : '';
-  if(!r.donnees.content && r.donnees.size > 0){ const b = await ghAppel(ghFichier(cfg), {brut:true, cfg}); if(!b.ok) throw erreurStatut(b); texte = b.texte; }
+  if(!r.donnees.content && r.donnees.size > 0){ const b = await ghAppel(ghDepot(cfg) + '/git/blobs/' + encodeURIComponent(r.donnees.sha), {brut:true, cfg}); if(!b.ok) throw erreurStatut(b); texte = b.texte; }
   let brut = null; try { brut = JSON.parse(texte); } catch(e){ brut = null; }
   if(!brut || typeof brut !== 'object' || Array.isArray(brut)) throw new ErreurGitHub('illisible', `Le fichier ${cfg.chemin} sur GitHub n’est pas une sauvegarde LIFE PANEL lisible : rien n’a été modifié.`);
   /* Écrit par une version plus récente : cette page effacerait ses nouveautés en réécrivant le fichier */
   if(Number(brut.version) > VERSION) throw new ErreurGitHub('version', 'Tes données ont été enregistrées par une version plus récente de LIFE PANEL : recharge la page (F5) pour la mettre à jour. Rien n’a été envoyé.');
   const par = brut.synchro && typeof brut.synchro === 'object' ? {appareil:txt(brut.synchro.appareil), le:txt(brut.synchro.le)} : null;
   const d = normaliser(brut); d.reglages.demo = false;   /* jamais de mode démo venu d'ailleurs */
-  return {sha:r.donnees.sha, d, par};
+  const R = JSON.stringify(d);
+  gh.lu = r.etag ? {cle:cleDepot(cfg), etag:r.etag, sha:r.donnees.sha, R, par} : null;
+  return {sha:r.donnees.sha, d, R, par};
 }
 /* Écrit d (déjà normalisé) ; {conflit} si GitHub refuse parce que le fichier a changé depuis la version sha */
 async function ghEcrire(d, sha, cfg = gh.cfg){
@@ -4721,7 +4821,7 @@ async function ghCycle(raison){
       const w = await ghEcrire(JSON.parse(L), null, cfg); if(!toujours()) return 'annule'; if(w.conflit) continue;
       ghNouvelleBase(w.sha, L); return 'cree';
     }
-    const R = JSON.stringify(r.d), B = gh.base;
+    const R = r.R, B = gh.base;
     if(R === L){ ghNouvelleBase(r.sha, R); return 'ajour'; }
     if(B !== null && R === B){   /* rien de changé ailleurs : on envoie */
       const w = await ghEcrire(JSON.parse(L), r.sha, cfg); if(!toujours()) return 'annule'; if(w.conflit) continue;
@@ -4814,7 +4914,7 @@ async function ghConnecter(v){
       const w = await ghEcrire(JSON.parse(L), null, cfg); if(w.conflit) return 'Le fichier vient d’être créé depuis un autre appareil : recommence.';
       base = L; sha = w.sha;
     } else {
-      const R = JSON.stringify(dist.d);
+      const R = dist.R;
       if(R === L){ base = R; sha = dist.sha; }
       else {
         const prendre = !aDesDonnees(DB) ? 'github' : await choisir({titre:'Quelles données garder ?', options:[{v:'navigateur', t:'Garder celles de ce navigateur'}, {v:'github', t:'Prendre celles de GitHub', p:true}],
@@ -4853,7 +4953,7 @@ async function ghDeconnecter(){
   if(!await confirmer({titre:'Arrêter la synchronisation ?', ok:'Arrêter', danger:false,
     texte:'La clé GitHub est effacée de ce navigateur. Tes données restent ici et sur GitHub ; tu pourras te reconnecter à tout moment.'})) return;
   clearTimeout(gh.t);
-  Object.assign(gh, {cfg:null, sha:null, base:null, etat:'aucun', erreur:'', faiteA:null, attente:false, hors:false, apresModale:false});
+  Object.assign(gh, {cfg:null, sha:null, base:null, lu:null, etat:'aucun', erreur:'', faiteA:null, attente:false, hors:false, apresModale:false});
   try { await idbSupprimer('github'); await idbSupprimer('github-base'); } catch(e){}
   rendre(); toast('Synchronisation arrêtée sur cet appareil');
 }
@@ -4972,7 +5072,7 @@ async function demarrer(){
   });
   window.addEventListener('online', () => { if(ghActif()) ghSynchroniser('reseau'); });
   setInterval(() => { if(ghActif() && document.visibilityState === 'visible' && !gh.enCours && Date.now() - gh.controle > 170000) ghSynchroniser('periodique'); }, 60000);
-  window.addEventListener('hashchange', () => { fermerModale(); fermerPalette(); rendre(); });
+  window.addEventListener('hashchange', () => { fermerModale({historique:false}); fermerPalette(); rendre(); });
   /* Une erreur imprévue n'est plus silencieuse : un message l'annonce */
   const signaler = m => { console.error(m); toast('Un problème est survenu : ' + (m && m.message || m) + '. Recharge la page (F5) si quelque chose ne répond plus.'); };
   window.addEventListener('error', e => signaler(e.error || e.message));
