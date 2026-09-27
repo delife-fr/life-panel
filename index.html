@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.15
+  LIFE PANEL — v3.16
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -78,6 +78,9 @@
   v3.15 : notifications (page Données) : résumé du matin, rappel des tâches à l'heure, anniversaires, documents,
   envoyés par GitHub Actions depuis le dépôt privé (notifications/rappels.js, toutes les 30 min) et affichés par
   Android ou Windows même LIFE PANEL fermée ; heures calmes 0 h – 6 h, à l'heure de chaque appareil.
+  v3.16 : menu dans un volet à gauche, caché à toutes les largeurs : bouton ☰ (ou touche m) ; modules, puis
+  Commandes, Corbeille et Réglages ; fermé au choix d'une entrée, par Échap, par un clic à côté ou par Retour.
+  Barre du haut allégée : ☰, logo, recherche, capture, état de la synchro.
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
   seule architecture :
@@ -146,16 +149,26 @@ code{font-family:var(--mono);font-size:.9em;background:#ffffff0f;padding:1px 5px
 .logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(145deg,#5b72d6,#7d5fc1);color:#fff;box-shadow:0 2px 8px #0006}
 .marque-txt strong{display:block;font-size:14px;line-height:1.2}
 .marque-txt span{display:block;font-size:11px;color:var(--texte-faible)}
-.menu{display:flex;gap:2px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
-.menu::-webkit-scrollbar{display:none}
-.menu a{display:flex;align-items:center;gap:7px;color:var(--texte-doux);font-size:13.5px;padding:8px 10px;border-radius:9px;white-space:nowrap;transition:background .18s,color .18s}
-.menu a:hover{background:#ffffff0d;color:var(--texte)}
-.menu a.actif{background:#ffffff14;color:var(--texte)}
-.menu a svg{color:var(--texte-faible);flex-shrink:0}
-.menu a.actif svg{color:var(--i-bleu)}
-.menu .badge{font-family:var(--mono);font-size:10.5px;background:#c9850030;color:var(--i-jaune);border-radius:99px;padding:0 6px;line-height:16px}
+.barre .marque{margin-right:auto}
+/* Volet de navigation : caché à gauche, ouvert par ☰ par-dessus la page (voile derrière) ; se referme au choix d'une entrée */
+.volet{position:fixed;top:0;left:0;bottom:0;z-index:56;width:min(284px,86vw);display:flex;flex-direction:column;gap:4px;padding:12px 12px 16px;background:var(--carte);border-right:1px solid var(--trait);box-shadow:18px 0 50px #00000080;overflow-y:auto;overscroll-behavior:contain;transform:translateX(-104%);visibility:hidden;transition:transform .22s ease,visibility 0s linear .22s}
+.volet.ouvert{transform:none;visibility:visible;transition:transform .22s ease}
+.voile-volet{position:fixed;inset:0;z-index:55;background:#101012a6;opacity:0;pointer-events:none;transition:opacity .2s}
+.voile-volet.on{opacity:1;pointer-events:auto}
+.volet-tete{display:flex;align-items:center;gap:10px;padding:2px 2px 12px 4px;margin-bottom:4px;border-bottom:1px solid var(--trait-doux)}
+.volet-tete .fermer{margin-left:auto}
+.volet .menu{display:flex;flex-direction:column;gap:2px}
+.volet-pied{margin-top:auto;padding-top:8px;border-top:1px solid var(--trait-doux);display:flex;flex-direction:column;gap:2px}
+.volet a,.ligne-volet{display:flex;align-items:center;gap:11px;width:100%;color:var(--texte-doux);font:inherit;font-size:14px;text-align:left;padding:9px 12px;border:0;border-radius:10px;background:none;cursor:pointer;transition:background .15s,color .15s}
+.volet a:hover,.ligne-volet:hover{background:#ffffff0d;color:var(--texte)}
+.volet a.actif{background:#ffffff14;color:var(--texte)}
+.volet a svg,.ligne-volet svg{color:var(--texte-faible);flex-shrink:0}
+.volet a.actif svg{color:var(--i-bleu)}
+.volet .badge,.ligne-volet kbd{margin-left:auto}
+.volet .badge{font-family:var(--mono);font-size:10.5px;background:#c9850030;color:var(--i-jaune);border-radius:99px;padding:0 6px;line-height:16px}
+.volet .badge.gris{background:#ffffff12;color:var(--texte-faible)}
 .recherche-wrap{position:relative;flex-shrink:0}
-.recherche{display:flex;align-items:center;gap:8px;background:var(--carte);border:1px solid var(--trait);border-radius:9px;padding:7px 9px 7px 11px;width:240px;color:var(--texte-faible);transition:border-color .18s,box-shadow .18s}
+.recherche{display:flex;align-items:center;gap:8px;background:var(--carte);border:1px solid var(--trait);border-radius:9px;padding:7px 9px 7px 11px;width:280px;color:var(--texte-faible);transition:border-color .18s,box-shadow .18s}
 .recherche:focus-within{border-color:#4a80c8;box-shadow:0 0 0 3px #3987e526}
 .recherche input{border:0;background:transparent;outline:0;color:var(--texte);font-size:13.5px;width:100%;min-width:0}
 .recherche input::placeholder{color:var(--texte-faible)}
@@ -726,26 +739,7 @@ td.act{text-align:right;white-space:nowrap;width:1%}
 /* ==========================================================================
    11. ÉCRANS PLUS PETITS
    ========================================================================== */
-/* Barre du haut : les 10 entrées du menu gardent toujours icône + nom.
-   On libère d'abord de la place (nom « Life Panel », recherche), puis on resserre le menu ;
-   quand tout ne tient plus, la ligne des modules défile (doigt, molette ou pavé tactile). */
-@media (max-width:1720px){
-  .marque-txt{display:none}
-  .recherche{width:200px}
-}
-@media (max-width:1520px){
-  .barre{gap:10px}
-  .menu{gap:1px}
-  .menu a{padding:7px;gap:5px;font-size:13px}
-  .recherche{width:170px}
-  .recherche kbd{display:none}
-}
-@media (max-width:1365px){
-  .barre{gap:8px}
-  .menu{gap:0}
-  .menu a{padding:7px 6px;font-size:12.5px}
-  .recherche{width:150px}
-}
+/* Barre du haut : ☰, logo, recherche, capture, état (le menu est dans le volet, à toutes les largeurs) */
 @media (max-width:1200px){
   .c3{grid-column:span 6}.c4{grid-column:span 6}.c5,.c7,.c8{grid-column:span 12}
   .chiffres{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -757,17 +751,15 @@ td.act{text-align:right;white-space:nowrap;width:1%}
   .dossier-btn{width:auto;flex-shrink:0;white-space:nowrap}
   .fiche-grille{grid-template-columns:1fr}
   .barre{padding:10px 16px}
-  .recherche{width:140px}
+  .recherche{width:220px}
   .c3,.c4,.c6{grid-column:span 12}
   .chiffres.trois{grid-template-columns:1fr 1fr 1fr}
 }
-/* Téléphone : 1re ligne logo + boutons ronds ; 2e ligne les modules (qui défilent) et une loupe au bout.
+/* Téléphone : une seule ligne ☰, logo, loupe, capture, état.
    Appuyer sur la loupe déplie le champ de recherche sur toute la ligne ; il se replie ensuite tout seul. */
 @media (max-width:760px){
-  .barre{flex-wrap:wrap;gap:8px}
-  .marque{margin-right:auto}
-  .menu{order:3;flex:1 1 calc(100% - 44px)}
-  .recherche-wrap{order:4}
+  .barre{gap:8px}
+  .recherche kbd,.ligne-volet kbd{display:none}   /* raccourcis clavier : inutiles sur écran tactile */
   .recherche{width:36px;height:36px;padding:0;gap:0;justify-content:center;cursor:pointer}
   .recherche input{width:0;flex:0 0 0}
   .recherche-wrap.ouverte{position:absolute;left:16px;right:16px;bottom:10px;z-index:2}
@@ -780,7 +772,6 @@ td.act{text-align:right;white-space:nowrap;width:1%}
   .ligne-cat .nom-l{white-space:normal}
   .barre-cat,.entete-cat > span:nth-child(2),.entete-cat .lg{display:none}
   .entete-cat .ct{display:inline}
-  [data-depliable="mouvements"]{scroll-margin-top:124px}
 }
 @media (max-width:620px){
   .page{padding:20px 16px 26px}
@@ -790,7 +781,7 @@ td.act{text-align:right;white-space:nowrap;width:1%}
   .entete-carte .droite .filtre{flex:1}
   .nav-mois strong{min-width:0}
   .bonjour h1{font-size:25px}
-  .marque-txt{display:none}
+  .barre .marque-txt{display:none}
   .chiffres,.chiffres.trois{grid-template-columns:1fr}
   .form-grille > .champ.demi{grid-column:span 2}
   .choix-priorites{grid-template-columns:1fr}
@@ -821,11 +812,11 @@ td.act{text-align:right;white-space:nowrap;width:1%}
 <body>
 
 <header class="barre">
+  <button class="rond" id="btn-volet" data-action="volet" title="Menu" aria-label="Ouvrir le menu" aria-controls="volet" aria-expanded="false"></button>
   <a class="marque" href="#/accueil" aria-label="Life Panel, accueil">
     <span class="logo" id="logo"></span>
     <span class="marque-txt"><strong>Life Panel</strong><span>Ma vie, un seul endroit</span></span>
   </a>
-  <nav class="menu" id="menu" aria-label="Navigation principale"></nav>
   <div class="recherche-wrap" id="recherche-wrap">
     <label class="recherche">
       <span id="ic-recherche"></span>
@@ -835,10 +826,16 @@ td.act{text-align:right;white-space:nowrap;width:1%}
     <div class="resultats" id="resultats-globaux" hidden></div>
   </div>
   <button class="rond plus" id="btn-ajouter" data-action="capture" title="Capture rapide (touche c)" aria-label="Capture rapide"></button>
-  <button class="rond" id="btn-commandes" data-action="palette" title="Commandes (Ctrl+K)" aria-label="Ouvrir les commandes"></button>
-  <a class="rond" id="btn-reglages" href="#/donnees" title="Données et réglages" aria-label="Données et réglages"></a>
   <button class="rond ecriture" id="etat-ecriture" data-action="etat-ecriture" aria-live="polite" title="Écriture des données"></button>
 </header>
+<!-- Volet de navigation : caché, ouvert par le bouton ☰ (ou la touche m), par-dessus la page -->
+<div class="voile-volet" id="voile-volet"></div>
+<nav class="volet" id="volet" aria-label="Navigation principale" inert>
+  <div class="volet-tete"><span class="logo" id="logo-volet"></span><span class="marque-txt"><strong>Life Panel</strong><span>Ma vie, un seul endroit</span></span>
+    <button class="icone-btn fermer" data-action="volet-fermer" aria-label="Fermer le menu" title="Fermer (Échap)" id="volet-fermer"></button></div>
+  <div class="menu" id="menu"></div>
+  <div class="volet-pied" id="volet-pied"></div>
+</nav>
 
 <main class="page" id="vue"></main>
 
@@ -1430,6 +1427,7 @@ const ICONES = {
   courriel:'<rect x="3.4" y="5.4" width="17.2" height="13.2" rx="2.4"/><path d="M4 7.2l8 6 8-6"/>',
   telephone:'<path d="M5.2 4h3.1l1.7 4.1-2.1 1.4a11.5 11.5 0 0 0 6.6 6.6l1.4-2.1 4.1 1.7v3.1a1.6 1.6 0 0 1-1.7 1.6A16.5 16.5 0 0 1 3.6 5.7 1.6 1.6 0 0 1 5.2 4z"/>',
   agrandir:'<path d="M14 4h6v6M10 20H4v-6M20 4l-6.4 6.4M4 20l6.4-6.4"/>',
+  menu:'<path d="M4 6.5h16M4 12h16M4 17.5h16"/>',
   sync:'<path d="M19.6 10.2A8 8 0 0 0 5.4 7.2L3.8 9"/><path d="M3.8 4.6V9h4.4"/><path d="M4.4 13.8a8 8 0 0 0 14.2 3L20.2 15"/><path d="M20.2 19.4V15h-4.4"/>',
   base:'<ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/><path d="M4.5 5.5v13c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-13"/><path d="M4.5 12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8"/>'
 };
@@ -2808,7 +2806,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.15 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.16 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -2821,7 +2819,7 @@ const ROUTES = {accueil:pageAccueil, aujourdhui:pageAujourdhui, inbox:pageInbox,
 const FICHES = {note:{page:'notes', ouvrir:id => ficheNote(id)}, contact:{page:'contacts', ouvrir:id => ficheContact(id)}, document:{page:'documents', ouvrir:id => ficheDocument(id)}};
 const MENU = [['accueil','Accueil','maison'],['aujourdhui','Aujourd’hui','cible'],['inbox','Inbox','ampoule'],['taches','Tâches','coche'],
   ['projets','Projets','dossier'],['finances','Finances','portefeuille'],['notes','Notes','doc'],['documents','Documents','document'],['contacts','Contacts','personnes'],['revue','Revue','calendrier']];
-const PARENT = {projet:'projets'};   /* recherche et corbeille : pas d'onglet du menu */
+const PARENT = {projet:'projets'};   /* page d'un projet : l'entrée « Projets » du volet reste en surbrillance */
 const LISTES = {taches:listeTaches, projets:listeProjets, finances:listeFinances, notes:listeNotes, documents:listeDocuments, contacts:listeContacts};
 let routeAffichee = '', tAnim;
 
@@ -2861,8 +2859,7 @@ function rendre(){
   try { vue.innerHTML = ROUTES[r.nom](r.id); }
   catch(err){ console.error(err); vue.innerHTML = pageErreur(err); }
   const actif = PARENT[r.nom] || r.nom;
-  $$('#menu a').forEach(a => { const on = a.dataset.route === actif; a.classList.toggle('actif', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
-  if(change) montrerModuleActif();
+  $$('#volet a[data-route]').forEach(a => { const on = a.dataset.route === actif; a.classList.toggle('actif', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
   if(change){   /* animation et retour en haut seulement quand on change de page */
     void vue.offsetWidth; vue.classList.add('anim');
     $$('.carte', vue).forEach((c, i) => c.style.setProperty('--i', Math.min(i, 12)));
@@ -2874,17 +2871,10 @@ function rendre(){
   document.title = titrePage();
   const b = $('#badge-inbox'), n = inboxOuverte().length;
   if(b){ b.hidden = !n; b.textContent = n; }
+  const bc = $('#badge-corbeille'); if(bc){ bc.hidden = !DB.corbeille.length; bc.textContent = DB.corbeille.length; }
   majPied(); majFocus();
   remplirExplos();   /* dossiers Drive affichés : lecture en arrière-plan si besoin */
   if(fiche) FICHES[fiche.nom].ouvrir(fiche.id);
-}
-/* Quand la ligne des modules défile (écran étroit), on ramène le module de la page ouverte dans la partie visible */
-function montrerModuleActif(){
-  const m = $('#menu'), a = $('#menu a.actif');
-  if(!m || !a || m.scrollWidth <= m.clientWidth) return;
-  const rm = m.getBoundingClientRect(), ra = a.getBoundingClientRect();
-  if(ra.left < rm.left) m.scrollLeft += ra.left - rm.left - 12;
-  else if(ra.right > rm.right) m.scrollLeft += ra.right - rm.right + 12;
 }
 /* Flèches de Finances : un mois, ou une année en vue par année (on garde le même mois, sauf l'année en cours où l'on prend le mois en cours) */
 function decalerFin(sens){
@@ -2909,7 +2899,7 @@ function ouvrirFicheDepuisLien(h){
    ========================================================================== */
 let surFermeture = null, focusAvant = null, retourFormulaire = null, ficheOuverte = null;
 const modaleOuverte = () => $('#voile').classList.contains('on');
-/* Bouton Retour (navigateur, geste retour d'Android) : il ferme la fenêtre ouverte au lieu de quitter la page.
+/* Bouton Retour (navigateur, geste retour d'Android) : il ferme la fenêtre ou le volet ouvert au lieu de quitter la page.
    À l'ouverture, une entrée d'historique (même adresse) est ajoutée ; Retour la retire et ferme la fenêtre.
    Une fenêtre fermée autrement (croix, Échap, Enregistrer) retire elle-même son entrée (history.back) ;
    une fenêtre rouverte avant la fin de ce retour attend qu'il soit fait pour ajouter la sienne. */
@@ -2920,18 +2910,51 @@ function pousserHisto(){
   try { history.pushState({lpFenetre:true}, ''); histo.pousse = true; } catch(e){}
 }
 window.addEventListener('popstate', () => {
-  if(histo.retourEnCours){   /* fin du retour demandé par fermerModale */
+  if(histo.retourEnCours){   /* fin du retour demandé par fermerModale / fermerVolet */
     histo.retourEnCours = false;
-    if(histo.aPousser){ histo.aPousser = false; if(modaleOuverte()) pousserHisto(); }
+    if(histo.aPousser){ histo.aPousser = false; if(modaleOuverte() || voletOuvert()) pousserHisto(); }
     return;
   }
-  if(histo.pousse){ histo.pousse = false; if(modaleOuverte()) fermerModale({historique:false}); }
+  if(histo.pousse){ histo.pousse = false; if(modaleOuverte()) fermerModale({historique:false}); else if(voletOuvert()) fermerVolet({historique:false}); }
+});
+/* Retire l'entrée d'historique de la fenêtre (ou du volet) qui se ferme autrement que par Retour */
+function retirerHisto(historique){
+  histo.aPousser = false;
+  if(histo.pousse){ histo.pousse = false; if(historique){ histo.retourEnCours = true; history.back(); } }
+}
+/* --- Volet de navigation (modules, commandes, corbeille, réglages) --- */
+const voletOuvert = () => $('#volet').classList.contains('ouvert');
+function ouvrirVolet(){
+  if(voletOuvert() || modaleOuverte()) return;
+  fermerResultats(); fermerPalette();
+  const v = $('#volet'); v.inert = false; v.classList.add('ouvert'); $('#voile-volet').classList.add('on');
+  $('#btn-volet').setAttribute('aria-expanded', 'true');
+  pousserHisto();
+  const a = $('a.actif', v) || $('a', v); if(a) setTimeout(() => a.focus({preventScroll:true}), 30);
+}
+/* historique : false quand la fermeture vient d'un changement de page, du bouton Retour, ou d'une fenêtre qui prend le relais */
+function fermerVolet({historique = true} = {}){
+  if(!voletOuvert()) return;
+  const v = $('#volet'), avait = v.contains(document.activeElement);
+  v.classList.remove('ouvert'); v.inert = true; $('#voile-volet').classList.remove('on');
+  $('#btn-volet').setAttribute('aria-expanded', 'false');
+  if(historique) retirerHisto(true);
+  if(avait) $('#btn-volet').focus({preventScroll:true});
+}
+$('#voile-volet').addEventListener('click', () => fermerVolet());
+/* Un choix dans le volet le referme. Vers une autre page : c'est le changement d'adresse qui le ferme
+   (un history.back() ici annulerait la navigation) ; vers la page déjà affichée ou une commande : fermé tout de suite. */
+$('#volet').addEventListener('click', e => {
+  const a = e.target.closest('a[href]'), b = e.target.closest('button[data-action]');
+  if(a && a.getAttribute('href') === (location.hash || '#/accueil')) fermerVolet();
+  else if(b && b.dataset.action !== 'volet-fermer') fermerVolet();
 });
 const teteModale = (titre, icone = 'plus', couleur = 'bleu') =>
   `<div class="modale-tete">${pastille(icone, couleur, 34, 17)}<h3 id="modale-titre">${titre}</h3><button class="icone-btn fermer" data-action="fermer" aria-label="Fermer">${ico('croix', 16)}</button></div>`;
 /* taille : '' | 'large' | 'fiche' (fenêtre agrandie des notes et contacts) ; saisie : placer le curseur dans le 1er champ */
 function ouvrirModale(html, {large = false, taille = '', saisie = true} = {}){
   const cb = surFermeture; surFermeture = null; retourFormulaire = null; ficheOuverte = null; if(cb) cb();
+  if(voletOuvert()) fermerVolet({historique:false});   /* la fenêtre garde l'entrée d'historique du volet */
   if(!modaleOuverte()) focusAvant = document.activeElement;
   const m = $('#modale'); m.className = 'modale' + (large ? ' large' : '') + (taille ? ' ' + taille : ''); m.innerHTML = html; m.scrollTop = 0;
   $('#voile').classList.add('on');
@@ -2942,8 +2965,7 @@ function ouvrirModale(html, {large = false, taille = '', saisie = true} = {}){
 /* historique : false quand la fermeture vient déjà d'un changement d'adresse ou du bouton Retour */
 function fermerModale({historique = true} = {}){
   if(!modaleOuverte()) return;
-  histo.aPousser = false;
-  if(histo.pousse){ histo.pousse = false; if(historique){ histo.retourEnCours = true; history.back(); } }
+  retirerHisto(historique);
   const m = $('#modale');
   if(m.contains(document.activeElement)) document.activeElement.blur();   /* enregistre un champ en cours de saisie */
   $('#voile').classList.remove('on'); m.innerHTML = ''; ficheOuverte = null; retourFormulaire = null;
@@ -3436,6 +3458,8 @@ function retirerVersCorbeille(type, x, extra = {}){
    ========================================================================== */
 const ACTIONS = {
   fermer: () => fermerModale(),
+  volet: () => voletOuvert() ? fermerVolet() : ouvrirVolet(),
+  'volet-fermer': () => fermerVolet(),
   recharger: () => location.reload(),
   palette: () => ouvrirPalette(),
   capture: () => ficheCapture(),
@@ -3731,7 +3755,7 @@ document.addEventListener('click', e => {
   const a = e.target.closest('a[href^="#/note/"], a[href^="#/contact/"], a[href^="#/document/"]');
   if(a && e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey){ e.preventDefault(); fermerResultats(); ouvrirFicheDepuisLien(a.getAttribute('href')); return; }
   /* Menu vers la page déjà affichée mais filtrée par projet : l'adresse ne change pas, on retire le filtre ici */
-  const m = e.target.closest('#menu a[data-route]');
+  const m = e.target.closest('#volet a[data-route]');
   if(m && filtreProjet && filtreProjet.page === m.dataset.route && location.hash === m.getAttribute('href')){ e.preventDefault(); filtreProjet = null; rendre(); return; }
   const el = e.target.closest('[data-action]');
   if(!el || el.disabled) return;
@@ -3826,6 +3850,7 @@ document.addEventListener('keydown', e => {
   if(e.key === 'Escape'){
     if(paletteOuverte()) fermerPalette();
     else if(modaleOuverte()) fermerModale();
+    else if(voletOuvert()) fermerVolet();
     else if(!$('#resultats-globaux').hidden){ fermerResultats(); $('#recherche-globale').blur(); }
     return;
   }
@@ -3835,6 +3860,7 @@ document.addEventListener('keydown', e => {
   if(e.target.closest && e.target.closest('input, textarea, select, [contenteditable]')) return;
   if(e.key === '/'){ e.preventDefault(); const s = $('#recherche-globale'); s.focus(); s.select(); }
   else if(e.key === 'c' || e.key === 'C'){ e.preventDefault(); ficheCapture(); }
+  else if(e.key === 'm' || e.key === 'M'){ e.preventDefault(); voletOuvert() ? fermerVolet() : ouvrirVolet(); }
 });
 $('#voile').addEventListener('mousedown', e => { if(e.target.id === 'voile') fermerModale(); });
 /* Survol de l'anneau / de la légende : la part s'affiche au centre */
@@ -3913,7 +3939,7 @@ function commandes(){
     {titre:'Exporter une sauvegarde', sous:'Tout, dans un fichier JSON daté', icone:'telecharger', action:'exporter'}
   ];
 }
-function ouvrirPalette(){ fermerModale(); fermerResultats(); palette.index = 0; $('#palette').classList.add('on'); const i = $('#palette-saisie'); i.value = ''; rendrePalette(); i.focus(); }
+function ouvrirPalette(){ fermerModale(); fermerVolet(); fermerResultats(); palette.index = 0; $('#palette').classList.add('on'); const i = $('#palette-saisie'); i.value = ''; rendrePalette(); i.focus(); }
 function fermerPalette(){ $('#palette').classList.remove('on'); }
 function rendrePalette(){
   palette.items = commandes().filter(c => correspond($('#palette-saisie').value, c.titre, c.sous));
@@ -5175,8 +5201,12 @@ async function demarrer(){
   $('#logo').innerHTML = ico('maison', 18, '#fff', 2);
   $('#ic-recherche').innerHTML = ico('recherche', 14);
   $('#btn-ajouter').innerHTML = ico('plus', 17);
-  $('#btn-commandes').innerHTML = ico('commande', 17);
-  $('#btn-reglages').innerHTML = ico('reglages', 17);
+  $('#btn-volet').innerHTML = ico('menu', 18);
+  $('#logo-volet').innerHTML = ico('maison', 18, '#fff', 2);
+  $('#volet-fermer').innerHTML = ico('croix', 16);
+  $('#volet-pied').innerHTML = `<button type="button" class="ligne-volet" data-action="palette">${ico('commande', 16)}<span>Commandes</span><kbd>Ctrl K</kbd></button>
+    <a href="#/corbeille" data-route="corbeille">${ico('corbeille', 16)}<span class="lib">Corbeille</span><span class="badge gris" id="badge-corbeille" hidden></span></a>
+    <a href="#/donnees" data-route="donnees">${ico('reglages', 16)}<span class="lib">Réglages et données</span></a>`;
   $('#menu').innerHTML = MENU.map(([r, n, i]) => `<a href="#/${r}" data-route="${r}" title="${n}">${ico(i, 16)}<span class="lib">${n}</span>${r === 'inbox' ? '<span class="badge" id="badge-inbox" hidden></span>' : ''}</a>`).join('');
 
   /* Données du navigateur (IndexedDB ou copie légère), sinon reprise des versions précédentes (jamais la démo toute seule) */
@@ -5241,7 +5271,7 @@ async function demarrer(){
   window.addEventListener('online', () => { if(ghActif()) ghSynchroniser('reseau'); });
   /* Vérification toutes les 30 s tant que la page est affichée (sauf si une synchro vient d'avoir lieu) */
   setInterval(() => { if(ghActif() && document.visibilityState === 'visible' && !gh.enCours && Date.now() - gh.controle > 25000) ghSynchroniser('periodique'); }, 30000);
-  window.addEventListener('hashchange', () => { fermerModale({historique:false}); fermerPalette(); rendre(); });
+  window.addEventListener('hashchange', () => { fermerModale({historique:false}); fermerVolet({historique:false}); fermerPalette(); rendre(); });
   /* Une erreur imprévue n'est plus silencieuse : un message l'annonce */
   const signaler = m => { console.error(m); toast('Un problème est survenu : ' + (m && m.message || m) + '. Recharge la page (F5) si quelque chose ne répond plus.'); };
   window.addEventListener('error', e => signaler(e.error || e.message));
