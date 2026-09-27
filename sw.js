@@ -1,12 +1,14 @@
-/* LIFE PANEL — service worker (v3.14)
-   Permet d'installer LIFE PANEL comme une appli et de l'ouvrir sans réseau.
+/* LIFE PANEL — service worker (v3.15)
+   Permet d'installer LIFE PANEL comme une appli, de l'ouvrir sans réseau et d'afficher ses notifications.
    · La page (index.html) : le réseau d'abord, pour avoir toujours la dernière version ; sans réseau, ou si le
      réseau ne répond pas en 3 secondes (4G faible), la copie gardée — la copie est tout de même remise à jour
      quand la réponse finit par arriver.
    · Icônes et manifeste : la copie gardée d'abord.
+   · Notifications : un rappel envoyé par GitHub Actions (dépôt privé) arrive chiffré ; il est affiché comme la
+     notification d'une appli, même LIFE PANEL fermée. Un appui ouvre LIFE PANEL à la bonne page.
    · Rien d'autre n'est touché : ni GitHub (tes données), ni aucun autre site. */
-const CACHE = 'lifepanel-v3.14';
-const FICHIERS = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
+const CACHE = 'lifepanel-v3.15';
+const FICHIERS = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/badge-96.png'];
 const DELAI_RESEAU = 3000;
 
 self.addEventListener('install', e => {
@@ -40,4 +42,23 @@ self.addEventListener('fetch', e => {
     return;
   }
   e.respondWith(caches.match(r).then(x => x || fetch(r)));
+});
+
+/* --- Notifications --- */
+const pageSure = u => typeof u === 'string' && /^#\/[\w/?=&%.-]*$/.test(u) ? u : '#/accueil';
+self.addEventListener('push', e => {
+  let m = {};
+  try { m = e.data ? e.data.json() : {}; } catch(x){ m = {titre:'LIFE PANEL', corps:e.data ? e.data.text() : ''}; }
+  e.waitUntil(self.registration.showNotification(String(m.titre || 'LIFE PANEL').slice(0, 120), {
+    body:String(m.corps || '').slice(0, 500), icon:'icons/icon-192.png', badge:'icons/badge-96.png', lang:'fr',
+    tag:m.tag ? String(m.tag) : undefined, renotify:!!m.tag, data:{url:pageSure(m.url)}}));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = pageSure(e.notification.data && e.notification.data.url), cible = new URL('./' + url, self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({type:'window', includeUncontrolled:true}).then(l => {
+    const c = l.find(x => x.url.startsWith(self.registration.scope));
+    if(c){ c.postMessage({aller:url}); return c.focus(); }   /* LIFE PANEL déjà ouvert : on y va */
+    return self.clients.openWindow(cible);
+  }));
 });
