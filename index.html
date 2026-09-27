@@ -61,7 +61,7 @@
   v3.13 : en ligne sur GitHub Pages et installable comme une appli (icône, plein écran, hors ligne :
   manifest.webmanifest + sw.js). Synchronisation GitHub (page Données) : donnees.json dans un dépôt
   PRIVÉ, une clé par appareil gardée dans le navigateur ; lecture à l'ouverture, au retour sur la page
-  et toutes les 3 minutes, écriture quelques secondes après la dernière modification. Protection contre
+  et toutes les 30 secondes, écriture quelques secondes après la dernière modification. Protection contre
   la double modification : GitHub refuse une écriture si le fichier a changé depuis la dernière lecture ;
   on relit et on fusionne (base commune, élément par élément puis champ par champ ; même champ modifié
   des deux côtés : la version la plus récente gagne, l'autre va dans la corbeille). Documents : dossier
@@ -4589,7 +4589,8 @@ function blocDriveProjet(p){
    P. SYNCHRONISATION GITHUB — les mêmes données sur le PC et le téléphone
    donnees.json vit dans un dépôt GitHub PRIVÉ. Chaque appareil a sa clé, gardée dans ce navigateur
    (jamais dans les données, les exports ni les copies). Lecture à l'ouverture, au retour sur la page et
-   toutes les 3 minutes ; écriture quelques secondes après la dernière modification.
+   toutes les 30 secondes tant que la page est affichée (une vérification sans changement reçoit « 304 » :
+   rien n'est téléchargé et GitHub ne la compte pas dans son quota) ; écriture quelques secondes après la dernière modification.
    Protection contre la double modification : GitHub refuse d'écrire si le fichier a changé depuis la
    dernière lecture (sha). On relit, on fusionne avec la « base » (dernière version synchronisée), on réessaie.
    ========================================================================== */
@@ -4967,7 +4968,7 @@ function carteGitHub(){
   if(ghActif()){
     const e = etatGitHub();
     return `<section class="carte c6 etire">${enteteCarte('sync', 'bleu', 'Synchronisation GitHub')}
-      <p class="aide">Tes données sont synchronisées avec le dépôt privé <b>${esc(c.owner)}/${esc(c.repo)}</b> (fichier <code>${esc(c.chemin)}</code>). Chaque modification y part quelques secondes après ; celles de tes autres appareils arrivent à l’ouverture, quand tu reviens sur la page, et toutes les 3 minutes. Si deux appareils ont modifié en même temps, les changements sont fusionnés.</p>
+      <p class="aide">Tes données sont synchronisées avec le dépôt privé <b>${esc(c.owner)}/${esc(c.repo)}</b> (fichier <code>${esc(c.chemin)}</code>). Chaque modification y part quelques secondes après ; celles de tes autres appareils arrivent à l’ouverture, quand tu reviens sur la page, et toutes les 30 secondes. Si deux appareils ont modifié en même temps, les changements sont fusionnés.</p>
       <p class="etat-github ${e}">${ico(ETATS_ECRITURE[e].icone, 15)}<span>${esc(TEXTES_GITHUB[e]().replace(/ Clique pour.*$/, ''))}</span></p>
       <p class="aide" style="margin:-6px 0 12px">Cet appareil : <b>${esc(c.appareil || '?')}</b></p>
       <div class="boutons">${btnAction('gh-maintenant', ico('sync', 14) + 'Synchroniser maintenant', 'btn p')}${btnAction('gh-cle', 'Changer la clé', 'btn')}<a class="btn" href="https://github.com/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/commits" target="_blank" rel="noopener noreferrer">${ico('externe', 14)}Historique</a>${btnAction('gh-deconnecter', 'Arrêter sur cet appareil', 'btn f')}</div></section>`;
@@ -5076,7 +5077,8 @@ async function demarrer(){
     else if(ghActif() && Date.now() - gh.controle > 10000) ghSynchroniser('retour');
   });
   window.addEventListener('online', () => { if(ghActif()) ghSynchroniser('reseau'); });
-  setInterval(() => { if(ghActif() && document.visibilityState === 'visible' && !gh.enCours && Date.now() - gh.controle > 170000) ghSynchroniser('periodique'); }, 60000);
+  /* Vérification toutes les 30 s tant que la page est affichée (sauf si une synchro vient d'avoir lieu) */
+  setInterval(() => { if(ghActif() && document.visibilityState === 'visible' && !gh.enCours && Date.now() - gh.controle > 25000) ghSynchroniser('periodique'); }, 30000);
   window.addEventListener('hashchange', () => { fermerModale({historique:false}); fermerPalette(); rendre(); });
   /* Une erreur imprévue n'est plus silencieuse : un message l'annonce */
   const signaler = m => { console.error(m); toast('Un problème est survenu : ' + (m && m.message || m) + '. Recharge la page (F5) si quelque chose ne répond plus.'); };
