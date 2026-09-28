@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.18.1
+  LIFE PANEL — v3.19
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -89,6 +89,8 @@
   « Nouvelle dépense » ; « Partager → LIFE PANEL » depuis n'importe quelle appli dépose le texte dans la capture.
   v3.18.1 : le manifeste de l'appli n'est plus figé par le service worker : Chrome voit enfin les raccourcis
   et le partage (ils n'apparaissaient pas après la mise à jour).
+  v3.19 : « Note » facultative sur chaque mouvement (vide par défaut), affichée sous le libellé, trouvée par la
+  recherche et exportée en CSV. Données VERSION 17.
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
   seule architecture :
@@ -695,6 +697,7 @@ tbody tr:hover{background:#ffffff05}
 td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
 td.date{white-space:nowrap;color:var(--texte-doux);font-family:var(--mono);font-size:12.5px}
 td.act{text-align:right;white-space:nowrap;width:1%}
+.note-mvt{display:block;max-width:34ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--texte-doux);margin-top:2px}
 @media (hover:hover){td.act .icone-btn{opacity:.4}tr:hover td.act .icone-btn{opacity:1}}
 .table-simple td{padding:8px 4px}
 
@@ -862,7 +865,7 @@ td.act{text-align:right;white-space:nowrap;width:1%}
 /* ==========================================================================
    A. DONNÉES — un seul modèle, une seule clé
    ========================================================================== */
-const VERSION = 16;  /* 8 : archives et corbeille · 9 : module Documents, tags communs · 10 : liste des comptes (statistiques, budgets) · 11 : couleur de chaque catégorie · 12 : téléphone et adresse des contacts · 13 : autre téléphone des contacts · 14 : e-mail des contacts · 15 : dossier Drive des projets, versions remplacées par la synchro (corbeille) · 16 : date de modification des mouvements et de l'Inbox (fusion de la synchro) */
+const VERSION = 17;  /* 8 : archives et corbeille · 9 : module Documents, tags communs · 10 : liste des comptes (statistiques, budgets) · 11 : couleur de chaque catégorie · 12 : téléphone et adresse des contacts · 13 : autre téléphone des contacts · 14 : e-mail des contacts · 15 : dossier Drive des projets, versions remplacées par la synchro (corbeille) · 16 : date de modification des mouvements et de l'Inbox (fusion de la synchro) · 17 : note des mouvements */
 const CLE = 'lifepanel';                   /* copie légère dans localStorage (voir « Stockage dans le navigateur ») */
 const CLE_SECOURS = 'lifepanel.secours';   /* ancienne place de la copie de secours (v3.3 à v3.8), reprise dans IndexedDB */
 const MIROIR_MAX = 2e6;                    /* au-delà de 2 millions de caractères, pas de copie dans localStorage */
@@ -950,8 +953,8 @@ const FORMES = {
       ajoute, modif:txt(x.modif) || ajoute, ...archivage(x)}; },
   mouvements:m => ({id:txt(m.id) || uid(), date:dateISO(m.date) || aujourdhui(),
     montant:montantValide(m.montant), type:m.type === 'revenu' ? 'revenu' : 'depense',
-    libelle:txt(m.libelle), categorie:txt(m.categorie), projet:m.projet || null, compte:txt(m.compte), cree:txt(m.cree),
-    modif:txt(m.modif) || txt(m.cree)}),   /* VERSION 16 : sans date de modification, celle de la saisie (vide pour un relevé importé) */
+    libelle:txt(m.libelle), categorie:txt(m.categorie), projet:m.projet || null, compte:txt(m.compte), note:txt(m.note), cree:txt(m.cree),
+    modif:txt(m.modif) || txt(m.cree)}),   /* VERSION 17 : note facultative, vide pour les anciens mouvements */   /* VERSION 16 : sans date de modification, celle de la saisie (vide pour un relevé importé) */
   contacts:c => { const aRepondre = itemsContact(c.aRepondre); return {id:txt(c.id) || uid(), nom:txt(c.nom) || 'Sans nom', telephone:txt(c.telephone), autreTelephone:txt(c.autreTelephone), email:txt(c.email), adresse:txt(c.adresse), anniversaire:dateISO(c.anniversaire),
     derniereConversation:dateISO(c.derniereConversation), nouvelles:txt(c.nouvelles), projet:c.projet || null,
     aDire:itemsContact(c.aDire), aRepondre, idees:itemsContact(c.idees), tags:tagRepondre(nettoyerTags(c.tags), aRepondre), modif:txt(c.modif), ...archivage(c)}; },
@@ -1981,7 +1984,7 @@ function tableMouvements(liste, avecProjet = true, tri = null){
   return `<div class="defile"><table><thead><tr>${th('date', 'Date')}${th('libelle', 'Libellé')}${th('categorie', 'Catégorie')}${avecProjet ? th('projet', 'Projet') : ''}${th('compte', 'Compte')}${th('montant', 'Montant', 'num')}<th><span class="sr">Actions</span></th></tr></thead><tbody>
     ${liste.map(m => `<tr${dansStats(m) ? '' : ' class="hors-stats" title="Compte décoché : pas pris en compte dans les statistiques"'}>
       <td class="date">${dateCourte(m.date)}</td>
-      <td>${esc(m.libelle || '—')}</td>
+      <td>${esc(m.libelle || '—')}${m.note ? `<span class="note-mvt" title="${esc(m.note)}">${esc(m.note)}</span>` : ''}</td>
       <td>${m.type === 'revenu' ? '<span class="puce">entrée</span>' : m.categorie ? `<span class="puce">${esc(m.categorie)}</span>` : `<button class="puce alerte" data-action="categoriser">à catégoriser</button>`}</td>
       ${avecProjet ? `<td>${tagProjet(m.projet)}</td>` : ''}
       <td class="doux">${esc(m.compte || '')}</td>
@@ -2461,7 +2464,7 @@ function listeFinances(){
   /* Catégorie choisie dans « Par catégorie » : seulement ses dépenses (« À catégoriser » : les dépenses sans catégorie) */
   const dansCat = m => fc === null || (m.type !== 'revenu' && (fc === SANS_CAT ? !m.categorie : m.categorie === fc));
   const nomCat = fc === SANS_CAT ? 'À catégoriser' : fc;
-  const tous = (q ? DB.mouvements.filter(m => correspond(q, m.libelle, m.categorie, m.compte, nomProjet(m.projet), String(m.montant), dateCourte(m.date)))
+  const tous = (q ? DB.mouvements.filter(m => correspond(q, m.libelle, m.note, m.categorie, m.compte, nomProjet(m.projet), String(m.montant), dateCourte(m.date)))
                   : DB.mouvements.filter(duMois(periode))).filter(dansCat);
   /* Le mois affiché suit les cases cochées ; une recherche trouve tout (les comptes décochés apparaissent en grisé) */
   const l = (q ? tous.slice() : tous.filter(dansStats)).sort(comparerMvts);
@@ -2860,7 +2863,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.18.1 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.19 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -3127,7 +3130,8 @@ function formMouvement(m0 = {}, apres){
     {n:'libelle', l:'Libellé', v:m0.libelle, aide:'ex. Barbier', suggestions:unique(DB.mouvements.map(m => m.libelle).filter(Boolean)).slice(0, 80)},
     {n:'categorie', l:'Catégorie', t:'select', o:cats, v:m0.categorie || '', demi:true, nouveau:'Nouvelle catégorie'},
     {n:'compte', l:'Compte', t:'select', o:comptes, v:cpt, demi:true, nouveau:'Nouveau compte'},
-    {n:'projet', l:'Projet', t:'select', o:optionsProjets(m0.projet), v:m0.projet || ''}
+    {n:'projet', l:'Projet', t:'select', o:optionsProjets(m0.projet), v:m0.projet || ''},
+    {n:'note', l:'Note', v:m0.note, aide:'facultatif : remboursé par…, n° de facture, garantie…'}
   ], onOk:v => {
     const montant = Math.abs(Number(String(v.montant).replace(/\s/g, '').replace(',', '.')));
     if(!Number.isFinite(montant) || !montant) return 'Indique un montant supérieur à zéro.';
@@ -3137,7 +3141,7 @@ function formMouvement(m0 = {}, apres){
     if(v.compte === NOUVEAU && !propreNom(v.compteNouveau)) return 'Donne un nom au nouveau compte.';
     const categorie = v.categorie === NOUVEAU ? assurerCategorie(v.categorieNouveau) : v.categorie;
     const compte = v.compte === NOUVEAU ? assurerCompte(v.compteNouveau) : v.compte;
-    const d = {type:v.type === 'revenu' ? 'revenu' : 'depense', montant, date:v.date, libelle:v.libelle, categorie, compte, projet:v.projet || null, modif:maintenant()};
+    const d = {type:v.type === 'revenu' ? 'revenu' : 'depense', montant, date:v.date, libelle:v.libelle, categorie, compte, projet:v.projet || null, note:String(v.note || '').trim(), modif:maintenant()};
     if(ex){ const avant = ex.projet; Object.assign(ex, d); toucherProjet(avant); toucherProjet(ex.projet); toast('Mouvement modifié'); }
     else { ajouter('mouvements', {cree:maintenant(), ...d}); toucherProjet(d.projet); toast((d.type === 'revenu' ? 'Entrée' : 'Dépense') + ' de ' + eur(montant) + ' ajoutée'); }
     if(apres) apres();
@@ -4059,7 +4063,7 @@ function indexRecherche(){
   DB.notes.forEach(n => ajout('notes', {titre:n.titre, textes:[nomDe(n.projet)], long:texteBrut(n.contenu), h:href('note', n.id),
     sous:['modifiée ' + ilya(n.modif), nomDe(n.projet)].filter(Boolean).join(' · '), date:n.modif, archive:n.archive, tags:n.tags, projet:nomDe(n.projet), jour:jourDe(n.modif)}));
   DB.mouvements.forEach(m => ajout('finances', {titre:(m.libelle || m.categorie || 'Mouvement') + ' · ' + (m.type === 'revenu' ? '+' : '') + eur(m.montant),
-    textes:[m.categorie, m.compte, nomDe(m.projet), String(m.montant).replace('.', ','), nomMois(m.date.slice(0, 7))],
+    textes:[m.note, m.categorie, m.compte, nomDe(m.projet), String(m.montant).replace('.', ','), nomMois(m.date.slice(0, 7))],
     h:'#/finances?q=' + encodeURIComponent(m.libelle || m.categorie || String(m.montant).replace('.', ',')), sous:[dateCourte(m.date), m.categorie, m.compte, nomDe(m.projet)].filter(Boolean).join(' · '), date:m.date,
     projet:nomDe(m.projet), montant:Number(m.montant) || 0, jour:m.date}));
   DB.contacts.forEach(c => ajout('contacts', {titre:c.nom, textes:[[...c.aDire, ...c.aRepondre, ...c.idees].map(i => i.t).join(' '), nomDe(c.projet), c.telephone, c.autreTelephone, c.email, c.adresse], long:c.nouvelles,
@@ -4248,9 +4252,9 @@ function telecharger(nom, contenu, type){
 /* Une cellule qui commence par = + - @ (ou tabulation) serait lue comme une formule par Excel : on la préfixe d'une apostrophe */
 const celluleCSV = v => { let s = String(v ?? ''); if(/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[;"\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
 function csvFinances(){
-  const l = ['date;type;montant;categorie;libelle;projet;compte'];
+  const l = ['date;type;montant;categorie;libelle;projet;compte;note'];
   DB.mouvements.slice().sort((a, b) => (a.date || '').localeCompare(b.date || '')).forEach(m =>
-    l.push([m.date, m.type, String(m.montant).replace('.', ','), m.categorie, m.libelle, nomProjet(m.projet), m.compte].map(celluleCSV).join(';')));
+    l.push([m.date, m.type, String(m.montant).replace('.', ','), m.categorie, m.libelle, nomProjet(m.projet), m.compte, m.note].map(celluleCSV).join(';')));
   return '\uFEFF' + l.join('\r\n');
 }
 /* Choix d'un fichier sur l'ordinateur (import, démo).
