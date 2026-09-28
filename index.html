@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.19
+  LIFE PANEL — v3.20
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -91,6 +91,8 @@
   et le partage (ils n'apparaissaient pas après la mise à jour).
   v3.19 : « Note » facultative sur chaque mouvement (vide par défaut), affichée sous le libellé, trouvée par la
   recherche et exportée en CSV. Données VERSION 17.
+  v3.20 : Contacts : le filtre comprend « #tag » (ex. #répondre : seulement les fiches qui portent ce tag) ;
+  « Voir » des messages en attente de réponse (Accueil) ouvre Contacts filtré sur #répondre.
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
   seule architecture :
@@ -1661,7 +1663,7 @@ function rappels(){
   if(sc) r.push({icone:'tag', couleur:'jaune', html:`<b>${pluriel(sc, 'dépense')}</b> ${sc > 1 ? 'attendent' : 'attend'} une catégorie.`, label:'Catégoriser', action:'categoriser'});
   anniversaires(30).forEach(({c, j}) => r.push({icone:'cadeau', couleur:'rose',
     html:`Anniversaire de <b>${esc(c.nom)}</b> ${j === 0 ? 'aujourd’hui' : j === 1 ? 'demain' : `dans <b>${j} jours</b>`}.`, label:'Fiche', href:href('contact', c.id)}));
-  if(rep) r.push({icone:'bulle', couleur:'violet', html:`<b>${pluriel(rep, 'message')}</b> en attente de réponse.`, label:'Voir', href:'#/contacts'});
+  if(rep) r.push({icone:'bulle', couleur:'violet', html:`<b>${pluriel(rep, 'message')}</b> en attente de réponse.`, label:'Voir', href:'#/contacts?q=' + encodeURIComponent('#' + TAG_REPONDRE)});
   projetsActifs().filter(p => p.budget && totalProjet(p.id) > p.budget).forEach(p => r.push({icone:'dossier', couleur:'orange',
     html:`Le projet <b>${esc(p.nom)}</b> dépasse son budget de <b>${eur(totalProjet(p.id) - p.budget)}</b>.`, label:'Ouvrir', href:href('projet', p.id)}));
   const derniere = DB.reglages.lastReview;
@@ -2657,14 +2659,17 @@ const boutonArchive = (type, x, cls = 'btn f compact') => btnAction(type + '-arc
 function pageContacts(){
   return titre('Contacts', 'Clique sur un nom pour ouvrir sa fiche en grand et la modifier, sur la flèche pour la déplier.',
       encartArchives('contacts') + (contactsActifs().length ? btnAction('contacts-deplier', contactsActifs().every(c => etatDepliage['contact-' + c.id]) ? 'Tout replier' : 'Tout déplier', 'btn') : '') + btnAction('contact-nouveau', ico('plus', 14) + 'Nouvelle fiche', 'btn p')) +
-    (DB.contacts.length ? `<div class="barre-outils">${champFiltre('contacts', 'Rechercher : nom, téléphone, e-mail, adresse, nouvelles, tags')}${puceFiltreProjet('contacts')}</div>` : '') +
+    (DB.contacts.length ? `<div class="barre-outils">${champFiltre('contacts', 'Rechercher : nom, téléphone, e-mail, adresse, nouvelles, #tag')}${puceFiltreProjet('contacts')}</div>` : '') +
     `<div id="liste-contacts">${listeContacts()}</div>`;
 }
 function listeContacts(){
   if(!DB.contacts.length) return vide('Aucune fiche. Ce module sert de mémoire : anniversaires, nouvelles, messages en attente.', btnAction('contact-nouveau', 'Créer une fiche', 'btn p'));
   const q = FILTRES.contacts, cherche = !!q.trim();
   const fp = projetFiltre('contacts');
-  const l = DB.contacts.filter(c => (!fp || c.projet === fp) && correspond(q, c.nom, c.telephone, c.autreTelephone, c.email, c.adresse, c.nouvelles, c.aDire.map(i => i.t), c.aRepondre.map(i => i.t), c.idees.map(i => i.t), nomProjet(c.projet), c.tags))
+  /* « #tag » dans le filtre : seulement les fiches qui portent ce tag (sans tenir compte des accents) ; le reste cherche dans le texte */
+  const mots = q.split(/\s+/), tags = mots.filter(m => m.length > 1 && m.startsWith('#')).map(m => m.replace(/^#+/, '')).filter(Boolean);
+  const texte = mots.filter(m => !m.startsWith('#')).join(' ');
+  const l = DB.contacts.filter(c => (!fp || c.projet === fp) && tags.every(t => aLeTag(c, t)) && correspond(texte, c.nom, c.telephone, c.autreTelephone, c.email, c.adresse, c.nouvelles, c.aDire.map(i => i.t), c.aRepondre.map(i => i.t), c.idees.map(i => i.t), nomProjet(c.projet), c.tags))
     .sort((a, b) => { const ja = joursAvantAnniv(a.anniversaire), jb = joursAvantAnniv(b.anniversaire); return (ja ?? 999) - (jb ?? 999) || a.nom.localeCompare(b.nom, 'fr'); });
   const actifs = l.filter(c => !c.archive);
   return actifs.length ? `<div class="mosaique">${actifs.map(c => carteContact(c, cherche)).join('')}</div>`
@@ -2863,7 +2868,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.19 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.20 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
