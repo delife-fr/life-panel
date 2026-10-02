@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.20
+  LIFE PANEL — v3.21
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -93,6 +93,10 @@
   recherche et exportée en CSV. Données VERSION 17.
   v3.20 : Contacts : le filtre comprend « #tag » (ex. #répondre : seulement les fiches qui portent ce tag) ;
   « Voir » des messages en attente de réponse (Accueil) ouvre Contacts filtré sur #répondre.
+  v3.21 : module Calendrier : événements (heure ou journée entière, fin, répétition chaque semaine / mois / an avec
+  dates retirées, fuseau horaire fixe ou « là où je suis », lieu + Itinéraire, lien visio, personnes, projet,
+  catégorie, rappel), vues Mois et Agenda qui regroupent aussi tâches, anniversaires, échéances et dépenses
+  (cases à cocher), saisie rapide « Dentiste jeudi 14h30 », rappels et résumé du matin. Données VERSION 18.
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
   seule architecture :
@@ -688,6 +692,38 @@ th.triable .fleche{display:inline-block;min-width:.8em;font-size:1.15em;line-hei
 .cal-leg{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:12px;font-size:11px;color:var(--texte-faible)}
 .cal-leg span{display:flex;align-items:center;gap:5px}
 .cal-leg i{width:7px;height:7px;border-radius:50%}
+/* Page Calendrier : filtres, grand mois (titres dans les cases, pastilles sur téléphone), agenda, fiche d'un événement */
+.cal-filtres{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 16px}
+.cal-filtres .puce-compte .boite{border-color:var(--c)}
+.cal-filtres .puce-compte.on{border-color:var(--trait);background:#ffffff08}
+.cal-filtres .puce-compte.on .boite{background:var(--c);border-color:var(--c);color:#16161a}
+.grand-mois{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.grand-mois .js{text-align:center;font-size:11px;color:var(--texte-faible);padding:2px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+.grand-mois .jour-g{min-height:98px;min-width:0;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:2px;text-align:left;padding:5px 5px 6px;border-radius:9px;border:1px solid var(--trait-doux);background:#ffffff04;color:var(--texte-doux);overflow:hidden;transition:background .15s,border-color .15s}
+.grand-mois .jour-g:hover{background:#ffffff0c;border-color:var(--trait)}
+.grand-mois .num{font-size:12px;font-variant-numeric:tabular-nums;margin:0 0 2px 2px;align-self:flex-start;line-height:22px}
+.grand-mois .jour-g.auj .num{display:inline-grid;place-items:center;width:22px;height:22px;margin-left:0;border-radius:50%;background:var(--bleu);color:#fff;font-weight:650}
+.grand-mois .lig{display:block;font-size:11px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:1px 5px;border-radius:5px;background:#ffffff0a;color:var(--texte);border-left:2px solid var(--c)}
+.grand-mois .plus{font-size:10.5px;color:var(--texte-faible);padding-left:5px}
+.grand-mois .pts{display:none}
+.agenda-jour + .agenda-jour{margin-top:16px}
+.agenda-jour h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--texte-faible);margin:0 0 4px;font-weight:600}
+.agenda-jour h3.auj{color:var(--i-bleu)}
+.ligne-evt{align-items:center}
+.evt-barre{width:3px;align-self:stretch;min-height:28px;border-radius:2px;background:var(--c);flex-shrink:0}
+.evt-heure{font-family:var(--mono);font-size:12.5px;color:var(--texte-doux);width:52px;flex-shrink:0}
+.infos-evt{margin-bottom:6px}
+.lien-evt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--texte-doux)}
+.note-evt{white-space:pre-wrap;margin-top:6px}
+@media (max-width:620px){
+  .grand-mois{gap:2px}
+  .grand-mois .js{font-size:10px;letter-spacing:0}
+  .grand-mois .jour-g{min-height:50px;padding:4px 1px;align-items:center;border-radius:7px}
+  .grand-mois .num{margin:0}
+  .grand-mois .lig,.grand-mois .plus{display:none}
+  .grand-mois .pts{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;max-width:24px}
+  .grand-mois .pts i{width:5px;height:5px;border-radius:50%;background:var(--c)}
+}
 .cal-leg .gamme{display:flex;gap:2px}
 .cal-leg .gamme i{width:12px;height:8px;border-radius:2px}
 .defile{position:relative;overflow-x:auto;margin:0 -6px}   /* position : garde le texte « sr » du tableau dans la zone qui défile */
@@ -867,7 +903,7 @@ td.act{text-align:right;white-space:nowrap;width:1%}
 /* ==========================================================================
    A. DONNÉES — un seul modèle, une seule clé
    ========================================================================== */
-const VERSION = 17;  /* 8 : archives et corbeille · 9 : module Documents, tags communs · 10 : liste des comptes (statistiques, budgets) · 11 : couleur de chaque catégorie · 12 : téléphone et adresse des contacts · 13 : autre téléphone des contacts · 14 : e-mail des contacts · 15 : dossier Drive des projets, versions remplacées par la synchro (corbeille) · 16 : date de modification des mouvements et de l'Inbox (fusion de la synchro) · 17 : note des mouvements */
+const VERSION = 18;  /* 8 : archives et corbeille · 9 : module Documents, tags communs · 10 : liste des comptes (statistiques, budgets) · 11 : couleur de chaque catégorie · 12 : téléphone et adresse des contacts · 13 : autre téléphone des contacts · 14 : e-mail des contacts · 15 : dossier Drive des projets, versions remplacées par la synchro (corbeille) · 16 : date de modification des mouvements et de l'Inbox (fusion de la synchro) · 17 : note des mouvements · 18 : événements du calendrier */
 const CLE = 'lifepanel';                   /* copie légère dans localStorage (voir « Stockage dans le navigateur ») */
 const CLE_SECOURS = 'lifepanel.secours';   /* ancienne place de la copie de secours (v3.3 à v3.8), reprise dans IndexedDB */
 const MIROIR_MAX = 2e6;                    /* au-delà de 2 millions de caractères, pas de copie dans localStorage */
@@ -877,16 +913,16 @@ const CLES_ANCIENNES = [
   {cle:'lifepanel.v6', nom:'life-panel.html'}
 ];
 const CATEGORIES_DEFAUT = ['Courses','Restaurants','Transport','Logement','Santé','Soins perso','Loisirs','Voyages','Formation','Cadeaux','Abonnements','Divers'];
-const LISTES_DONNEES = ['projets','taches','notes','documents','mouvements','contacts','inbox'];
+const LISTES_DONNEES = ['projets','taches','notes','documents','mouvements','contacts','inbox','evenements'];
 const JOURS_CORBEILLE = 30;
 const PREAVIS_DEFAUT = 30;   /* jours avant l'échéance d'un document où il passe « à renouveler » */
-const LIENS_PROJET = ['taches', 'notes', 'documents', 'mouvements', 'contacts'];   /* ce qu'un projet peut rassembler */
+const LIENS_PROJET = ['taches', 'notes', 'documents', 'mouvements', 'contacts', 'evenements'];   /* ce qu'un projet peut rassembler */
 /* Il y a quelque chose à protéger (données ou corbeille) */
 const aDesDonnees = d => !!d && (compter(d) > 0 || (Array.isArray(d.corbeille) && d.corbeille.length > 0));
 
 const DBVide = () => ({
   version: VERSION, prenom: 'Alexis',
-  projets: [], taches: [], notes: [], documents: [], mouvements: [], contacts: [], inbox: [], corbeille: [],
+  projets: [], taches: [], notes: [], documents: [], mouvements: [], contacts: [], inbox: [], evenements: [], corbeille: [],
   categories: CATEGORIES_DEFAUT.slice(),
   couleursCategories: [],   /* {nom, couleur} : couleur gardée par chaque catégorie (graphique « Par catégorie ») */
   comptes: [],   /* {nom, stats, budget, periode} : stats = pris en compte dans les statistiques ; budget par mois ou par an */
@@ -935,6 +971,13 @@ function formeCompte(c){
   const b = arrondiBudget(c.budget);
   return {nom:propreNom(c.nom), stats:c.stats !== false, budget:b, periode:c.periode === 'an' ? 'an' : 'mois'};
 }
+/* Événements du calendrier (VERSION 18). heure vide = journée entière ; fuseau vide = « l'heure où je suis »
+   (sinon un fuseau IANA, ex. Europe/Athens) ; recurrence.freq '' = une seule fois, sinon 'semaine' | 'mois' | 'an',
+   avec un « jusqu'au » facultatif et les dates retirées de la série (exceptions). rappel : minutes avant, ou null. */
+const CATEGORIES_EVT = {perso:['Perso', 'bleu'], pro:['Pro', 'violet'], vol:['Vol', 'orange'], sante:['Santé', 'rose'], famille:['Famille', 'vert']};
+const RAPPELS_EVT = [15, 60, 1440];
+const heureValide = v => /^([01]\d|2[0-3]):[0-5]\d$/.test(txt(v)) ? txt(v) : '';
+const fuseauValide = tz => { if(!tz || typeof tz !== 'string') return false; try { new Intl.DateTimeFormat('fr-FR', {timeZone:tz}); return true; } catch(e){ return false; } };
 const FORMES = {
   projets:p => ({id:txt(p.id) || uid(), nom:txt(p.nom) || 'Sans nom', resume:txt(p.resume),
     budget:positif(p.budget, MAX_BUDGET), prochaineAction:txt(p.prochaineAction), echeance:dateISO(p.echeance),
@@ -961,7 +1004,15 @@ const FORMES = {
     derniereConversation:dateISO(c.derniereConversation), nouvelles:txt(c.nouvelles), projet:c.projet || null,
     aDire:itemsContact(c.aDire), aRepondre, idees:itemsContact(c.idees), tags:tagRepondre(nettoyerTags(c.tags), aRepondre), modif:txt(c.modif), ...archivage(c)}; },
   inbox:x => { const created = txt(x.created) || maintenant();
-    return {id:txt(x.id) || uid(), text:txt(x.text), created, status:x.status === 'archived' ? 'archived' : 'open', archived:txt(x.archived), modif:txt(x.modif) || created}; }
+    return {id:txt(x.id) || uid(), text:txt(x.text), created, status:x.status === 'archived' ? 'archived' : 'open', archived:txt(x.archived), modif:txt(x.modif) || created}; },
+  evenements:e => { const cree = txt(e.cree) || maintenant(), r = e.recurrence && typeof e.recurrence === 'object' ? e.recurrence : {};
+    const freq = ['semaine', 'mois', 'an'].includes(r.freq) ? r.freq : '', heure = heureValide(e.heure);
+    return {id:txt(e.id) || uid(), titre:txt(e.titre).trim() || 'Sans titre', date:dateISO(e.date) || aujourdhui(), heure, fin:heure ? heureValide(e.fin) : '',
+      fuseau:fuseauValide(e.fuseau) ? e.fuseau : '',
+      recurrence:{freq, jusqua:freq ? dateISO(r.jusqua) : '', exceptions:freq && Array.isArray(r.exceptions) ? unique(r.exceptions.map(dateISO).filter(Boolean)).sort() : []},
+      lieu:txt(e.lieu).trim(), lien:e.lien ? normaliserLien(e.lien) : '', contacts:Array.isArray(e.contacts) ? unique(e.contacts.filter(v => typeof v === 'string' && v)) : [],
+      projet:e.projet || null, categorie:Object.prototype.hasOwnProperty.call(CATEGORIES_EVT, e.categorie) ? e.categorie : 'perso', note:txt(e.note),
+      rappel:RAPPELS_EVT.includes(Number(e.rappel)) ? Number(e.rappel) : null, cree, modif:txt(e.modif) || cree}; }
 };
 /* Crée un élément complet dans la liste voulue (en tête pour l'Inbox) et le renvoie */
 function ajouter(liste, brut){
@@ -1070,7 +1121,7 @@ function colorerCategories(categories, ancien, mouvements = []){
 const compter = d => d ? LISTES_DONNEES.reduce((n, k) => n + (Array.isArray(d[k]) ? d[k].length : 0), 0) : 0;
 function resume(d){
   const n = k => (d && Array.isArray(d[k])) ? d[k].length : 0;
-  return [[n('projets'),'projet'],[n('taches'),'tâche'],[n('notes'),'note'],[n('documents'),'document'],[n('mouvements'),'mouvement'],[n('contacts'),'contact']]
+  return [[n('projets'),'projet'],[n('taches'),'tâche'],[n('notes'),'note'],[n('documents'),'document'],[n('mouvements'),'mouvement'],[n('contacts'),'contact'],[n('evenements'),'événement']]
     .filter(x => x[0]).map(x => pluriel(x[0], x[1])).join(', ') || 'aucune donnée';
 }
 function derniereModif(d){
@@ -1413,6 +1464,7 @@ const ICONES = {
   dossier:'<path d="M3.4 7.2a1.8 1.8 0 0 1 1.8-1.8h3.6l2 2.4h7.8a1.8 1.8 0 0 1 1.8 1.8v8.4a1.8 1.8 0 0 1-1.8 1.8H5.2a1.8 1.8 0 0 1-1.8-1.8z"/>',
   personnes:'<circle cx="9.2" cy="8.4" r="3.2"/><path d="M3.4 19.4c0-3 2.6-5 5.8-5s5.8 2 5.8 5M16.4 6.2a3 3 0 0 1 0 5.9M17.6 14.8c2 .6 3.4 2.2 3.4 4.6"/>',
   carte:'<rect x="2.8" y="5.4" width="18.4" height="13.2" rx="2.6"/><path d="M2.8 10h18.4"/>',
+  lieu:'<path d="M12 21s-6.6-5.7-6.6-11.2a6.6 6.6 0 0 1 13.2 0C18.6 15.3 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/>',
   calendrier:'<rect x="3.4" y="5" width="17.2" height="16" rx="2.6"/><path d="M3.4 10h17.2M8.4 3v4M15.6 3v4"/>',
   horloge:'<circle cx="12" cy="12" r="8.6"/><path d="M12 7.2V12l3.2 2"/>',
   plus:'<path d="M12 5.6v12.8M5.6 12h12.8"/>',
@@ -1719,6 +1771,7 @@ function entretien(){ if(archiverTachesTerminees() + purgerCorbeille()) sauver({
 /* --- Journal : ce qui a été saisi ou fait récemment (jamais les échéances futures) ---
    Chaque source donne la date de l'entrée (texte ISO) et, seulement si elle est retenue, l'entrée elle-même. */
 const SOURCES_JOURNAL = [
+  [() => DB.evenements, x => x.modif, x => ({icone:'calendrier', couleur:'violet', titre:x.modif !== x.cree ? 'Événement modifié' : 'Événement ajouté', sous:x.titre + ' · ' + dateCourte(x.date), href:href('evenement', x.id)})],
   [() => DB.mouvements, m => m.cree || (m.date ? m.date + 'T12:00:00' : ''), m => ({icone:m.type === 'revenu' ? 'haut' : 'euro', couleur:'vert',
     titre:(m.type === 'revenu' ? 'Entrée — ' : 'Dépense — ') + eur(m.montant), sous:(m.libelle || m.categorie || 'Sans libellé') + ' · ' + dateCourte(m.date),
     href:m.projet ? href('projet', m.projet) : '#/finances'})],
@@ -1747,7 +1800,8 @@ function journal(n = 6){
 
 /* --- Pastilles du calendrier de l'accueil : un seul passage sur les données pour tout le mois --- */
 function marqueursMois(ym){
-  const r = {taches:new Set(), mvts:new Set(), anniv:new Set(), docs:new Map()}, mm = ym.slice(5) + '-';
+  const r = {taches:new Set(), mvts:new Set(), anniv:new Set(), docs:new Map(), evts:new Set()}, mm = ym.slice(5) + '-';
+  DB.evenements.forEach(e => occurrences(e, ym + '-01', ym + '-' + pad(joursDansMois(ym))).forEach(j => r.evts.add(j)));
   DB.taches.forEach(t => { if(!t.fait && t.date && t.date.startsWith(ym)) r.taches.add(t.date); });
   mouvementsStats().forEach(m => { if(m.date && m.date.startsWith(ym)) r.mvts.add(m.date); });
   contactsActifs().forEach(c => { const md = c.anniversaire ? jourAnniv(c.anniversaire, ym.slice(0, 4)) : ''; if(md.startsWith(mm)) r.anniv.add(md); });
@@ -1760,6 +1814,7 @@ function marqueursMois(ym){
 function evenementsJour(j){
   const md = j.slice(5);
   return {
+    evenements: evenementsDuJour(j),
     taches: trierTaches(DB.taches.filter(t => t.date === j)),
     anniv: contactsActifs().filter(c => c.anniversaire && jourAnniv(c.anniversaire, j.slice(0, 4)) === md),
     mvts: mouvementsStats().filter(m => m.date === j),
@@ -1964,6 +2019,7 @@ function calendrierAccueil(){
   for(let j = 1; j <= n; j++){
     const jIso = ym + '-' + pad(j), docs = mq.docs.get(jIso) || [], noms = esc(docs.map(d => d.x.titre).join(', '));
     const pts = (docs.length ? `<i class="doc ${docs.some(d => d.etat === 'expire') ? 'expire' : ''}"></i>` : '') +
+                (mq.evts.has(jIso) ? '<i style="background:var(--i-violet)"></i>' : '') +
                 (mq.taches.has(jIso) ? '<i style="background:var(--i-bleu)"></i>' : '') +
                 (mq.anniv.has(jIso.slice(5)) ? '<i style="background:var(--i-rose)"></i>' : '') +
                 (mq.mvts.has(jIso) ? '<i style="background:var(--i-vert)"></i>' : '');
@@ -1972,7 +2028,107 @@ function calendrierAccueil(){
   return `<div class="cal-tete"><button class="cal-titre" data-action="cal-auj" title="Revenir au mois en cours">${nomMois(ym)}</button>
       <span class="cal-nav"><button data-action="cal-prec" aria-label="Mois précédent">${ico('chevronG', 15)}</button><button data-action="cal-suiv" aria-label="Mois suivant">${ico('chevronD', 15)}</button></span></div>
     <div class="cal">${['L','M','M','J','V','S','D'].map(x => `<span class="js">${x}</span>`).join('')}${cases}</div>
-    <div class="cal-leg"><span><i style="background:var(--i-bleu)"></i>tâche</span><span><i style="background:var(--i-rose)"></i>anniversaire</span><span><i style="background:var(--i-vert)"></i>dépense</span><span><i class="doc"></i>échéance de document</span></div>`;
+    <div class="cal-leg"><span><i style="background:var(--i-violet)"></i>événement</span><span><i style="background:var(--i-bleu)"></i>tâche</span><span><i style="background:var(--i-rose)"></i>anniversaire</span><span><i style="background:var(--i-vert)"></i>dépense</span><span><i class="doc"></i>échéance de document</span></div>`;
+}
+
+/* --- CALENDRIER : dates d'un événement, heure dans un autre fuseau, contenu des jours --- */
+const jourUTC = ms => new Date(ms).toISOString().slice(0, 10);
+const msJour = j => Date.UTC(Number(j.slice(0, 4)), Number(j.slice(5, 7)) - 1, Number(j.slice(8, 10)));
+/* Dates (AAAA-MM-JJ) d'un événement entre debut et fin inclus. Chaque mois : le même jour, sauté les mois qui ne l'ont
+   pas (un 31) ; chaque année : un 29 février tombe le 28 les autres années (comme un anniversaire). */
+function occurrences(ev, debut, fin){
+  const r = ev.recurrence || {}, res = [];
+  if(!r.freq) return ev.date >= debut && ev.date <= fin ? [ev.date] : res;
+  const borne = r.jusqua && r.jusqua < fin ? r.jusqua : fin, sautees = new Set(r.exceptions || []);
+  if(ev.date > borne) return res;
+  const prendre = j => { if(j >= debut && j <= borne && j >= ev.date && !sautees.has(j)) res.push(j); };
+  const [a, m, jr] = ev.date.split('-').map(Number);
+  if(r.freq === 'semaine'){
+    const d0 = msJour(ev.date), sem = 7 * 864e5;
+    for(let t = d0 + Math.max(0, Math.floor((msJour(debut) - d0) / sem)) * sem; jourUTC(t) <= borne; t += sem) prendre(jourUTC(t));
+  } else if(r.freq === 'mois'){
+    for(let k = Math.max(0, (Number(debut.slice(0, 4)) - a) * 12 + Number(debut.slice(5, 7)) - m); ; k++){
+      const ym = (a + Math.floor((m - 1 + k) / 12)) + '-' + pad((m - 1 + k) % 12 + 1);
+      if(ym + '-01' > borne) break;
+      if(jr <= joursDansMois(ym)) prendre(ym + '-' + pad(jr));
+    }
+  } else for(let y = Math.max(a, Number(debut.slice(0, 4))); y + '-01-01' <= borne; y++) prendre(y + '-' + jourAnniv(ev.date, y));
+  return res;
+}
+const prochaineOccurrence = (ev, depuis = aujourdhui()) => occurrences(ev, depuis, plusAns(depuis, 5))[0] || '';
+/* Heure d'un fuseau → instant, et instant → date et heure d'un autre fuseau (même calcul que le script des rappels) */
+function partiesLocales(ms, tz){
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {timeZone:tz, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23'})
+    .formatToParts(new Date(ms)).map(x => [x.type, x.value]));
+  return {date:`${p.year}-${p.month}-${p.day}`, hm:pad(Number(p.hour) % 24) + ':' + p.minute};
+}
+function instantFuseau(date, heure, tz){
+  const [a, mo, j] = date.split('-').map(Number), [h, mi] = heure.split(':').map(Number), mur = Date.UTC(a, mo - 1, j, h, mi);
+  const decalage = ms => { const l = partiesLocales(ms, tz), [la, lm, lj] = l.date.split('-').map(Number), [lh, lmi] = l.hm.split(':').map(Number); return Date.UTC(la, lm - 1, lj, lh, lmi) - ms; };
+  const t = mur - decalage(mur);
+  return mur - decalage(t);
+}
+const FUSEAUX = [['Europe/Paris', 'Paris'], ['Europe/Athens', 'Athènes']];
+const nomFuseau = tz => (FUSEAUX.find(f => f[0] === tz) || [0, String(tz).split('/').pop().replace(/_/g, ' ')])[1];
+const autreFuseau = ev => !!ev.fuseau && !!ev.heure && ev.fuseau !== fuseauIci();
+/* Heure à afficher « ici » (là où se trouve l'appareil) ; '' pour une journée entière */
+function heureIci(ev, j){
+  if(!ev.heure) return '';
+  return autreFuseau(ev) ? partiesLocales(instantFuseau(j, ev.heure, ev.fuseau), fuseauIci()).hm : ev.heure;
+}
+/* « 14:00–15:30 », ou « 10:00–11:00 Athènes · 09:00 ici » quand l'événement est fixé à l'heure d'un autre fuseau */
+function heureEvenement(ev, j){
+  if(!ev.heure) return 'journée entière';
+  const h = ev.heure + (ev.fin ? '–' + ev.fin : '');
+  if(!autreFuseau(ev)) return h;
+  const l = partiesLocales(instantFuseau(j, ev.heure, ev.fuseau), fuseauIci());
+  return `${h} ${nomFuseau(ev.fuseau)} · ${l.hm} ici${l.date !== j ? ' (' + dateCourte(l.date) + ')' : ''}`;
+}
+const FREQS_EVT = [{v:'', t:'Une seule fois'}, {v:'semaine', t:'Chaque semaine'}, {v:'mois', t:'Chaque mois'}, {v:'an', t:'Chaque année'}];
+const NOMS_RAPPEL = {15:'15 min avant', 60:'1 h avant', 1440:'la veille'};
+function texteRepetition(ev){
+  const r = ev.recurrence; if(!r.freq) return '';
+  return FREQS_EVT.find(f => f.v === r.freq).t + (r.jusqua ? ' jusqu’au ' + dateMoyenne(r.jusqua) : '') + (r.exceptions.length ? ' · ' + pluriel(r.exceptions.length, 'date retirée', 'dates retirées') : '');
+}
+const unEvenement = id => DB.evenements.find(e => e.id === id) || null;
+const evenementsDuJour = j => DB.evenements.filter(e => occurrences(e, j, j).length).sort((a, b) => heureIci(a, j).localeCompare(heureIci(b, j)));
+
+/* Tout ce qui est daté entre deux jours, jour par jour (page Calendrier) : événements, tâches à faire, anniversaires,
+   échéances de documents, dépenses (total du jour). Chaque entrée : {type, j, tri, …} ; tri = heure ('' en tête) */
+const FILTRES_CAL = [['evenements', 'Événements', 'violet'], ['taches', 'Tâches', 'bleu'], ['anniv', 'Anniversaires', 'rose'], ['documents', 'Échéances', 'jaune'], ['depenses', 'Dépenses', 'vert']];
+let filtresCal = {evenements:true, taches:true, anniv:true, documents:true, depenses:false};
+function contenuJours(debut, fin, f = filtresCal){
+  const jours = new Map(), ajout = x => { if(!jours.has(x.j)) jours.set(x.j, []); jours.get(x.j).push(x); };
+  if(f.evenements) DB.evenements.forEach(ev => occurrences(ev, debut, fin).forEach(j => ajout({type:'evt', j, ev, tri:heureIci(ev, j)})));
+  if(f.taches) DB.taches.forEach(t => { if(!t.fait && !t.archive && t.date && t.date >= debut && t.date <= fin) ajout({type:'tache', j:t.date, t, tri:t.heure || '99'}); });
+  if(f.anniv) contactsActifs().forEach(c => { if(!c.anniversaire) return;
+    for(let y = Number(debut.slice(0, 4)); y <= Number(fin.slice(0, 4)); y++){ const j = y + '-' + jourAnniv(c.anniversaire, y); if(j >= debut && j <= fin) ajout({type:'anniv', j, c, tri:''}); } });
+  if(f.documents) documentsActifs().forEach(x => { if(x.echeance && x.echeance >= debut && x.echeance <= fin) ajout({type:'doc', j:x.echeance, x, tri:''}); });
+  if(f.depenses){ const tot = new Map();
+    mouvementsStats().forEach(m => { if(m.type !== 'revenu' && m.date >= debut && m.date <= fin){ const s = tot.get(m.date) || {montant:0, n:0}; s.montant += Number(m.montant) || 0; s.n++; tot.set(m.date, s); } });
+    tot.forEach((s, j) => ajout({type:'dep', j, ...s, tri:'99z'})); }
+  jours.forEach(l => l.sort((a, b) => a.tri.localeCompare(b.tri)));
+  return jours;
+}
+const couleurItem = x => 'var(--i-' + (x.type === 'evt' ? CATEGORIES_EVT[x.ev.categorie][1] : {tache:'bleu', anniv:'rose', doc:'jaune', dep:'vert'}[x.type]) + ')';
+const texteItem = x => x.type === 'evt' ? (x.ev.heure ? heureIci(x.ev, x.j) + ' ' : '') + x.ev.titre : x.type === 'tache' ? (x.t.heure ? x.t.heure + ' ' : '') + x.t.nom
+  : x.type === 'anniv' ? 'Anniv. ' + x.c.nom : x.type === 'doc' ? 'Échéance : ' + x.x.titre : '−' + eur(x.montant);
+/* Détail d'un événement sous son titre : heure d'origine si autre fuseau, fin, lieu, projet, personnes, répétition */
+function sousEvenement(ev, j, avecDate = false){
+  const noms = ev.contacts.map(contact).filter(Boolean).map(c => c.nom);
+  return [avecDate ? dateCourte(j) : '', autreFuseau(ev) ? ev.heure + (ev.fin ? '–' + ev.fin : '') + ' heure de ' + nomFuseau(ev.fuseau) : ev.fin ? 'jusqu’à ' + ev.fin : '',
+    ev.lieu, nomProjet(ev.projet), noms.slice(0, 3).join(', ') + (noms.length > 3 ? ' +' + (noms.length - 3) : ''), ev.recurrence.freq ? FREQS_EVT.find(f => f.v === ev.recurrence.freq).t.toLowerCase() : '']
+    .filter(Boolean).join(' · ');
+}
+/* Une ligne de l'agenda (aussi : fenêtre d'un jour, page d'un projet) */
+function ligneAgenda(x){
+  if(x.type === 'evt') return `<li class="ligne-evt"><span class="evt-barre" style="--c:${couleurItem(x)}"></span><span class="evt-heure">${x.ev.heure ? esc(heureIci(x.ev, x.j)) : 'Journée'}</span>
+    <span class="corps"><button type="button" class="t nom-lien" data-action="evt-ouvrir" data-id="${esc(x.ev.id)}" data-j="${x.j}">${esc(x.ev.titre)}</button>${(() => { const s = sousEvenement(x.ev, x.j, x.avecDate); return s ? `<span class="s">${esc(s)}</span>` : ''; })()}</span></li>`;
+  if(x.type === 'tache') return ligneTache(x.t, {date:false});
+  if(x.type === 'anniv'){ const age = Number(x.j.slice(0, 4)) - Number(x.c.anniversaire.slice(0, 4));
+    return `<li>${pastille('cadeau', 'rose', 28, 14)}<span class="corps"><a class="t" href="${href('contact', x.c.id)}">Anniversaire de ${esc(x.c.nom)}</a></span>${age > 0 && age < 120 ? `<span class="pct">${age} ans</span>` : ''}</li>`; }
+  if(x.type === 'doc') return `<li>${pastille('document', {expire:'rose', preavis:'jaune'}[etatDocument(x.x).etat] || 'bleu', 28, 14)}<span class="corps">${titreDocument(x.x, 't nom-lien')}<span class="s">Échéance du document · ${badgeEcheance(x.x)}</span></span></li>`;
+  return `<li>${pastille('euro', 'vert', 28, 14)}<span class="corps"><button type="button" class="t nom-lien" data-action="jour" data-j="${x.j}">${pluriel(x.n, 'dépense')} · ${eur(x.montant)}</button></span></li>`;
 }
 
 /* Tableau de mouvements (finances, projet, jour) */
@@ -2265,6 +2421,7 @@ function pageProjet(id){
   const toutesNotes = DB.notes.filter(n => n.projet === id), notes = nonArchives(toutesNotes).sort(parModif), nbNA = toutesNotes.length - notes.length;
   const mvts = DB.mouvements.filter(m => m.projet === id).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   const tousContacts = DB.contacts.filter(c => c.projet === id), contacts = nonArchives(tousContacts), nbCA = tousContacts.length - contacts.length;
+  const evts = DB.evenements.filter(e => e.projet === id).map(e => ({type:'evt', ev:e, j:prochaineOccurrence(e), avecDate:true})).filter(x => x.j).sort((a, b) => (a.j + a.ev.heure).localeCompare(b.j + b.ev.heure));
   const dep = totalProjet(id), pct = progressionProjet(id), nb = noteBudget(dep, p.budget), ici = encodeURIComponent(id);
   const d = `data-id="${esc(id)}"`, dp = `data-projet="${esc(id)}"`;
   return titre(esc(p.nom) + (p.archive ? ' <span class="puce" style="vertical-align:middle">archivé</span>' : ''), esc(p.resume),
@@ -2289,6 +2446,7 @@ function pageProjet(id){
     </div>
     <section class="carte">${enteteCarte('euro', 'vert', 'Dépenses du projet', btnAction('mvt-nouveau', ico('plus', 13) + 'Dépense', 'btn f compact', dp))}
       ${mvts.length ? tableMouvements(mvts, false) : '<p class="aide" style="margin:0">Aucune dépense rattachée.</p>'}</section>
+    ${evts.length ? `<section class="carte">${enteteCarte('calendrier', 'violet', 'Événements à venir', btnAction('evt-nouveau', ico('plus', 13) + 'Événement', 'btn f compact', dp))}<ul class="liste">${evts.slice(0, 8).map(ligneAgenda).join('')}</ul></section>` : ''}
     ${tousContacts.length ? `<section class="carte">${enteteCarte('personnes', 'rose', 'Personnes liées')}${contacts.length ? `<div class="puces">${contacts.map(c => `<a class="puce" href="${href('contact', c.id)}">${esc(c.nom)}</a>`).join('')}</div>` : ''}
       ${ligneArchives(nbCA, 'fiche', 'fiches', '#/archives?type=contacts&projet=' + ici)}</section>` : ''}`;
 }
@@ -2791,6 +2949,132 @@ function pageRevue(){
     </section>`;
 }
 
+/* --- CALENDRIER : vue Mois (titres dans les cases ; pastilles sur téléphone) ou Agenda (liste des jours à venir) ---
+   Vue et cases cochées retenues sur cet appareil (navigateur), jamais dans les données synchronisées. */
+const CLE_CAL = 'lifepanel.calendrier', JOURS_AGENDA = 30;
+let vueCal = null, moisPage = moisCourant(), joursAgenda = JOURS_AGENDA;
+function lirePrefsCal(){
+  try { const p = JSON.parse(localStorage.getItem(CLE_CAL) || 'null');
+    if(p && typeof p === 'object'){ if(p.vue === 'mois' || p.vue === 'agenda') vueCal = p.vue;
+      if(p.filtres && typeof p.filtres === 'object') FILTRES_CAL.forEach(([k]) => { if(typeof p.filtres[k] === 'boolean') filtresCal[k] = p.filtres[k]; }); } } catch(e){ /* navigateur sans stockage : réglages par défaut */ }
+  if(!vueCal) vueCal = window.matchMedia && matchMedia('(max-width: 760px)').matches ? 'agenda' : 'mois';
+}
+function garderPrefsCal(){ try { localStorage.setItem(CLE_CAL, JSON.stringify({vue:vueCal, filtres:filtresCal})); } catch(e){ /* tant pis : réglage de cette visite seulement */ } }
+function pageCalendrier(){
+  if(vueCal === null) lirePrefsCal();
+  const mois = vueCal === 'mois', cour = moisCourant();
+  const bouton = (v, t) => `<button type="button" data-action="cal-vue" data-v="${v}" aria-pressed="${vueCal === v}"${vueCal === v ? ' class="on"' : ''}>${t}</button>`;
+  const nav = `<div class="nav-mois"><div class="segment vue-fin" role="group" aria-label="Affichage du calendrier">${bouton('mois', 'Mois')}${bouton('agenda', 'Agenda')}</div>` +
+    (mois ? `<button class="icone-btn" data-action="calp-prec" aria-label="Mois précédent">${ico('chevronG', 16)}</button><strong>${nomMois(moisPage)}</strong><button class="icone-btn" data-action="calp-suiv" aria-label="Mois suivant">${ico('chevronD', 16)}</button>` +
+      (moisPage !== cour ? btnAction('calp-auj', 'Revenir au mois en cours', 'btn f compact') : '') : '') + '</div>';
+  const filtres = `<div class="cal-filtres" role="group" aria-label="Ce qui est affiché">${FILTRES_CAL.map(([k, nom, c]) =>
+    `<button type="button" class="puce-compte${filtresCal[k] ? ' on' : ''}" style="--c:var(--i-${c})" data-action="cal-filtre" data-k="${k}" aria-pressed="${filtresCal[k]}"><span class="boite">${filtresCal[k] ? ico('check', 11, 'currentColor', 3) : ''}</span>${nom}</button>`).join('')}</div>`;
+  return titre('Calendrier', 'Tes événements, et tout ce qui est daté ailleurs : tâches, anniversaires, échéances de documents, dépenses.', btnAction('evt-nouveau', ico('plus', 14) + 'Nouvel événement', 'btn p')) +
+    nav + filtres + `<section class="carte">${mois ? grandMois(moisPage) : agenda()}</section>`;
+}
+function grandMois(ym){
+  const n = joursDansMois(ym), [a, m] = ym.split('-').map(Number), dec = (new Date(a, m - 1, 1).getDay() + 6) % 7, auj = aujourdhui();
+  const contenu = contenuJours(ym + '-01', ym + '-' + pad(n));
+  let cases = '';
+  for(let i = 0; i < dec; i++) cases += '<span></span>';
+  for(let j = 1; j <= n; j++){
+    const jIso = ym + '-' + pad(j), l = contenu.get(jIso) || [];
+    const lignes = l.slice(0, 3).map(x => `<span class="lig" style="--c:${couleurItem(x)}">${esc(texteItem(x))}</span>`).join('') + (l.length > 3 ? `<span class="plus">+${l.length - 3}</span>` : '');
+    const pts = l.length ? `<span class="pts">${l.slice(0, 4).map(x => `<i style="--c:${couleurItem(x)}"></i>`).join('')}</span>` : '';
+    cases += `<button type="button" class="jour-g${jIso === auj ? ' auj' : ''}" data-action="jour" data-j="${jIso}" aria-label="${esc(dateLongue(jIso))}${l.length ? ' · ' + pluriel(l.length, 'élément') : ''}"><span class="num">${j}</span>${lignes}${pts}</button>`;
+  }
+  return `<div class="grand-mois">${['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(x => `<span class="js">${x}</span>`).join('')}${cases}</div>`;
+}
+function agenda(){
+  const debut = aujourdhui(), fin = decaleJour(joursAgenda - 1), contenu = contenuJours(debut, fin), demain = decaleJour(1);
+  const jours = [...contenu.keys()].sort();
+  const titreJour = j => (j === debut ? 'Aujourd’hui · ' : j === demain ? 'Demain · ' : '') + dateLongue(j);
+  const corps = jours.map(j => `<div class="agenda-jour"><h3${j === debut ? ' class="auj"' : ''}>${esc(titreJour(j))}</h3><ul class="liste">${contenu.get(j).map(ligneAgenda).join('')}</ul></div>`).join('');
+  return (corps || vide(`Rien de prévu d’ici le ${esc(dateMoyenne(fin))}.`, btnAction('evt-nouveau', 'Créer un événement', 'btn p'))) +
+    `<p class="aide" style="margin:14px 0 8px">Jusqu’au ${esc(dateMoyenne(fin))}.</p>${btnAction('cal-plus', 'Afficher 30 jours de plus', 'btn')}`;
+}
+
+/* --- Événement : formulaire, fiche (Itinéraire, visio, personnes), suppression d'une date ou de la série --- */
+const pucesPersonnes = ids => ids.map(contact).filter(Boolean).map(c =>
+  `<button type="button" class="puce" data-action="personne-retirer" data-id="${esc(c.id)}" title="Retirer" aria-label="Retirer ${esc(c.nom)}">${esc(c.nom)}${ico('croix', 11)}</button>`).join('');
+/* Nom tapé ou choisi dans la liste → fiche contact (les fiches actives d'abord) */
+const contactParNom = nom => { const k = norm(String(nom || '').trim()); return k ? contactsActifs().find(c => norm(c.nom) === k) || DB.contacts.find(c => norm(c.nom) === k) || null : null; };
+function ajouterPersonne(c){
+  const cache = $('#ch-contacts'); if(!cache || !c) return;
+  const ids = cache.value ? cache.value.split(',') : [];
+  if(!ids.includes(c.id)) ids.push(c.id);
+  cache.value = ids.join(','); $('#ch-contacts-puces').innerHTML = pucesPersonnes(ids); $('#ch-contacts-saisie').value = '';
+}
+function formEvenement(e0 = {}, {apres = null, puis = null, retour = null} = {}){
+  const ex = e0.id ? unEvenement(e0.id) : null, r0 = e0.recurrence || {}, ici = fuseauIci();
+  const fuseaux = [{v:'', t:'Là où je suis (' + nomFuseau(ici) + ')'}, ...FUSEAUX.map(([v, t]) => ({v, t})), ...(e0.fuseau && !FUSEAUX.some(f => f[0] === e0.fuseau) ? [{v:e0.fuseau, t:nomFuseau(e0.fuseau)}] : [])];
+  formulaire({titre:ex ? 'Modifier l’événement' : 'Nouvel événement', icone:'calendrier', couleur:'violet', ok:ex ? 'Enregistrer' : 'Créer l’événement', puis, retour, champs:[
+    {n:'titre', l:'Titre', v:e0.titre, aide:'ex. Dentiste, Examen EASA, Dîner chez Papa'},
+    {n:'date', l:'Date', t:'date', v:e0.date || aujourdhui(), demi:true},
+    {n:'categorie', l:'Catégorie', t:'select', o:Object.entries(CATEGORIES_EVT).map(([v, [t]]) => ({v, t})), v:e0.categorie || 'perso', demi:true},
+    {n:'heure', l:'Début', t:'heure', v:e0.heure, demi:true, aide:'vide = journée entière'},
+    {n:'fin', l:'Fin', t:'heure', v:e0.fin, demi:true, aide:'facultatif'},
+    {n:'fuseau', l:'Heure de', t:'select', o:fuseaux, v:e0.fuseau || '', demi:true, nouveau:'Autre fuseau (ex. Asia/Dubai)'},
+    {n:'rappel', l:'Rappel', t:'select', o:[{v:'', t:'Aucun'}, ...RAPPELS_EVT.map(v => ({v, t:NOMS_RAPPEL[v]}))], v:e0.rappel ?? '', demi:true, aide:'notification'},
+    {n:'freq', l:'Répétition', t:'select', o:FREQS_EVT, v:r0.freq || '', demi:true},
+    {n:'jusqua', l:'Jusqu’au', t:'date', v:r0.jusqua || '', demi:true, aide:'facultatif, si répété'},
+    {n:'lieu', l:'Lieu', v:e0.lieu, aide:'adresse ou nom du lieu : bouton « Itinéraire » dans la fiche'},
+    {n:'lien', l:'Lien', v:e0.lien, aide:'facultatif : visio (Teams, Meet, Zoom…) ou page web'},
+    {n:'contacts', l:'Personnes', t:'personnes', v:e0.contacts || [], aide:'fiches contacts'},
+    {n:'projet', l:'Projet', t:'select', o:optionsProjets(e0.projet), v:e0.projet || ''},
+    {n:'note', l:'Note', t:'zone', v:e0.note, aide:'facultatif'}
+  ], onOk:v => {
+    if(!v.titre) return 'Donne un titre à l’événement.';
+    if(!dateISO(v.date)) return 'Indique une date.';
+    if(v.fin && !v.heure) return 'Indique l’heure de début (ou efface l’heure de fin).';
+    if(v.fin && v.fin <= v.heure) return 'L’heure de fin doit être après le début.';
+    if(v.freq && v.jusqua && v.jusqua < v.date) return 'La date « jusqu’au » doit être après la date de l’événement.';
+    let fuseau = v.fuseau;
+    if(fuseau === NOUVEAU){ fuseau = v.fuseauNouveau; if(!fuseauValide(fuseau)) return 'Fuseau inconnu : écris-le comme « Europe/Athens » ou « America/New_York ».'; }
+    const lien = v.lien ? normaliserLien(v.lien) : '';
+    if(v.lien && !lien) return 'Ce lien n’est pas valide. Copie l’adresse complète (elle commence par https://), ou laisse le champ vide.';
+    const reste = ($('#ch-contacts-saisie') || {}).value || '';   /* nom tapé sans avoir appuyé sur Entrée */
+    if(reste.trim()){ const c = contactParNom(reste); if(!c) return `Aucune fiche contact « ${reste.trim()} » : choisis un nom dans la liste, ou efface-le.`; ajouterPersonne(c); }
+    const contacts = String(($('#ch-contacts') || {}).value || '').split(',').filter(id => contact(id));
+    const d = {titre:v.titre, date:v.date, heure:v.heure, fin:v.heure ? v.fin : '', fuseau:v.heure ? fuseau : '',
+      recurrence:{freq:v.freq, jusqua:v.freq ? v.jusqua : '', exceptions:v.freq && ex ? ex.recurrence.exceptions : []},
+      lieu:v.lieu, lien, contacts, projet:v.projet || null, categorie:v.categorie, note:v.note, rappel:v.rappel ? Number(v.rappel) : null, modif:maintenant()};
+    if(ex){ const avant = ex.projet; Object.assign(ex, FORMES.evenements({...ex, ...d})); toucherProjet(avant); toucherProjet(ex.projet); toast('Événement modifié'); }
+    else { ajouter('evenements', {...d, cree:d.modif}); toucherProjet(d.projet); toast('Événement créé : ' + dateMoyenne(d.date)); }
+    if(apres) apres();
+  }});
+  const saisie = $('#ch-contacts-saisie');
+  if(saisie){
+    /* Un nom choisi dans la liste est ajouté aussitôt ; un nom tapé, avec Entrée */
+    saisie.addEventListener('input', e => { if(!e.inputType || e.inputType === 'insertReplacementText'){ const c = contactParNom(saisie.value); if(c) ajouterPersonne(c); } });
+    saisie.addEventListener('keydown', e => { if(e.key !== 'Enter') return; e.preventDefault();
+      const c = contactParNom(saisie.value); if(c) ajouterPersonne(c); else if(saisie.value.trim()) toast('Aucune fiche contact à ce nom.'); });
+  }
+}
+function ficheEvenement(id, jour = ''){
+  const ev = unEvenement(id); if(!ev){ toast('Cet événement n’existe plus.'); return; }
+  const j = jour && occurrences(ev, jour, jour).length ? jour : prochaineOccurrence(ev) || ev.date;
+  const [nomCat, coul] = CATEGORIES_EVT[ev.categorie], d = `data-id="${esc(ev.id)}"`, repete = !!ev.recurrence.freq;
+  const personnes = ev.contacts.map(contact).filter(Boolean);
+  const ligne = (icone, contenu) => `<li>${pastille(icone, 'gris', 28, 14)}<span class="corps">${contenu}</span></li>`;
+  const visio = /teams\.|meet\.google|zoom\.|whereby|webex|jitsi/i.test(ev.lien);
+  const ouvrirLien = !ev.lien ? '' : estDrive(ev.lien) ? boutonDrive(cheminDe(ev.lien), 'btn compact', ico('externe', 13) + 'Ouvrir le lien')
+    : `<a class="btn compact" href="${esc(ev.lien)}" target="_blank" rel="noopener noreferrer">${ico('externe', 13)}${visio ? 'Rejoindre la visio' : 'Ouvrir le lien'}</a>`;
+  const sous = `<span class="puce" style="color:var(--i-${coul})">${esc(nomCat)}</span>${repete ? `<span class="puce">${ico('sync', 12)}${esc(FREQS_EVT.find(f => f.v === ev.recurrence.freq).t.toLowerCase())}</span>` : ''}${tagProjet(ev.projet)}`;
+  const infos = `<ul class="liste infos-evt">` +
+    ligne('calendrier', `<span class="t">${esc(dateLongue(j))} · ${esc(heureEvenement(ev, j))}</span>${repete ? `<span class="s">${esc(texteRepetition(ev))}</span>` : ''}`) +
+    (ev.lieu ? ligne('lieu', `<span class="t">${esc(ev.lieu)}</span><span class="s"><a class="btn compact" href="https://www.google.com/maps/dir/?api=1&amp;destination=${encodeURIComponent(ev.lieu)}" target="_blank" rel="noopener noreferrer">${ico('externe', 13)}Itinéraire</a></span>`) : '') +
+    (ev.lien ? ligne('lien', `<span class="t lien-evt">${esc(ev.lien)}</span><span class="s">${ouvrirLien}</span>`) : '') +
+    (personnes.length ? ligne('personnes', `<div class="puces">${personnes.map(c => `<a class="puce" href="${href('contact', c.id)}">${esc(c.nom)}</a>`).join('')}</div>`) : '') +
+    (ev.rappel ? ligne('horloge', `<span class="t">Rappel ${esc(NOMS_RAPPEL[ev.rappel])}</span><span class="s">notification sur les appareils inscrits</span>`) : '') +
+    '</ul>' + (ev.note ? `<p class="texte note-evt">${esc(ev.note)}</p>` : '');
+  const suppr = repete ? btnAction('evt-supprimer-date', ico('corbeille', 13) + 'Cette date seulement', 'btn danger', d + ` data-j="${j}"`) + btnAction('evt-supprimer', ico('corbeille', 13) + 'Toute la série', 'btn danger', d)
+    : btnAction('evt-supprimer', ico('corbeille', 13) + 'Supprimer', 'btn danger', d);
+  ouvrirModale(teteFiche(pastille('calendrier', coul, 40, 20), esc(ev.titre), sous) + infos +
+    `<div class="actions fiche-pied">${btnAction('evt-modifier', ico('crayon', 13) + (repete ? 'Modifier la série' : 'Modifier'), 'btn', d)}${suppr}<button class="btn p" data-action="fermer">Fermer</button></div>`, {taille:'fiche', saisie:false});
+  ficheOuverte = {type:'evenement', id:ev.id, jour:j};
+}
+
 /* --- CORBEILLE : 30 jours pour changer d'avis --- */
 const TYPES_ELEMENTS = {
   taches:{nom:'Tâche', fem:true, icone:'coche', couleur:'bleu', titre:x => x.nom},
@@ -2799,7 +3083,8 @@ const TYPES_ELEMENTS = {
   mouvements:{nom:'Mouvement', icone:'euro', couleur:'vert', titre:x => (x.libelle || x.categorie || 'Mouvement') + ' · ' + eur(x.montant)},
   projets:{nom:'Projet', icone:'dossier', couleur:'violet', titre:x => x.nom},
   documents:{nom:'Document', icone:'document', couleur:'bleu', titre:x => x.titre || titreDepuisLien(x.url)},
-  inbox:{nom:'Élément de l’Inbox', icone:'ampoule', couleur:'jaune', titre:x => x.text}
+  inbox:{nom:'Élément de l’Inbox', icone:'ampoule', couleur:'jaune', titre:x => x.text},
+  evenements:{nom:'Événement', icone:'calendrier', couleur:'violet', titre:x => x.titre + ' · ' + dateCourte(x.date)}
 };
 function pageCorbeille(){
   const l = DB.corbeille;
@@ -2868,7 +3153,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.20 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.21 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -2876,11 +3161,12 @@ function pageDonnees(){
    G. ROUTEUR — une seule fonction rendre(), jamais redéfinie
    ========================================================================== */
 const ROUTES = {accueil:pageAccueil, aujourdhui:pageAujourdhui, inbox:pageInbox, taches:pageTaches, projets:pageProjets, projet:pageProjet,
-  finances:pageFinances, notes:pageNotes, documents:pageDocuments, contacts:pageContacts, revue:pageRevue, donnees:pageDonnees, recherche:pageRecherche, corbeille:pageCorbeille, archives:pageArchives};
+  finances:pageFinances, notes:pageNotes, documents:pageDocuments, contacts:pageContacts, revue:pageRevue, calendrier:pageCalendrier, donnees:pageDonnees, recherche:pageRecherche, corbeille:pageCorbeille, archives:pageArchives};
 /* Notes et contacts s'ouvrent dans une fenêtre : « #/note/ID » affiche la page Notes puis la fenêtre */
-const FICHES = {note:{page:'notes', ouvrir:id => ficheNote(id)}, contact:{page:'contacts', ouvrir:id => ficheContact(id)}, document:{page:'documents', ouvrir:id => ficheDocument(id)}};
-const MENU = [['accueil','Accueil','maison'],['aujourdhui','Aujourd’hui','cible'],['inbox','Inbox','ampoule'],['taches','Tâches','coche'],
-  ['projets','Projets','dossier'],['finances','Finances','portefeuille'],['notes','Notes','doc'],['documents','Documents','document'],['contacts','Contacts','personnes'],['revue','Revue','calendrier']];
+const FICHES = {note:{page:'notes', ouvrir:id => ficheNote(id)}, contact:{page:'contacts', ouvrir:id => ficheContact(id)}, document:{page:'documents', ouvrir:id => ficheDocument(id)},
+  evenement:{page:'calendrier', ouvrir:id => ficheEvenement(id)}};
+const MENU = [['accueil','Accueil','maison'],['aujourdhui','Aujourd’hui','cible'],['calendrier','Calendrier','calendrier'],['inbox','Inbox','ampoule'],['taches','Tâches','coche'],
+  ['projets','Projets','dossier'],['finances','Finances','portefeuille'],['notes','Notes','doc'],['documents','Documents','document'],['contacts','Contacts','personnes'],['revue','Revue','sync']];
 const PARENT = {projet:'projets'};   /* page d'un projet : l'entrée « Projets » du volet reste en surbrillance */
 const LISTES = {taches:listeTaches, projets:listeProjets, finances:listeFinances, notes:listeNotes, documents:listeDocuments, contacts:listeContacts, archives:listeArchives};
 let routeAffichee = '', tAnim;
@@ -2897,7 +3183,7 @@ function lireRoute(){
 function titrePage(){
   const r = lireRoute();
   const t = {accueil:'Accueil', aujourdhui:'Aujourd’hui', inbox:'Inbox', taches:'Tâches', projets:'Projets', projet:nomProjet(r.id) || 'Projet',
-    finances:'Finances', notes:'Notes', documents:'Documents', contacts:'Contacts', revue:'Revue hebdo', donnees:'Données', recherche:'Recherche', corbeille:'Corbeille', archives:'Archives'}[r.nom];
+    finances:'Finances', notes:'Notes', documents:'Documents', contacts:'Contacts', revue:'Revue hebdo', calendrier:'Calendrier', donnees:'Données', recherche:'Recherche', corbeille:'Corbeille', archives:'Archives'}[r.nom];
   return t + ' · Life Panel';
 }
 function rendre(){
@@ -3062,6 +3348,9 @@ function champHTML(c){
   if(c.t === 'segment') return `<div class="${cls}"><span>${esc(c.l)}${aide}</span><div class="segment" role="radiogroup">${c.o.map(o =>
     `<label><input type="radio" name="${c.n}" value="${esc(o.v)}"${String(o.v) === String(v) ? ' checked' : ''}><span>${esc(o.t)}</span></label>`).join('')}</div></div>`;
   if(c.t === 'tags') return `<div class="${cls}"><span>${esc(c.l)}${aide}</span>${champTags(`id="${id}" name="${c.n}"`, v)}</div>`;
+  if(c.t === 'personnes'){ const ids = Array.isArray(v) ? v : [];   /* fiches contacts : puces + saisie avec la liste des noms */
+    return `<div class="${cls}"><span>${esc(c.l)}${aide}</span><input type="hidden" id="${id}" name="${c.n}" value="${esc(ids.join(','))}"><div class="puces" id="${id}-puces" style="margin-bottom:6px">${pucesPersonnes(ids)}</div>
+      <input id="${id}-saisie" type="text" list="dl-${c.n}" placeholder="Nom d’une fiche contact…" autocomplete="off" aria-label="Ajouter une personne"><datalist id="dl-${c.n}">${unique(contactsActifs().map(x => x.nom)).sort((a, b) => a.localeCompare(b, 'fr')).map(x => `<option value="${esc(x)}">`).join('')}</datalist></div>`; }
   if(c.t === 'markdown') return `<div class="${cls}"><span>${esc(c.l)}${aide}</span><div class="onglets"><button type="button" class="actif" data-action="md-ecrire">Écrire</button><button type="button" data-action="md-apercu">Aperçu</button></div>
     <textarea id="${id}" name="${c.n}" class="code" aria-label="${esc(c.l)}">${esc(v)}</textarea><div class="apercu md" hidden></div></div>`;
   const dl = c.suggestions && c.suggestions.length ? `<datalist id="dl-${c.n}">${c.suggestions.map(s => `<option value="${esc(s)}">`).join('')}</datalist>` : '';
@@ -3421,6 +3710,7 @@ function ficheRenouveler(x, depuisFiche){
 function ficheJour(j){
   const ev = evenementsJour(j), dep = somme(ev.mvts.filter(m => m.type !== 'revenu'));
   let corps = '';
+  if(ev.evenements.length) corps += `<div class="sous-titre">${ico('calendrier', 12)} Événements</div><ul class="liste">${ev.evenements.map(e => ligneAgenda({type:'evt', ev:e, j})).join('')}</ul>`;
   if(ev.taches.length) corps += `<div class="sous-titre">${ico('coche', 12)} Tâches</div><ul class="liste">${ev.taches.map(t => ligneTache(t, {date:false})).join('')}</ul>`;
   if(ev.anniv.length) corps += `<div class="sous-titre">${ico('cadeau', 12)} Anniversaires</div><ul class="liste">${ev.anniv.map(c => { const age = Number(j.slice(0, 4)) - Number(c.anniversaire.slice(0, 4));
     return `<li>${pastille('cadeau', 'rose', 28, 14)}<span class="corps"><a class="t" href="${href('contact', c.id)}">${esc(c.nom)}</a></span>${age > 0 && age < 120 ? `<span class="pct">${age} ans</span>` : ''}</li>`; }).join('')}</ul>`;
@@ -3428,7 +3718,7 @@ function ficheJour(j){
   if(ev.documents.length) corps += `<div class="sous-titre">${ico('document', 12)} Échéances de documents</div><ul class="liste">${ev.documents.map(x => `<li>${pastille('document', {expire:'rose', preavis:'jaune'}[etatDocument(x).etat] || 'bleu', 28, 14)}<span class="corps">${titreDocument(x, 't nom-lien')}<span class="s">${badgeEcheance(x)}</span></span></li>`).join('')}</ul>`;
   if(ev.notes.length) corps += `<div class="sous-titre">${ico('doc', 12)} Notes créées</div><ul class="liste">${ev.notes.map(n => `<li><span class="corps"><a class="t" href="${href('note', n.id)}">${esc(n.titre)}</a></span></li>`).join('')}</ul>`;
   ouvrirModale(teteModale(esc(dateLongue(j)), 'calendrier', 'bleu') + (corps || '<p class="texte">Rien de noté ce jour-là.</p>') +
-    `<div class="actions" style="margin-top:16px">${btnAction('tache-nouvelle', ico('plus', 14) + 'Tâche ce jour', 'btn', `data-date="${j}"`)}${btnAction('mvt-nouveau', ico('plus', 14) + 'Dépense ce jour', 'btn', `data-date="${j}"`)}<button class="btn p" data-action="fermer">Fermer</button></div>`, {large:true});
+    `<div class="actions" style="margin-top:16px">${btnAction('evt-nouveau', ico('plus', 14) + 'Événement', 'btn', `data-date="${j}"`)}${btnAction('tache-nouvelle', ico('plus', 14) + 'Tâche ce jour', 'btn', `data-date="${j}"`)}${btnAction('mvt-nouveau', ico('plus', 14) + 'Dépense ce jour', 'btn', `data-date="${j}"`)}<button class="btn p" data-action="fermer">Fermer</button></div>`, {large:true});
 }
 const INDICES = [['Restaurants', /restau|dejeuner|diner|repas|cafe\b|bar\b|pizza|burger|brasserie/], ['Courses', /course|supermarche|carrefour|lidl|auchan|leclerc|intermarche|aliment|marche\b/],
   ['Transport', /essence|carburant|plein|bus\b|train|taxi|uber|peage|parking|transport|metro|navigo/], ['Abonnements', /abonnement|netflix|spotify|deezer|claude|icloud|forfait|youtube/],
@@ -3450,9 +3740,24 @@ function ficheCategoriser(){
 }
 
 /* --- Capture rapide : une pensée → tâche, dépense ou note --- */
+/* Jour et mois sans année : la prochaine fois que cette date arrive (aujourd'hui compris) ; '' si elle n'existe pas */
+function prochaineDate(j, m, a){
+  const auj = aujourdhui(), annee = a ? (a < 100 ? 2000 + a : a) : Number(auj.slice(0, 4));
+  for(let y = annee; y <= annee + (a ? 0 : 1); y++){ const s = y + '-' + pad(m) + '-' + pad(j); if(dateReelle(y, m, j) && (a || s >= auj)) return s; }
+  return '';
+}
+const MOIS_SAISIE = ['janv', 'fev', 'mars', 'avr', 'mai', 'juin', 'juil', 'aout', 'sep', 'oct', 'nov', 'dec'];
+const RE_DATE_NUM = /\b(\d{1,2})\/(\d{1,2})(?:\/(\d{4}|\d{2}))?\b/, RE_DATE_MOIS = /\b(\d{1,2})(?:er)?\s+(janv|fevr?|mars|avr|mai|juin|juil|aout|sept?|oct|nov|dec)[a-z]*\.?(?:\s+(\d{4}))?/;
+const RE_LE_JOUR = /\ble\s+(\d{1,2})(?:er)?\b(?!\s*(?:h\b|h\d|:|\/|€|eur|\d))/;   /* pas « le 14h », ni « le 06 12 34… » */
 function lireQuand(n){
   let date = '', h = '';
-  if(/\baujourd.?hui\b|\bce soir\b/.test(n)) date = aujourdhui();
+  const dn = n.match(RE_DATE_NUM), dm = n.match(RE_DATE_MOIS), le = n.match(RE_LE_JOUR);
+  if(dn) date = prochaineDate(Number(dn[1]), Number(dn[2]), dn[3] ? Number(dn[3]) : 0);   /* 14/10, 14/10/2026 */
+  else if(dm) date = prochaineDate(Number(dm[1]), MOIS_SAISIE.findIndex(x => dm[2].startsWith(x)) + 1, dm[3] ? Number(dm[3]) : 0);   /* 14 octobre, 1er mai, 3 sept. */
+  else if(le){ const j = Number(le[1]); let ym = moisCourant(); if(j < Number(aujourdhui().slice(8))) ym = decaleMois(ym, 1);   /* le 14 : ce mois-ci, ou le suivant s'il est passé */
+    if(j >= 1 && j <= joursDansMois(ym)) date = ym + '-' + pad(j); }
+  if(date){ /* date écrite : prioritaire sur « demain », un jour de la semaine… */ }
+  else if(/\baujourd.?hui\b|\bce soir\b/.test(n)) date = aujourdhui();
   else if(/\bapres-demain\b/.test(n)) date = decaleJour(2);
   else if(/\bdemain\b/.test(n)) date = decaleJour(1);
   else { const jours = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'], i = jours.findIndex(j => new RegExp('\\b' + j + '\\b').test(n));
@@ -3460,6 +3765,18 @@ function lireQuand(n){
   const m = n.match(/\b(\d{1,2})\s*(?:h|:)\s*(\d{2})?(?!\d)/);
   if(m && Number(m[1]) < 24 && (!m[2] || Number(m[2]) < 60)) h = pad(m[1]) + ':' + (m[2] || '00');
   return {date, heure:h};
+}
+/* Titre d'un événement saisi d'une traite : « Dîner chez Papa samedi à 20h » → « Dîner chez Papa » */
+function titreSansQuand(s){
+  const t = String(s).replace(/\b(?:aujourd['’]?hui|ce soir|apr[eè]s-demain|demain)(?![\wàâçéèêëîïôûùüÿ])/gi, ' ')
+    .replace(/\b(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/gi, ' ')
+    .replace(/\b\d{1,2}\/\d{1,2}(?:\/(?:\d{4}|\d{2}))?\b/g, ' ')
+    .replace(/\b\d{1,2}(?:er)?\s+(?:janv|f[ée]vr?|mars|avr|mai|juin|juil|ao[uû]t|sept?|oct|nov|d[ée]c)[a-zéû]*\.?(?:\s+\d{4})?/gi, ' ')
+    .replace(/\b\d{1,2}\s*(?:h|:)\s*(?:\d{2})?(?!\d)/gi, ' ')
+    .replace(/\ble\s+\d{1,2}(?:er)?\b/gi, ' ')
+    .replace(/\s+/g, ' ').trim()
+    .replace(/(?:[\s,–—-]+(?:à|a|le|de|du|pour|vers|ce|cette|ce))+$/i, '').replace(/^(?:(?:le|à|a)\s+)+/i, '').replace(/[\s,–—:-]+$/, '').trim();
+  return t || String(s).trim();
 }
 function analyserCapture(texte){
   const s = texte.trim(), n = norm(s), bords = /^[\s\-–—:,]+|[\s\-–—:,]+$/g;
@@ -3470,24 +3787,27 @@ function analyserCapture(texte){
     return {type:'depense', montant:Number(m[1].replace(',', '.')), libelle, categorie:devinerCategorie(libelle)}; }
   const quand = lireQuand(n);
   const verbe = /^(appeler|rappeler|repondre|faire|acheter|reviser|envoyer|terminer|preparer|reserver|payer|verifier|ecrire|prendre|contacter|commander|finir|relire|imprimer|penser|aller|confirmer|regarder|ranger|nettoyer|reparer|planifier|demander|rendre|chercher)\b/.test(n);
+  if(!verbe && quand.date && quand.heure) return {type:'evenement', ...quand, titre:titreSansQuand(s)};   /* « Dentiste jeudi 14h30 » */
   if(verbe || quand.date || quand.heure) return {type:'tache', ...quand};
   return {type:'note'};
 }
 function ficheCapture(texte = '', inboxId = ''){
   ouvrirModale(teteModale('Capture rapide', 'ampoule', 'jaune') + `
     <p class="texte">Écris ce qui te passe par la tête : Life Panel propose un type, tu confirmes à l’étape suivante.</p>
-    <label class="champ" for="capture-texte"><span>Que veux-tu noter ?</span><textarea id="capture-texte" style="min-height:96px" placeholder="Ex. Appeler le garage vendredi à 15h · 45 € essence · Idée : … · un lien Google Drive">${esc(texte)}</textarea></label>
-    <div class="champ"><span>Type <em id="capture-devine"></em></span><div class="segment">${[['auto','Auto'],['tache','Tâche'],['depense','Dépense'],['note','Note'],['document','Document']].map(([v, t], i) =>
+    <label class="champ" for="capture-texte"><span>Que veux-tu noter ?</span><textarea id="capture-texte" style="min-height:96px" placeholder="Ex. Appeler le garage vendredi à 15h · Dentiste jeudi 14h30 · 45 € essence · Idée : … · un lien Google Drive">${esc(texte)}</textarea></label>
+    <div class="champ"><span>Type <em id="capture-devine"></em></span><div class="segment">${[['auto','Auto'],['tache','Tâche'],['evenement','Événement'],['depense','Dépense'],['note','Note'],['document','Document']].map(([v, t], i) =>
       `<label><input type="radio" name="capture-type" value="${v}"${i ? '' : ' checked'}><span>${t}</span></label>`).join('')}</div></div>
     <div class="actions">${inboxId ? '' : '<button class="btn f" id="capture-inbox" style="margin-right:auto">Mettre dans l’Inbox</button>'}<button class="btn" data-action="fermer">Annuler</button><button class="btn p" id="capture-valider">Continuer</button></div>`);
   const zone = $('#capture-texte');
-  const devine = () => { const t = zone.value.trim(); $('#capture-devine').textContent = t ? '— détecté : ' + ({tache:'tâche', depense:'dépense', note:'note', document:'document'})[analyserCapture(t).type] : ''; };
+  const devine = () => { const t = zone.value.trim(); $('#capture-devine').textContent = t ? '— détecté : ' + ({tache:'tâche', evenement:'événement', depense:'dépense', note:'note', document:'document'})[analyserCapture(t).type] : ''; };
   const valider = () => {
     const t = zone.value.trim(); if(!t){ zone.focus(); return; }
     const a = analyserCapture(t); let type = $('#modale [name="capture-type"]:checked').value;
     if(type === 'auto') type = a.type;
     const apres = inboxId ? () => { DB.inbox = DB.inbox.filter(x => x.id !== inboxId); } : null;   /* retiré de l'Inbox seulement une fois enregistré */
     if(type === 'tache') formTache({nom:t, date:a.date || aujourdhui(), heure:a.heure || ''}, apres);
+    else if(type === 'evenement'){ const q = a.type === 'evenement' ? a : {...lireQuand(norm(t)), titre:titreSansQuand(t)};
+      formEvenement({titre:q.titre.slice(0, 120), date:q.date || aujourdhui(), heure:q.heure || '', note:t.includes('\n') ? t : ''}, {apres}); }
     else if(type === 'depense'){ const brut = (t.match(/(\d+(?:[.,]\d{1,2})?)/) || [])[1];
       const nb = a.montant !== undefined ? a.montant : (brut ? Number(brut.replace(',', '.')) : '');
       formMouvement({type:'depense', montant:nb, libelle:a.libelle || t, categorie:a.categorie || devinerCategorie(t)}, apres); }
@@ -3552,6 +3872,26 @@ const ACTIONS = {
   'recherche-onglet': el => { ongletRecherche = el.dataset.m || 'tout'; limiteRecherche = PAR_PAGE; const i = $('#recherche-page'); majRecherchePage(i ? i.value : ''); window.scrollTo({top:0, behavior:animationsReduites() ? 'auto' : 'smooth'}); },
   'recherche-plus': () => { limiteRecherche += PAR_PAGE; const i = $('#recherche-page'); majRecherchePage(i ? i.value : ''); },
 
+  /* Calendrier */
+  'evt-nouveau': el => formEvenement({date:el.dataset.date || (lireRoute().nom === 'calendrier' && vueCal === 'mois' && moisPage !== moisCourant() ? moisPage + '-01' : aujourdhui()), projet:el.dataset.projet || ''}),
+  'evt-ouvrir': el => ficheEvenement(el.dataset.id, el.dataset.j || ''),
+  'evt-modifier': el => { const ev = unEvenement(el.dataset.id); if(!ev) return;
+    const j = ficheOuverte && ficheOuverte.id === ev.id ? ficheOuverte.jour : null, revoir = j ? () => ficheEvenement(ev.id, j) : null;
+    formEvenement(ev, revoir ? {puis:revoir, retour:revoir} : {}); },
+  'evt-supprimer': async el => { const ev = unEvenement(el.dataset.id); if(!ev) return; const serie = !!ev.recurrence.freq;
+    if(!await confirmerSuppression(ev, {titre:serie ? 'Supprimer toute la série ?' : 'Supprimer cet événement ?', texte:`« ${esc(ev.titre)} »${serie ? ', toutes dates confondues,' : ''} sera mis à la corbeille.`, rouvrir:id => ficheEvenement(id)})) return;
+    retirerVersCorbeille('evenements', ev); sauver(); rendre(); toast('Événement mis à la corbeille'); },
+  'evt-supprimer-date': async el => { const ev = unEvenement(el.dataset.id), j = el.dataset.j; if(!ev || !j) return;
+    if(!await confirmer({titre:'Retirer cette date ?', texte:`« ${esc(ev.titre)} » du ${esc(dateLongue(j))} ne sera plus affiché. Les autres dates de la série restent.`, ok:'Retirer cette date'})){ ficheEvenement(ev.id, j); return; }
+    ev.recurrence.exceptions = unique([...ev.recurrence.exceptions, j]).sort(); ev.modif = maintenant(); toucherProjet(ev.projet); sauver(); rendre(); toast('Date retirée de la série'); },
+  'personne-retirer': el => { const cache = $('#ch-contacts'); if(!cache) return; const ids = cache.value.split(',').filter(id => id && id !== el.dataset.id);
+    cache.value = ids.join(','); $('#ch-contacts-puces').innerHTML = pucesPersonnes(ids); },
+  'cal-vue': el => { const v = el.dataset.v === 'agenda' ? 'agenda' : 'mois'; if(v === vueCal) return; vueCal = v; garderPrefsCal(); rendre(); },
+  'cal-filtre': el => { const k = el.dataset.k; if(!Object.prototype.hasOwnProperty.call(filtresCal, k)) return; filtresCal[k] = !filtresCal[k]; garderPrefsCal(); rendre(); },
+  'calp-prec': () => { moisPage = decaleMois(moisPage, -1); rendre(); },
+  'calp-suiv': () => { moisPage = decaleMois(moisPage, 1); rendre(); },
+  'calp-auj': () => { moisPage = moisCourant(); rendre(); },
+  'cal-plus': () => { joursAgenda += JOURS_AGENDA; rendre(); },
   /* Tâches et Focus */
   'tache-nouvelle': el => formTache({date:el.dataset.date || aujourdhui(), projet:el.dataset.projet || projetFiltre('taches') || '', priorite:el.dataset.priorite || 'p2'}),
   'tache-modifier': el => { const t = tache(el.dataset.id); if(t) formTache(t); },
@@ -4004,7 +4344,8 @@ function commandes(){
     {titre:'Rechercher partout', sous:'Page de résultats complète', icone:'recherche', href:'#/recherche', touche:'/'},
     {titre:'Corbeille', sous:'Restaurer un élément supprimé (' + JOURS_CORBEILLE + ' jours)', icone:'corbeille', href:'#/corbeille'},
     {titre:'Nouvelle tâche', sous:'Priorité, échéance, projet', icone:'coche', action:'tache-nouvelle'},
-    {titre:'Capture rapide', sous:'Une pensée → tâche, dépense ou note', icone:'ampoule', action:'capture', touche:'c'},
+    {titre:'Nouvel événement', sous:'Calendrier : date, heure, lieu, rappel', icone:'calendrier', action:'evt-nouveau'},
+    {titre:'Capture rapide', sous:'Une pensée → tâche, événement, dépense ou note', icone:'ampoule', action:'capture', touche:'c'},
     {titre:'Nouvelle dépense', sous:'Enregistrer un mouvement', icone:'euro', action:'mvt-nouveau'},
     {titre:'Nouvelle note', sous:'Écrire tout de suite', icone:'doc', action:'note-nouvelle'},
     {titre:'Nouveau document', sous:'Un lien, une échéance à surveiller', icone:'document', action:'document-nouveau'},
@@ -4044,7 +4385,7 @@ $('#palette').addEventListener('mousedown', e => { if(e.target.id === 'palette')
       montant:12,50, date:2026-09 (ou 2026, 2026-09-15, 09/2026, 15/09/2026), date>2026-06, avant:2026-01, après:2026-06-30.
    ========================================================================== */
 const MODULES_RECHERCHE = [['taches', 'Tâches', 'coche', 'bleu'], ['notes', 'Notes', 'doc', 'orange'], ['documents', 'Documents', 'document', 'bleu'], ['finances', 'Finances', 'euro', 'vert'],
-  ['contacts', 'Contacts', 'personnes', 'rose'], ['projets', 'Projets', 'dossier', 'violet'], ['inbox', 'Inbox', 'ampoule', 'jaune']]
+  ['contacts', 'Contacts', 'personnes', 'rose'], ['calendrier', 'Calendrier', 'calendrier', 'violet'], ['projets', 'Projets', 'dossier', 'violet'], ['inbox', 'Inbox', 'ampoule', 'jaune']]
   .map(([id, nom, icone, couleur]) => ({id, nom, icone, couleur}));
 const MODULE_RECHERCHE = Object.fromEntries(MODULES_RECHERCHE.map(m => [m.id, m]));
 /* Tout ce qui peut être trouvé. titre : compte le plus ; textes : autres champs ; long : texte dont on montre un extrait.
@@ -4074,6 +4415,9 @@ function indexRecherche(){
   DB.contacts.forEach(c => ajout('contacts', {titre:c.nom, textes:[[...c.aDire, ...c.aRepondre, ...c.idees].map(i => i.t).join(' '), nomDe(c.projet), c.telephone, c.autreTelephone, c.email, c.adresse], long:c.nouvelles,
     h:href('contact', c.id), sous:[c.anniversaire ? 'anniversaire le ' + dateCourte(c.anniversaire) : '', nomDe(c.projet)].filter(Boolean).join(' · '), date:c.modif, archive:c.archive, tags:c.tags,
     projet:nomDe(c.projet), jour:c.derniereConversation || jourDe(c.modif)}));
+  DB.evenements.forEach(e => { const j = prochaineOccurrence(e) || e.date, noms = e.contacts.map(contact).filter(Boolean).map(c => c.nom);
+    ajout('calendrier', {titre:e.titre, textes:[e.lieu, nomDe(e.projet), noms.join(' '), CATEGORIES_EVT[e.categorie][0], texteRepetition(e)], long:e.note, h:href('evenement', e.id),
+      sous:[labelJour(j) + (e.heure ? ' · ' + heureIci(e, j) : ''), e.lieu, nomDe(e.projet)].filter(Boolean).join(' · '), date:e.modif, projet:nomDe(e.projet), jour:j}); });
   inboxOuverte().forEach(x => ajout('inbox', {titre:x.text, h:'#/inbox', sous:'capturé ' + ilya(x.created), date:x.created, jour:jourDe(x.created)}));
   l.forEach(e => { e.n = norm(e.titre); e.tn = e.tags.map(norm); e.r = norm(e.textes.join(' ') + ' ' + e.tags.join(' ') + ' ' + e.long); e.pn = norm(e.projet); });
   cacheIndex = {cle, db:DB, l};
@@ -4354,6 +4698,8 @@ function rebaserDemo(src){
   const T = s => { if(typeof s !== 'string' || !s) return s; const t = new Date(s); return isNaN(t) ? s : new Date(t.getTime() + decalage).toISOString(); };
   L('projets').forEach(p => { p.echeance = J(p.echeance); p.modif = T(p.modif); });
   L('taches').forEach(t => { t.date = J(t.date); t.modif = T(t.modif); t.faitLe = T(t.faitLe); });
+  L('evenements').forEach(x => { x.date = J(x.date); x.cree = T(x.cree); x.modif = T(x.modif);
+    if(x.recurrence && typeof x.recurrence === 'object'){ x.recurrence.jusqua = J(x.recurrence.jusqua); if(Array.isArray(x.recurrence.exceptions)) x.recurrence.exceptions = x.recurrence.exceptions.map(J); } });
   L('notes').forEach(n => { n.cree = T(n.cree); n.modif = T(n.modif); });
   L('mouvements').forEach(m => { m.date = J(m.date); m.cree = T(m.cree); m.modif = T(m.modif); });
   L('contacts').forEach(c => { c.derniereConversation = J(c.derniereConversation); c.modif = T(c.modif); });
@@ -5130,7 +5476,7 @@ const notifDispo = () => location.protocol !== 'file:' && !!window.isSecureConte
 const b64urlVersOctets = s => { const t = String(s).replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(t + '==='.slice((t.length + 3) % 4)), c => c.charCodeAt(0)); };
 const octetsVersB64url = o => btoa(String.fromCharCode(...new Uint8Array(o))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const fuseauIci = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Paris'; } catch(e){ return 'Europe/Paris'; } };
-const MODES_NOTIF = [{v:'tout', t:'Tout : résumé du matin et rappels des tâches'}, {v:'resume', t:'Seulement le résumé du matin'}, {v:'rien', t:'Rien (en pause)'}];
+const MODES_NOTIF = [{v:'tout', t:'Tout : résumé du matin, rappels des tâches et des événements'}, {v:'resume', t:'Seulement le résumé du matin'}, {v:'rien', t:'Rien (en pause)'}];
 /* Fichiers texte du dépôt privé (à côté de donnees.json) */
 const ghContenu = chemin => ghDepot() + '/contents/' + chemin.split('/').map(encodeURIComponent).join('/');
 async function ghLireTexte(chemin){
@@ -5243,7 +5589,7 @@ async function actionNotif(f, ...a){
 }
 function carteNotif(){
   const c = gh.cfg, lienActions = c ? `https://github.com/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/actions/workflows/${NOTIF.workflow}` : '#';
-  const regles = 'Résumé du matin vers 8 h (tâches du jour et en retard, anniversaires, documents), rappel d’une tâche 15 à 40 min avant son heure, rien entre 0 h et 6 h — à l’heure de l’appareil, même en voyage.';
+  const regles = 'Résumé du matin vers 8 h (événements et tâches du jour, tâches en retard, anniversaires, documents), rappel d’une tâche 15 à 40 min avant son heure, rappel d’un événement selon son réglage (15 min, 1 h, la veille), rien entre 0 h et 6 h — à l’heure de l’appareil, même en voyage.';
   const carte = (texte, boutons = '') => `<section class="carte c6 etire">${enteteCarte('alerte', 'orange', 'Notifications')}<p class="aide">${texte}</p>${boutons ? `<div class="boutons">${boutons}</div>` : ''}</section>`;
   if(!notifDispo()) return carte(location.protocol === 'file:' ? 'Les notifications demandent la version en ligne de LIFE PANEL (adresse https), installée comme une appli sur le téléphone.' : 'Ce navigateur ne sait pas recevoir de notifications : utilise Chrome ou Opera.');
   if(!ghActif()) return carte('Les rappels sont envoyés depuis ton dépôt GitHub privé : active d’abord la synchronisation GitHub (carte ci-dessus).');
