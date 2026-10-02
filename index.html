@@ -328,8 +328,9 @@ a.carte{display:block;color:inherit}
 .compte-etapes:hover{color:var(--texte);border-color:#ffffff30}
 .compte-etapes.fini{color:var(--i-vert);border-color:#4ec89b55;background:#4ec89b14}
 .etapes{margin:6px 0 2px}
-.etapes .items li{min-height:26px;padding:2px 0}
-.etapes .case{width:16px;height:16px;border-radius:5px}
+.etapes .items li{min-height:26px;padding:3px 0;align-items:flex-start;line-height:1.4}   /* étape sur plusieurs lignes : case et × en face de la 1re ligne */
+.etapes .case{width:16px;height:16px;border-radius:5px;margin-top:1px}
+.etapes .items li .icone-btn{margin-top:-5px}
 .etapes .et{flex:1;min-width:0;overflow-wrap:anywhere}
 .etapes li.fait .et{text-decoration:line-through;color:var(--texte-faible)}
 .etapes .ajout{margin-top:2px}
@@ -860,6 +861,7 @@ td.act{text-align:right;white-space:nowrap;width:1%}
   .tache .corps .t{display:block}
   .tache .corps .t > span:first-child{white-space:normal;overflow:visible;overflow-wrap:anywhere}
   .tache .corps .t > .priorite{display:inline-block;margin-left:7px;vertical-align:1px}
+  .tache .corps .t > .compte-etapes{margin-left:6px;vertical-align:1px}
   .actions-ligne{gap:0}
   /* Fenêtre des comptes : nom et corbeille sur la 1re ligne, budget et nombre de mouvements dessous */
   .liste.gestion > li{flex-wrap:wrap}
