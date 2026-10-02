@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.21
+  LIFE PANEL — v3.22
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -97,6 +97,9 @@
   dates retirées, fuseau horaire fixe ou « là où je suis », lieu + Itinéraire, lien visio, personnes, projet,
   catégorie, rappel), vues Mois et Agenda qui regroupent aussi tâches, anniversaires, échéances et dépenses
   (cases à cocher), saisie rapide « Dentiste jeudi 14h30 », rappels et résumé du matin. Données VERSION 18.
+  v3.22 : étapes d'une tâche (cases à cocher à l'intérieur) : compteur « 2/5 » sur la ligne de la tâche, un clic
+  déplie la liste pour cocher, ajouter ou retirer une étape ; la tâche reste une seule ligne (Accueil, Aujourd'hui).
+  Données VERSION 19.
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
   seule architecture :
@@ -321,6 +324,17 @@ a.carte{display:block;color:inherit}
 .tache.faite .corps .t > span:first-child{text-decoration:line-through;color:var(--texte-faible)}
 .tache .s .retard{color:var(--i-rose)}
 .tache .s .auj{color:var(--i-vert)}
+.compte-etapes{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;font-size:11px;font-family:var(--mono);padding:1px 7px;border-radius:99px;border:1px solid var(--trait);background:#ffffff08;color:var(--texte-doux);cursor:pointer;transition:border-color .15s,color .15s}
+.compte-etapes:hover{color:var(--texte);border-color:#ffffff30}
+.compte-etapes.fini{color:var(--i-vert);border-color:#4ec89b55;background:#4ec89b14}
+.etapes{margin:6px 0 2px}
+.etapes .items li{min-height:26px;padding:2px 0}
+.etapes .case{width:16px;height:16px;border-radius:5px}
+.etapes .et{flex:1;min-width:0;overflow-wrap:anywhere}
+.etapes li.fait .et{text-decoration:line-through;color:var(--texte-faible)}
+.etapes .ajout{margin-top:2px}
+li.tache:has(> .corps > .etapes:not([hidden])){align-items:flex-start}   /* étapes dépliées : case et boutons restent en face du titre */
+li.tache:has(> .corps > .etapes:not([hidden])) > .case{margin-top:2px}
 .actions-ligne{display:flex;gap:2px;flex-shrink:0}
 @media (hover:hover){
   .actions-ligne .icone-btn{opacity:.35}
@@ -903,7 +917,7 @@ td.act{text-align:right;white-space:nowrap;width:1%}
 /* ==========================================================================
    A. DONNÉES — un seul modèle, une seule clé
    ========================================================================== */
-const VERSION = 18;  /* 8 : archives et corbeille · 9 : module Documents, tags communs · 10 : liste des comptes (statistiques, budgets) · 11 : couleur de chaque catégorie · 12 : téléphone et adresse des contacts · 13 : autre téléphone des contacts · 14 : e-mail des contacts · 15 : dossier Drive des projets, versions remplacées par la synchro (corbeille) · 16 : date de modification des mouvements et de l'Inbox (fusion de la synchro) · 17 : note des mouvements · 18 : événements du calendrier */
+const VERSION = 19;  /* 8 : archives et corbeille · 9 : module Documents, tags communs · 10 : liste des comptes (statistiques, budgets) · 11 : couleur de chaque catégorie · 12 : téléphone et adresse des contacts · 13 : autre téléphone des contacts · 14 : e-mail des contacts · 15 : dossier Drive des projets, versions remplacées par la synchro (corbeille) · 16 : date de modification des mouvements et de l'Inbox (fusion de la synchro) · 17 : note des mouvements · 18 : événements du calendrier · 19 : étapes des tâches */
 const CLE = 'lifepanel';                   /* copie légère dans localStorage (voir « Stockage dans le navigateur ») */
 const CLE_SECOURS = 'lifepanel.secours';   /* ancienne place de la copie de secours (v3.3 à v3.8), reprise dans IndexedDB */
 const MIROIR_MAX = 2e6;                    /* au-delà de 2 millions de caractères, pas de copie dans localStorage */
@@ -984,7 +998,7 @@ const FORMES = {
     couleur:COULEURS.includes(p.couleur) ? p.couleur : '', dossier:cheminDrive(p.dossier), archive:!!p.archive, modif:txt(p.modif) || maintenant()}),
   taches:t => ({id:txt(t.id) || uid(), nom:txt(t.nom) || 'Sans titre', date:dateISO(t.date), heure:/^\d{2}:\d{2}$/.test(txt(t.heure)) ? txt(t.heure) : '',
     projet:t.projet || null, fait:!!t.fait, faitLe:t.fait ? txt(t.faitLe || t.modif) : '',
-    priorite:['p1','p2','p3'].includes(t.priorite) ? t.priorite : 'p2', estimation:positif(t.estimation, 100000), tags:nettoyerTags(t.tags), modif:txt(t.modif) || maintenant(),
+    priorite:['p1','p2','p3'].includes(t.priorite) ? t.priorite : 'p2', estimation:positif(t.estimation, 100000), tags:nettoyerTags(t.tags), etapes:itemsContact(t.etapes), modif:txt(t.modif) || maintenant(),   /* VERSION 19 : étapes (cases à cocher), vides pour les anciennes tâches */
     ...archivage({...t, archive:t.archive && t.fait})}),   /* seule une tâche terminée peut être archivée */
   notes:n => { const cree = txt(n.cree || n.modif) || maintenant();   /* une seule heure : une note neuve n'est pas « modifiée » */
     return {id:txt(n.id) || uid(), titre:txt(n.titre) || 'Sans titre', contenu:txt(n.contenu),
@@ -1870,15 +1884,38 @@ function ligneTache(t, {date = true} = {}){
   if(t.estimation) meta.push(t.estimation + ' min');
   if(t.fait && t.faitLe) meta.push('terminée ' + ilya(t.faitLe) + (t.archive ? ' · archivée' : ''));
   const enFocus = focusEnCours && focusEnCours.taskId === t.id;
-  return `<li class="tache${t.fait ? ' faite' : ''}">
+  return `<li class="tache${t.fait ? ' faite' : ''}" data-tache="${esc(t.id)}"${date ? '' : ' data-sans-date="1"'}>
     <input type="checkbox" class="case" data-coche="tache" data-id="${esc(t.id)}" ${t.fait ? 'checked' : ''} aria-label="${t.fait ? 'Rouvrir' : 'Terminer'} : ${esc(t.nom)}">
-    <div class="corps"><div class="t"><span>${esc(t.nom)}</span>${t.fait ? '' : badgePrio(t)}</div>
-      ${meta.length || t.projet || t.tags.length ? `<div class="s">${meta.join(' · ')}${t.projet ? tagProjet(t.projet) : ''}${pucesTags(t.tags)}</div>` : ''}</div>
+    <div class="corps"><div class="t"><span>${esc(t.nom)}</span>${t.fait ? '' : badgePrio(t)}${compteEtapes(t)}</div>
+      ${meta.length || t.projet || t.tags.length ? `<div class="s">${meta.join(' · ')}${t.projet ? tagProjet(t.projet) : ''}${pucesTags(t.tags)}</div>` : ''}${listeEtapes(t)}</div>
     <div class="actions-ligne">
       ${t.fait ? '' : `<button class="icone-btn" data-action="focus" data-id="${esc(t.id)}" title="${enFocus ? 'Focus en cours' : 'Focus de 25 min'}" aria-label="Focus"${enFocus ? ' style="color:var(--i-bleu);opacity:1"' : ''}>${ico('horloge', 15)}</button>`}
       <button class="icone-btn" data-action="tache-modifier" data-id="${esc(t.id)}" title="Modifier" aria-label="Modifier">${ico('crayon', 15)}</button>
       <button class="icone-btn danger" data-action="tache-supprimer" data-id="${esc(t.id)}" title="Supprimer" aria-label="Supprimer">${ico('corbeille', 15)}</button>
     </div></li>`;
+}
+
+/* --- Étapes d'une tâche : compteur « 2/5 » (vert quand tout est coché) ; un clic déplie la liste (pendant la visite).
+   La tâche reste une seule ligne partout (Accueil, Aujourd'hui) ; terminer la tâche reste un geste à part. */
+function compteEtapes(t){
+  if(!t.etapes.length) return '';
+  const faites = t.etapes.filter(e => e.ok).length, ouvert = !!etatDepliage['etapes-' + t.id];
+  return `<button type="button" class="compte-etapes${faites === t.etapes.length ? ' fini' : ''}" data-action="etapes-basculer" data-id="${esc(t.id)}" aria-expanded="${ouvert}"
+    title="${ouvert ? 'Replier les étapes' : 'Voir les étapes'}" aria-label="Étapes : ${faites} sur ${t.etapes.length} cochées">${ico('coche', 11)}${faites}/${t.etapes.length}</button>`;
+}
+function listeEtapes(t){
+  if(!t.etapes.length) return '';
+  const d = `data-id="${esc(t.id)}"`;
+  return `<div class="etapes"${etatDepliage['etapes-' + t.id] ? '' : ' hidden'}><ul class="items">${t.etapes.map((e, i) => `<li class="${e.ok ? 'fait' : ''}">
+      <input type="checkbox" class="case" data-coche="etape" ${d} data-i="${i}" ${e.ok ? 'checked' : ''} aria-label="Étape faite : ${esc(e.t)}"><span class="et">${esc(e.t)}</span>
+      <button class="icone-btn danger" data-action="etape-supprimer" ${d} data-i="${i}" title="Retirer l’étape" aria-label="Retirer l’étape">${ico('croix', 13)}</button></li>`).join('')}</ul>
+    <form class="ajout" data-form="etape" ${d}>${ico('plus', 13)}<input name="t" placeholder="Ajouter une étape…" autocomplete="off" aria-label="Ajouter une étape à ${esc(t.nom)}"></form></div>`;
+}
+/* Après un changement d'étapes : la page est redessinée ; une fenêtre ouverte (jour, calendrier) l'est ligne par ligne */
+function majEtapes(t, focus = null){
+  t.modif = maintenant(); toucherProjet(t.projet); sauver(); rendre();
+  $$('#modale li[data-tache]').filter(li => li.dataset.tache === t.id).forEach(li => { li.outerHTML = ligneTache(t, {date:!li.dataset.sansDate}); });
+  if(focus){ const f = $$(focus + ' form[data-form="etape"]').find(x => x.dataset.id === t.id); if(f) f.elements.t.focus(); }
 }
 
 /* --- Anneau des dépenses + légende (survol : la part s'affiche au centre) ---
@@ -3153,7 +3190,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.21 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.22 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -3356,7 +3393,7 @@ function champHTML(c){
   const dl = c.suggestions && c.suggestions.length ? `<datalist id="dl-${c.n}">${c.suggestions.map(s => `<option value="${esc(s)}">`).join('')}</datalist>` : '';
   let ctrl;
   if(c.t === 'zone') ctrl = `<textarea id="${id}" name="${c.n}">${esc(v)}</textarea>`;
-  else if(c.t === 'liste') ctrl = `<textarea id="${id}" name="${c.n}" style="min-height:230px">${esc(Array.isArray(v) ? v.join('\n') : v)}</textarea>`;
+  else if(c.t === 'liste') ctrl = `<textarea id="${id}" name="${c.n}" style="min-height:${c.hauteur || 230}px">${esc(Array.isArray(v) ? v.join('\n') : v)}</textarea>`;
   else if(c.t === 'select') ctrl = `<select id="${id}" name="${c.n}"${c.nouveau ? ` data-nouveau="${id}-nouveau"` : ''}>${c.o.map(o => `<option value="${esc(o.v)}"${String(o.v) === String(v) ? ' selected' : ''}>${esc(o.t)}</option>`).join('')}${c.nouveau ? `<option value="${NOUVEAU}">＋ ${esc(c.nouveau)}…</option>` : ''}</select>` +
     (c.nouveau ? `<input id="${id}-nouveau" name="${c.n}Nouveau" class="nouveau-nom" placeholder="${esc(c.nouveau)}" autocomplete="off" aria-label="${esc(c.nouveau)}" hidden>` : '');
   else if(c.t === 'nombre') ctrl = `<input id="${id}" type="number" inputmode="decimal" step="0.01" min="0" name="${c.n}" value="${esc(v)}">`;
@@ -3403,10 +3440,13 @@ function formTache(t0 = {}, apres){
     {n:'priorite', l:'Priorité', t:'segment', v:t0.priorite || 'p2', o:[{v:'p1', t:'P1 · importante'}, {v:'p2', t:'P2 · normale'}, {v:'p3', t:'P3 · légère'}]},
     {n:'estimation', l:'Durée estimée (min)', t:'nombre', v:t0.estimation ?? '', demi:true, aide:'facultatif'},
     {n:'projet', l:'Projet', t:'select', o:optionsProjets(t0.projet), v:t0.projet || '', demi:true},
-    {n:'tags', l:'Tags', t:'tags', v:t0.tags || [], aide:'facultatif, séparés par des virgules'}
+    {n:'tags', l:'Tags', t:'tags', v:t0.tags || [], aide:'facultatif, séparés par des virgules'},
+    {n:'etapes', l:'Étapes', t:'liste', v:(t0.etapes || []).map(e => e.t), aide:'facultatif : une par ligne ; elles se cochent dans la liste des tâches', hauteur:110}
   ], onOk:v => {
     if(!v.nom) return 'Donne un nom à la tâche.';
-    const d = {nom:v.nom, date:v.date, heure:v.heure, priorite:v.priorite || 'p2', estimation:v.estimation ? positif(Math.abs(Number(v.estimation.replace(',', '.'))), 100000) : null, projet:v.projet || null, tags:nettoyerTags(v.tags), modif:maintenant()};
+    const cochees = new Set(ex ? ex.etapes.filter(e => e.ok).map(e => e.t) : []);   /* une étape gardée garde sa coche */
+    const d = {nom:v.nom, date:v.date, heure:v.heure, priorite:v.priorite || 'p2', estimation:v.estimation ? positif(Math.abs(Number(v.estimation.replace(',', '.'))), 100000) : null, projet:v.projet || null, tags:nettoyerTags(v.tags),
+      etapes:v.etapes.map(e => ({t:e, ok:cochees.has(e)})), modif:maintenant()};
     if(ex){ const avant = ex.projet; Object.assign(ex, d); toucherProjet(avant); toucherProjet(ex.projet); toast('Tâche modifiée'); }
     else { ajouter('taches', d); toucherProjet(d.projet); toast('Tâche créée'); }
     if(apres) apres();
@@ -3893,6 +3933,10 @@ const ACTIONS = {
   'calp-auj': () => { moisPage = moisCourant(); rendre(); },
   'cal-plus': () => { joursAgenda += JOURS_AGENDA; rendre(); },
   /* Tâches et Focus */
+  'etapes-basculer': el => { const id = el.dataset.id, k = 'etapes-' + id, ouvert = !etatDepliage[k]; etatDepliage[k] = ouvert;
+    $$('li[data-tache]').filter(li => li.dataset.tache === id).forEach(li => { const z = $('.etapes', li), b = $('.compte-etapes', li); if(z) z.hidden = !ouvert;
+      if(b){ b.setAttribute('aria-expanded', ouvert); b.title = ouvert ? 'Replier les étapes' : 'Voir les étapes'; } }); },
+  'etape-supprimer': el => { const t = tache(el.dataset.id); if(!t || !t.etapes[Number(el.dataset.i)]) return; t.etapes.splice(Number(el.dataset.i), 1); majEtapes(t); },
   'tache-nouvelle': el => formTache({date:el.dataset.date || aujourdhui(), projet:el.dataset.projet || projetFiltre('taches') || '', priorite:el.dataset.priorite || 'p2'}),
   'tache-modifier': el => { const t = tache(el.dataset.id); if(t) formTache(t); },
   'tache-supprimer': async el => { const t = tache(el.dataset.id); if(!t) return;
@@ -4196,6 +4240,9 @@ document.addEventListener('change', e => {
     if(t.fait && focusEnCours && focusEnCours.taskId === t.id) arreterFocus();
     sauver(); toast(t.fait ? 'Tâche terminée' : 'Tâche rouverte');
     setTimeout(rendre, 160);   /* laisse voir la coche avant de redessiner */
+  } else if(el.dataset.coche === 'etape'){
+    const t = tache(el.dataset.id), e = t && t.etapes[Number(el.dataset.i)]; if(!e) return;
+    e.ok = el.checked; majEtapes(t);
   } else if(el.dataset.coche === 'item'){
     const c = contact(el.dataset.id), it = c && c[el.dataset.cle][Number(el.dataset.i)]; if(!it) return;
     it.ok = el.checked; c.modif = maintenant(); sauver(); rendre(); majFicheContact(c, {items:true});
@@ -4245,6 +4292,9 @@ document.addEventListener('submit', e => {
     const t = f.elements.texte.value.trim(); if(!t) return;
     ajouter('inbox', {text:t, created:maintenant()}); sauver(); rendre(); toast('Ajouté à l’Inbox');
     const i = $('form[data-form="inbox"] input'); if(i) i.focus();
+  } else if(type === 'etape'){
+    const t = tache(f.dataset.id), x = f.elements.t.value.trim(); if(!t || !x) return;
+    t.etapes.push({t:x, ok:false}); etatDepliage['etapes-' + t.id] = true; majEtapes(t, f.closest('#modale') ? '#modale' : '#vue');
   } else if(type === 'item'){
     const c = contact(f.dataset.id), t = f.elements.t.value.trim(), cle = f.dataset.cle; if(!c || !t) return;
     const zone = f.closest('#modale') ? '#modale ' : '#vue ';
@@ -4403,7 +4453,7 @@ function indexRecherche(){
   DB.documents.forEach(x => ajout('documents', {titre:x.titre, textes:[x.url, nomDe(x.projet)], long:x.note, h:x.url && !estDrive(x.url) ? x.url : href('document', x.id), externe:!!x.url && !estDrive(x.url),
     sous:[typeDocument(x.url).nom, x.echeance ? 'échéance ' + dateCourte(x.echeance) : '', nomDe(x.projet)].filter(Boolean).join(' · '), date:x.modif, archive:x.archive, tags:x.tags,
     projet:nomDe(x.projet), jour:x.echeance || jourDe(x.modif)}));
-  DB.taches.forEach(t => ajout('taches', {titre:t.nom, textes:[nomDe(t.projet), t.date ? labelJour(t.date) : ''], h:'#/taches?q=' + encodeURIComponent(t.nom),
+  DB.taches.forEach(t => ajout('taches', {titre:t.nom, textes:[nomDe(t.projet), t.date ? labelJour(t.date) : '', t.etapes.map(e => e.t).join(' ')], h:'#/taches?q=' + encodeURIComponent(t.nom),
     sous:[t.fait ? 'terminée ' + ilya(t.faitLe) : t.date ? labelJour(t.date) : 'sans date', nomDe(t.projet)].filter(Boolean).join(' · '), date:t.modif, archive:t.archive, tags:t.tags,
     projet:nomDe(t.projet), jour:t.date || jourDe(t.modif)}));
   DB.notes.forEach(n => ajout('notes', {titre:n.titre, textes:[nomDe(n.projet)], long:texteBrut(n.contenu), h:href('note', n.id),
