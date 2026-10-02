@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.22
+  LIFE PANEL — v3.22.1
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -100,6 +100,7 @@
   v3.22 : étapes d'une tâche (cases à cocher à l'intérieur) : compteur « 2/5 » sur la ligne de la tâche, un clic
   déplie la liste pour cocher, ajouter ou retirer une étape ; la tâche reste une seule ligne (Accueil, Aujourd'hui).
   Données VERSION 19.
+  v3.22.1 : téléphone : la priorité et le compteur des étapes restent côte à côte.
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
   seule architecture :
@@ -324,6 +325,8 @@ a.carte{display:block;color:inherit}
 .tache.faite .corps .t > span:first-child{text-decoration:line-through;color:var(--texte-faible)}
 .tache .s .retard{color:var(--i-rose)}
 .tache .s .auj{color:var(--i-vert)}
+/* Priorité et compteur des étapes : toujours côte à côte (passent ensemble à la ligne si le titre est long) */
+.pastilles-tache{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap}
 .compte-etapes{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;font-size:11px;font-family:var(--mono);padding:1px 7px;border-radius:99px;border:1px solid var(--trait);background:#ffffff08;color:var(--texte-doux);cursor:pointer;transition:border-color .15s,color .15s}
 .compte-etapes:hover{color:var(--texte);border-color:#ffffff30}
 .compte-etapes.fini{color:var(--i-vert);border-color:#4ec89b55;background:#4ec89b14}
@@ -861,7 +864,7 @@ td.act{text-align:right;white-space:nowrap;width:1%}
   .tache .corps .t{display:block}
   .tache .corps .t > span:first-child{white-space:normal;overflow:visible;overflow-wrap:anywhere}
   .tache .corps .t > .priorite{display:inline-block;margin-left:7px;vertical-align:1px}
-  .tache .corps .t > .compte-etapes{margin-left:6px;vertical-align:1px}
+  .tache .corps .t > .pastilles-tache{vertical-align:-1px}   /* espace normal avant : rien en début de ligne s'il passe dessous */
   .actions-ligne{gap:0}
   /* Fenêtre des comptes : nom et corbeille sur la 1re ligne, budget et nombre de mouvements dessous */
   .liste.gestion > li{flex-wrap:wrap}
@@ -1888,7 +1891,7 @@ function ligneTache(t, {date = true} = {}){
   const enFocus = focusEnCours && focusEnCours.taskId === t.id;
   return `<li class="tache${t.fait ? ' faite' : ''}" data-tache="${esc(t.id)}"${date ? '' : ' data-sans-date="1"'}>
     <input type="checkbox" class="case" data-coche="tache" data-id="${esc(t.id)}" ${t.fait ? 'checked' : ''} aria-label="${t.fait ? 'Rouvrir' : 'Terminer'} : ${esc(t.nom)}">
-    <div class="corps"><div class="t"><span>${esc(t.nom)}</span>${t.fait ? '' : badgePrio(t)}${compteEtapes(t)}</div>
+    <div class="corps"><div class="t"><span>${esc(t.nom)}</span>${(() => { const p = (t.fait ? '' : badgePrio(t)) + compteEtapes(t); return p ? ` <span class="pastilles-tache">${p}</span>` : ''; })()}</div>
       ${meta.length || t.projet || t.tags.length ? `<div class="s">${meta.join(' · ')}${t.projet ? tagProjet(t.projet) : ''}${pucesTags(t.tags)}</div>` : ''}${listeEtapes(t)}</div>
     <div class="actions-ligne">
       ${t.fait ? '' : `<button class="icone-btn" data-action="focus" data-id="${esc(t.id)}" title="${enFocus ? 'Focus en cours' : 'Focus de 25 min'}" aria-label="Focus"${enFocus ? ' style="color:var(--i-bleu);opacity:1"' : ''}>${ico('horloge', 15)}</button>`}
@@ -3192,7 +3195,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.22 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.22.1 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
