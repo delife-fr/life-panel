@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.22.3
+  LIFE PANEL — v3.22.4
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -103,6 +103,7 @@
   v3.22.1 : téléphone : la priorité et le compteur des étapes restent côte à côte.
   v3.22.2 : durée estimée d'une tâche affichée en heures à partir de 60 min (« 1 h 30 », « 60 h »).
   v3.22.3 : bouton × pour vider une date facultative (tâche, échéances, anniversaire…) : impossible autrement sur téléphone.
+  v3.22.4 : « Tout déplier / Tout replier » marche aussi avec un filtre actif (Contacts, Notes, Documents) et n'agit que sur les fiches affichées.
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
   seule architecture :
@@ -2728,9 +2729,8 @@ function pageNotes(){
   const dossiers = dossiersNotes();
   if(filtreTag){ const d = dossiers.find(d => norm(d.v) === norm(filtreTag)); filtreTag = d ? d.v : ''; }
   const actif = dossiers.find(d => d.v === filtreTag) || dossiers[0];
-  const visibles = DB.notes.filter(dansDossier);
   const icone = d => d.v === '' ? 'base' : d.v === filtreTag ? 'dossierOuvert' : 'dossier';
-  const boutons = encartArchives('notes') + (visibles.length ? btnAction('notes-deplier', visibles.every(n => etatDepliage['note-' + n.id]) ? 'Tout replier' : 'Tout déplier', 'btn') : '') +
+  const boutons = encartArchives('notes') + boutonDeplier('notes-deplier', 'note-', notesAffichees(), FILTRES.notes) +
     btnAction('note-nouvelle', ico('plus', 14) + (vraiTag() ? 'Note dans « ' + esc(filtreTag) + ' »' : 'Nouvelle note'), 'btn p', vraiTag() ? `data-tag="${esc(filtreTag)}"` : '');
   const tete = titre('Notes', 'Chaque tag est un dossier. Clique sur un titre pour ouvrir la note, sur la flèche pour la déplier.', boutons);
   if(!DB.notes.length) return tete + `<div id="liste-notes">${listeNotes()}</div>`;
@@ -2744,17 +2744,17 @@ function pageNotes(){
       <div id="liste-notes">${listeNotes()}</div>
     </div></div>`;
 }
+const notesAffichees = () => DB.notes.filter(n => dansDossier(n) && correspond(FILTRES.notes, n.titre, n.contenu, n.tags, nomProjet(n.projet))).sort(parModif);
 function listeNotes(){
   if(!DB.notes.length) return vide('Aucune note pour l’instant.', btnAction('note-nouvelle', 'Écrire une note', 'btn p'));
-  const q = FILTRES.notes;
-  const l = DB.notes.filter(n => dansDossier(n) && correspond(q, n.titre, n.contenu, n.tags, nomProjet(n.projet))).sort(parModif);
+  const q = FILTRES.notes, l = notesAffichees();
   if(!l.length) return vide(q ? `Aucune note ne correspond à « ${esc(q)} » dans ce dossier.` : 'Ce dossier est vide.');
   const reste = l.length - limiteNotes;
   return `<div class="mosaique notes">${l.slice(0, limiteNotes).map(n => carteNote(n, !!q.trim())).join('')}</div>` +
     (reste > 0 ? `<div class="plus-notes"><span class="aide">${pluriel(Math.min(limiteNotes, l.length), 'note affichée', 'notes affichées')} sur ${l.length}, les plus récentes d’abord</span>${btnAction('notes-plus', `Afficher ${Math.min(NOTES_PAR_PAGE, reste)} de plus`, 'btn')}</div>` : '');
 }
-function carteNote(n, forcerOuvert){
-  const k = 'note-' + n.id, ouvert = forcerOuvert || !!etatDepliage[k];
+function carteNote(n, recherche){
+  const k = 'note-' + n.id, ouvert = estDeplie(k, recherche);
   return `<article class="carte depliable carte-note${ouvert ? ' ouvert' : ''}" data-depliable="${esc(k)}" data-corps="note:${esc(n.id)}">
     <div class="depliable-tete" data-action="deplier">${pastille('doc', 'orange', 30, 15)}
       <span class="titre"><button class="nom-lien" data-action="note-ouvrir" data-id="${esc(n.id)}" title="Ouvrir la note">${esc(n.titre)}</button></span>
@@ -2796,8 +2796,7 @@ function pageDocuments(){
   else if(filtreDocs && filtreDocs !== VUE_DRIVE && !tous.some(d => d.v === filtreDocs && (d.n || d.v.startsWith('e:')))) filtreDocs = '';
   const vueDrive = filtreDocs === VUE_DRIVE;
   const actif = vueDrive ? drv : tous.find(d => d.v === filtreDocs) || g.tous, tag = filtreDocs.startsWith('t:') ? filtreDocs.slice(2) : '';
-  const visibles = vueDrive ? [] : DB.documents.filter(dansDossierDoc);
-  const boutons = encartArchives('documents') + (visibles.length ? btnAction('documents-deplier', visibles.every(x => etatDepliage['document-' + x.id]) ? 'Tout replier' : 'Tout déplier', 'btn') : '') +
+  const boutons = encartArchives('documents') + (vueDrive ? '' : boutonDeplier('documents-deplier', 'document-', documentsAffiches(), FILTRES.documents)) +
     btnAction('document-nouveau', ico('plus', 14) + 'Nouveau document', 'btn p', tag ? `data-tag="${esc(tag)}"` : '');
   const tete = titre('Documents', vueDrive ? 'Les fichiers de ton dossier Google Drive, en lecture seule. Clic sur un fichier : il s’ouvre dans un nouvel onglet. L’icône calendrier crée une fiche pour suivre son échéance.'
     : 'Tes papiers et leurs liens, avec une échéance à surveiller si besoin. Clic sur un titre : le lien s’ouvre (ou la fiche, s’il n’y a pas de lien).', boutons);
@@ -2814,17 +2813,16 @@ function pageDocuments(){
       <div id="liste-documents">${listeDocuments()}</div>`}
     </div></div>`;
 }
+const documentsAffiches = () => DB.documents.filter(x => dansDossierDoc(x) && correspond(FILTRES.documents, x.titre, x.note, x.url, x.tags, nomProjet(x.projet))).sort(ordreDocuments);
 function listeDocuments(){
   if(!DB.documents.length) return vide('Aucun document pour l’instant. Exemples : passeport, assurance auto, certificat médical, contrat… avec ou sans lien.', btnAction('document-nouveau', 'Ajouter un document', 'btn p') +
     (fsDispo() ? btnAction('filtre-docs', ico('dossierOuvert', 14) + 'Parcourir mon Drive', 'btn', `data-v="${VUE_DRIVE}"`) : ''));
-  const q = FILTRES.documents;
-  const l = DB.documents.filter(x => dansDossierDoc(x) && correspond(q, x.titre, x.note, x.url, x.tags, nomProjet(x.projet)))
-    .sort(ordreDocuments);
+  const q = FILTRES.documents, l = documentsAffiches();
   if(!l.length) return vide(q ? `Aucun document ne correspond à « ${esc(q)} » dans ce dossier.` : 'Ce dossier est vide.');
   return `<div class="mosaique notes">${l.map(x => carteDocument(x, !!q.trim())).join('')}</div>`;
 }
-function carteDocument(x, forcerOuvert){
-  const k = 'document-' + x.id, ouvert = forcerOuvert || !!etatDepliage[k], t = typeDocument(x.url);
+function carteDocument(x, recherche){
+  const k = 'document-' + x.id, ouvert = estDeplie(k, recherche), t = typeDocument(x.url);
   return `<article class="carte depliable carte-document${ouvert ? ' ouvert' : ''}${x.archive ? ' archive' : ''}" data-depliable="${esc(k)}" data-corps="document:${esc(x.id)}">
     <div class="depliable-tete" data-action="deplier">${pastille(t.icone, t.couleur, 30, 15)}
       <span class="titre-doc"><span class="titre">${titreDocument(x)}</span>${badgeEcheance(x)}</span>
@@ -2865,22 +2863,25 @@ const boutonArchive = (type, x, cls = 'btn f compact') => btnAction(type + '-arc
 /* --- CONTACTS : titres dépliables ; clic sur le nom = fiche en grand, modifiable --- */
 function pageContacts(){
   return titre('Contacts', 'Clique sur un nom pour ouvrir sa fiche en grand et la modifier, sur la flèche pour la déplier.',
-      encartArchives('contacts') + (contactsActifs().length ? btnAction('contacts-deplier', contactsActifs().every(c => etatDepliage['contact-' + c.id]) ? 'Tout replier' : 'Tout déplier', 'btn') : '') + btnAction('contact-nouveau', ico('plus', 14) + 'Nouvelle fiche', 'btn p')) +
+      encartArchives('contacts') + boutonDeplier('contacts-deplier', 'contact-', contactsAffiches(), FILTRES.contacts) + btnAction('contact-nouveau', ico('plus', 14) + 'Nouvelle fiche', 'btn p')) +
     (DB.contacts.length ? `<div class="barre-outils">${champFiltre('contacts', 'Rechercher : nom, téléphone, e-mail, adresse, nouvelles, #tag')}${puceFiltreProjet('contacts')}</div>` : '') +
     `<div id="liste-contacts">${listeContacts()}</div>`;
 }
 function listeContacts(){
   if(!DB.contacts.length) return vide('Aucune fiche. Ce module sert de mémoire : anniversaires, nouvelles, messages en attente.', btnAction('contact-nouveau', 'Créer une fiche', 'btn p'));
-  const q = FILTRES.contacts, cherche = !!q.trim();
-  const fp = projetFiltre('contacts');
+  const q = FILTRES.contacts, cherche = !!q.trim(), actifs = contactsAffiches();
+  return actifs.length ? `<div class="mosaique">${actifs.map(c => carteContact(c, cherche)).join('')}</div>`
+    : vide(cherche ? `Aucune fiche active ne correspond à « ${esc(q)} ».` : 'Toutes les fiches sont archivées (menu → Archives).');
+}
+/* Fiches actives affichées (filtre et projet de la page Contacts) */
+function contactsAffiches(){
+  const q = FILTRES.contacts, fp = projetFiltre('contacts');
   /* « #tag » dans le filtre : seulement les fiches qui portent ce tag (sans tenir compte des accents) ; le reste cherche dans le texte */
   const mots = q.split(/\s+/), tags = mots.filter(m => m.length > 1 && m.startsWith('#')).map(m => m.replace(/^#+/, '')).filter(Boolean);
   const texte = mots.filter(m => !m.startsWith('#')).join(' ');
   const l = DB.contacts.filter(c => (!fp || c.projet === fp) && tags.every(t => aLeTag(c, t)) && correspond(texte, c.nom, c.telephone, c.autreTelephone, c.email, c.adresse, c.nouvelles, c.aDire.map(i => i.t), c.aRepondre.map(i => i.t), c.idees.map(i => i.t), nomProjet(c.projet), c.tags))
     .sort((a, b) => { const ja = joursAvantAnniv(a.anniversaire), jb = joursAvantAnniv(b.anniversaire); return (ja ?? 999) - (jb ?? 999) || a.nom.localeCompare(b.nom, 'fr'); });
-  const actifs = l.filter(c => !c.archive);
-  return actifs.length ? `<div class="mosaique">${actifs.map(c => carteContact(c, cherche)).join('')}</div>`
-    : vide(cherche ? `Aucune fiche active ne correspond à « ${esc(q)} ».` : 'Toutes les fiches sont archivées (menu → Archives).');
+  return l.filter(c => !c.archive);
 }
 const avatarContact = (c, cls = '') => `<span class="avatar${cls}" style="background:linear-gradient(135deg,${DEGRADE[couleurDe(c.id)]})">${esc(initiales(c.nom))}</span>`;
 function pucesContact(c){
@@ -2902,8 +2903,8 @@ function blocItems(c, libelle, cle, icone, modifiable = false){
     <form class="ajout" data-form="item" ${base}>${ico('plus', 13)}<input name="t" placeholder="Ajouter…" autocomplete="off" aria-label="Ajouter à ${esc(libelle)}"></form>`;
 }
 const blocsContact = (c, modifiable) => blocItems(c, 'À lui dire', 'aDire', 'bulle', modifiable) + blocItems(c, 'À répondre', 'aRepondre', 'retour', modifiable) + blocItems(c, 'Idées de cadeaux', 'idees', 'cadeau', modifiable);
-function carteContact(c, forcerOuvert){
-  const j = joursAvantAnniv(c.anniversaire), k = 'contact-' + c.id, ouvert = forcerOuvert || !!etatDepliage[k], d = `data-id="${esc(c.id)}"`;
+function carteContact(c, recherche){
+  const j = joursAvantAnniv(c.anniversaire), k = 'contact-' + c.id, ouvert = estDeplie(k, recherche), d = `data-id="${esc(c.id)}"`;
   const attente = c.aRepondre.filter(i => !i.ok).length;
   const badge = c.archive ? '' : j !== null && j <= 30 ? `<span class="puce alerte">${ico('cadeau', 12)}${j === 0 ? 'aujourd’hui' : j === 1 ? 'demain' : 'dans ' + j + ' j'}</span>` : attente ? `<span class="compte" title="Réponses en attente">${attente}</span>` : '';
   return `<article class="carte depliable${ouvert ? ' ouvert' : ''}" data-depliable="${esc(k)}">
@@ -3202,7 +3203,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.22.3 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.22.4 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -3909,8 +3910,8 @@ const ACTIONS = {
   capture: () => ficheCapture(),
   rappels: () => ouvrirModale(teteModale('À suivre', 'ampoule', 'jaune') + `<ul class="liste">${rappels().map(ligneRappel).join('')}</ul><div class="actions" style="margin-top:14px"><button class="btn p" data-action="fermer">Fermer</button></div>`),
   deplier: el => { const carte = el.closest('[data-depliable]'); if(carte) basculerDepliable(carte, !carte.classList.contains('ouvert')); },
-  'contacts-deplier': () => toutDeplier('contact-', contactsActifs()),
-  'notes-deplier': () => toutDeplier('note-', DB.notes.filter(dansDossier)),
+  'contacts-deplier': () => toutDeplier('contact-', contactsAffiches(), FILTRES.contacts),
+  'notes-deplier': () => toutDeplier('note-', notesAffichees(), FILTRES.notes),
   'notes-plus': () => { limiteNotes += NOTES_PAR_PAGE; rafraichirListe('notes'); },
   'taches-plus': () => { limiteTaches += TACHES_PAR_PAGE; rafraichirListe('taches'); },
   /* Archives */
@@ -4072,7 +4073,7 @@ const ACTIONS = {
   /* Une tâche proposée, jamais créée d'office */
   'document-tache': el => { const x = unDocument(el.dataset.id); if(!x) return; const {etat} = etatDocument(x);
     formTache({nom:'Renouveler : ' + x.titre, date:aujourdhui(), projet:x.projet || '', priorite:etat === 'expire' ? 'p1' : 'p2', tags:x.tags}); },
-  'documents-deplier': () => toutDeplier('document-', DB.documents.filter(dansDossierDoc)),
+  'documents-deplier': () => toutDeplier('document-', documentsAffiches(), FILTRES.documents),
   'filtre-docs': el => { const v = el.dataset.v || ''; filtreDocs = filtreDocs === v ? '' : v; FILTRES.documents = ''; rendre(); },
   'filtre-projet-retirer': () => { filtreProjet = null; rendre(); },
   /* Tags : un clic sur un tag existant l'ajoute au champ (ou le retire) */
@@ -4223,8 +4224,13 @@ function basculerDepliable(carte, ouvert){
     if(ouvert && !corps.childElementCount && CORPS[type]) corps.innerHTML = CORPS[type](id);
   }
 }
-function toutDeplier(prefixe, liste){
-  const tous = liste.length && liste.every(x => etatDepliage[prefixe + x.id]);
+/* Fiche dépliée ? Le choix fait (flèche, « Tout déplier / replier ») d'abord ; sinon ouverte quand un filtre est actif.
+   (Avant : un filtre forçait l'ouverture, et « Tout replier » semblait ne rien faire.) */
+const estDeplie = (k, recherche) => Object.prototype.hasOwnProperty.call(etatDepliage, k) ? !!etatDepliage[k] : !!String(recherche || '').trim();
+/* « Tout déplier / Tout replier » : sur les fiches affichées (celles du filtre), pas sur toutes */
+const boutonDeplier = (action, prefixe, liste, recherche) => liste.length ? btnAction(action, liste.every(x => estDeplie(prefixe + x.id, recherche)) ? 'Tout replier' : 'Tout déplier', 'btn') : '';
+function toutDeplier(prefixe, liste, recherche){
+  const tous = liste.length && liste.every(x => estDeplie(prefixe + x.id, recherche));
   liste.forEach(x => etatDepliage[prefixe + x.id] = !tous); rendre();
 }
 
