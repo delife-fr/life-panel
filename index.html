@@ -3409,7 +3409,7 @@ function champHTML(c){
   else if(c.t === 'select') ctrl = `<select id="${id}" name="${c.n}"${c.nouveau ? ` data-nouveau="${id}-nouveau"` : ''}>${c.o.map(o => `<option value="${esc(o.v)}"${String(o.v) === String(v) ? ' selected' : ''}>${esc(o.t)}</option>`).join('')}${c.nouveau ? `<option value="${NOUVEAU}">＋ ${esc(c.nouveau)}…</option>` : ''}</select>` +
     (c.nouveau ? `<input id="${id}-nouveau" name="${c.n}Nouveau" class="nouveau-nom" placeholder="${esc(c.nouveau)}" autocomplete="off" aria-label="${esc(c.nouveau)}" hidden>` : '');
   else if(c.t === 'nombre') ctrl = `<input id="${id}" type="number" inputmode="decimal" step="0.01" min="0" name="${c.n}" value="${esc(v)}">`;
-  else if(c.t === 'date') ctrl = c.effacable ? champDate(`id="${id}" name="${c.n}"`, v) : `<input id="${id}" type="date" name="${c.n}" value="${esc(v)}">`;
+  else if(c.t === 'date') ctrl = c.effacable ? champDate(`id="${id}" name="${c.n}"`, v, c.l) : `<input id="${id}" type="date" name="${c.n}" value="${esc(v)}">`;
   else if(c.t === 'heure') ctrl = `<input id="${id}" type="time" name="${c.n}" value="${esc(v)}">`;
   else if(c.t === 'tel') ctrl = `<input id="${id}" type="tel" inputmode="tel" name="${c.n}" value="${esc(v)}" autocomplete="off">`;
   else if(c.t === 'email') ctrl = `<input id="${id}" type="email" inputmode="email" name="${c.n}" value="${esc(v)}" autocomplete="off" spellcheck="false">`;
@@ -3417,7 +3417,7 @@ function champHTML(c){
   return `<label class="${cls}" for="${id}"><span>${esc(c.l)}${aide}</span>${ctrl}${dl}</label>`;
 }
 /* Date facultative : champ + bouton ×. Sur téléphone, le sélecteur de date de Chrome ne permet pas toujours de vider le champ. */
-const champDate = (attributs, v) => `<span class="champ-date"><input ${attributs} type="date" value="${esc(v)}"><button type="button" class="icone-btn" data-action="date-effacer" title="Effacer la date" aria-label="Effacer la date">${ico('croix', 14)}</button></span>`;
+const champDate = (attributs, v, libelle) => `<span class="champ-date"><input ${attributs} type="date" value="${esc(v)}"><button type="button" class="icone-btn" data-action="date-effacer" title="Effacer la date" aria-label="Effacer : ${esc(libelle)}">${ico('croix', 14)}</button></span>`;
 /* Saisie des tags (commune à tous les modules) : champ texte + tags déjà utilisés, cliquables */
 function champTags(attributs, v){
   const courants = new Set(nettoyerTags(v).map(norm)), dispo = tousLesTags();
@@ -3651,8 +3651,8 @@ function ficheContact(id){
         <label class="champ demi"><span>Téléphone</span><input ${d} name="telephone" type="tel" inputmode="tel" value="${esc(c.telephone)}" placeholder="facultatif" autocomplete="off"></label>
         <label class="champ demi"><span>Autre téléphone</span><input ${d} name="autreTelephone" type="tel" inputmode="tel" value="${esc(c.autreTelephone)}" placeholder="facultatif" autocomplete="off"></label>
         <label class="champ"><span>E-mail</span><input ${d} name="email" type="email" inputmode="email" value="${esc(c.email)}" placeholder="facultatif" autocomplete="off" spellcheck="false"></label>
-        <label class="champ demi"><span>Anniversaire</span>${champDate(`${d} name="anniversaire"`, c.anniversaire)}</label>
-        <label class="champ demi"><span>Dernier échange</span>${champDate(`${d} name="derniereConversation"`, c.derniereConversation)}</label>
+        <label class="champ demi"><span>Anniversaire</span>${champDate(`${d} name="anniversaire"`, c.anniversaire, 'Anniversaire')}</label>
+        <label class="champ demi"><span>Dernier échange</span>${champDate(`${d} name="derniereConversation"`, c.derniereConversation, 'Dernier échange')}</label>
         <label class="champ"><span>Adresse postale</span><textarea ${d} name="adresse" rows="3" placeholder="facultatif">${esc(c.adresse)}</textarea></label>
         <label class="champ"><span>Projet lié</span><select ${d} name="projet">${optionsProjets(c.projet).map(o => `<option value="${esc(o.v)}"${o.v === proj ? ' selected' : ''}>${esc(o.t)}</option>`).join('')}</select></label>
         <label class="champ"><span>Ses nouvelles</span><textarea ${d} name="nouvelles" rows="6" placeholder="Ce qu’il ou elle t’a raconté la dernière fois…">${esc(c.nouvelles)}</textarea></label>
