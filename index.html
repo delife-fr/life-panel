@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.22.2
+  LIFE PANEL — v3.22.3
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -102,6 +102,7 @@
   Données VERSION 19.
   v3.22.1 : téléphone : la priorité et le compteur des étapes restent côte à côte.
   v3.22.2 : durée estimée d'une tâche affichée en heures à partir de 60 min (« 1 h 30 », « 60 h »).
+  v3.22.3 : bouton × pour vider une date facultative (tâche, échéances, anniversaire…) : impossible autrement sur téléphone.
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
   seule architecture :
@@ -393,6 +394,9 @@ a.puce.proj:hover{filter:brightness(1.2)}
 .filtre input{border:0;background:transparent;outline:0;color:var(--texte);font-size:13.5px;width:100%;min-width:0}
 .champ{display:block;margin-bottom:13px;min-width:0}
 .champ > span{display:block;font-size:12.5px;color:var(--texte-doux);margin-bottom:6px}
+.champ > .champ-date{display:flex;align-items:center;gap:4px;margin-bottom:0;font-size:inherit}   /* date facultative : champ + bouton × */
+.champ-date input{flex:1;min-width:0}
+.champ-date .icone-btn{color:var(--texte-doux)}
 .champ em{font-style:normal;color:var(--texte-faible)}
 .champ input,.champ select,.champ textarea,.saisie{width:100%;background:var(--champ);border:1px solid var(--trait);color:var(--texte);border-radius:9px;padding:9px 11px;outline:0;transition:border-color .15s,box-shadow .15s}
 .champ input:focus,.champ select:focus,.champ textarea:focus,.saisie:focus{border-color:#5a80be;box-shadow:0 0 0 3px #3987e520}
@@ -3062,7 +3066,7 @@ function formEvenement(e0 = {}, {apres = null, puis = null, retour = null} = {})
     {n:'fuseau', l:'Heure de', t:'select', o:fuseaux, v:e0.fuseau || '', demi:true, nouveau:'Autre fuseau (ex. Asia/Dubai)'},
     {n:'rappel', l:'Rappel', t:'select', o:[{v:'', t:'Aucun'}, ...RAPPELS_EVT.map(v => ({v, t:NOMS_RAPPEL[v]}))], v:e0.rappel ?? '', demi:true, aide:'notification'},
     {n:'freq', l:'Répétition', t:'select', o:FREQS_EVT, v:r0.freq || '', demi:true},
-    {n:'jusqua', l:'Jusqu’au', t:'date', v:r0.jusqua || '', demi:true, aide:'facultatif, si répété'},
+    {n:'jusqua', l:'Jusqu’au', t:'date', effacable:true, v:r0.jusqua || '', demi:true, aide:'facultatif, si répété'},
     {n:'lieu', l:'Lieu', v:e0.lieu, aide:'adresse ou nom du lieu : bouton « Itinéraire » dans la fiche'},
     {n:'lien', l:'Lien', v:e0.lien, aide:'facultatif : visio (Teams, Meet, Zoom…) ou page web'},
     {n:'contacts', l:'Personnes', t:'personnes', v:e0.contacts || [], aide:'fiches contacts'},
@@ -3198,7 +3202,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.22.2 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.22.3 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -3405,13 +3409,15 @@ function champHTML(c){
   else if(c.t === 'select') ctrl = `<select id="${id}" name="${c.n}"${c.nouveau ? ` data-nouveau="${id}-nouveau"` : ''}>${c.o.map(o => `<option value="${esc(o.v)}"${String(o.v) === String(v) ? ' selected' : ''}>${esc(o.t)}</option>`).join('')}${c.nouveau ? `<option value="${NOUVEAU}">＋ ${esc(c.nouveau)}…</option>` : ''}</select>` +
     (c.nouveau ? `<input id="${id}-nouveau" name="${c.n}Nouveau" class="nouveau-nom" placeholder="${esc(c.nouveau)}" autocomplete="off" aria-label="${esc(c.nouveau)}" hidden>` : '');
   else if(c.t === 'nombre') ctrl = `<input id="${id}" type="number" inputmode="decimal" step="0.01" min="0" name="${c.n}" value="${esc(v)}">`;
-  else if(c.t === 'date') ctrl = `<input id="${id}" type="date" name="${c.n}" value="${esc(v)}">`;
+  else if(c.t === 'date') ctrl = c.effacable ? champDate(`id="${id}" name="${c.n}"`, v, c.l) : `<input id="${id}" type="date" name="${c.n}" value="${esc(v)}">`;
   else if(c.t === 'heure') ctrl = `<input id="${id}" type="time" name="${c.n}" value="${esc(v)}">`;
   else if(c.t === 'tel') ctrl = `<input id="${id}" type="tel" inputmode="tel" name="${c.n}" value="${esc(v)}" autocomplete="off">`;
   else if(c.t === 'email') ctrl = `<input id="${id}" type="email" inputmode="email" name="${c.n}" value="${esc(v)}" autocomplete="off" spellcheck="false">`;
   else ctrl = `<input id="${id}" type="text" name="${c.n}" value="${esc(v)}" autocomplete="off"${dl ? ` list="dl-${c.n}"` : ''}>`;
   return `<label class="${cls}" for="${id}"><span>${esc(c.l)}${aide}</span>${ctrl}${dl}</label>`;
 }
+/* Date facultative : champ + bouton ×. Sur téléphone, le sélecteur de date de Chrome ne permet pas toujours de vider le champ. */
+const champDate = (attributs, v, libelle) => `<span class="champ-date"><input ${attributs} type="date" value="${esc(v)}"><button type="button" class="icone-btn" data-action="date-effacer" title="Effacer la date" aria-label="Effacer : ${esc(libelle)}">${ico('croix', 14)}</button></span>`;
 /* Saisie des tags (commune à tous les modules) : champ texte + tags déjà utilisés, cliquables */
 function champTags(attributs, v){
   const courants = new Set(nettoyerTags(v).map(norm)), dispo = tousLesTags();
@@ -3443,7 +3449,7 @@ function formTache(t0 = {}, apres){
   const ex = t0.id ? tache(t0.id) : null;
   formulaire({titre:ex ? 'Modifier la tâche' : 'Nouvelle tâche', icone:'coche', couleur:'bleu', ok:ex ? 'Enregistrer' : 'Créer la tâche', champs:[
     {n:'nom', l:'Tâche', v:t0.nom},
-    {n:'date', l:'Date', t:'date', v:ex ? ex.date : (t0.date ?? aujourdhui()), demi:true, aide:'vide = sans date'},
+    {n:'date', l:'Date', t:'date', effacable:true, v:ex ? ex.date : (t0.date ?? aujourdhui()), demi:true, aide:'vide = sans date'},
     {n:'heure', l:'Heure', t:'heure', v:t0.heure, demi:true, aide:'facultatif'},
     {n:'priorite', l:'Priorité', t:'segment', v:t0.priorite || 'p2', o:[{v:'p1', t:'P1 · importante'}, {v:'p2', t:'P2 · normale'}, {v:'p3', t:'P3 · légère'}]},
     {n:'estimation', l:'Durée estimée (min)', t:'nombre', v:t0.estimation ?? '', demi:true, aide:'facultatif'},
@@ -3594,7 +3600,7 @@ function formProjet(p0 = {}){
     {n:'nom', l:'Nom du projet', v:p0.nom},
     {n:'resume', l:'De quoi il s’agit', t:'zone', v:p0.resume},
     {n:'prochaineAction', l:'Prochaine action', v:p0.prochaineAction, aide:'une action concrète, faisable en une session'},
-    {n:'echeance', l:'Échéance', t:'date', v:p0.echeance, demi:true, aide:'facultatif'},
+    {n:'echeance', l:'Échéance', t:'date', effacable:true, v:p0.echeance, demi:true, aide:'facultatif'},
     {n:'budget', l:'Budget (€)', t:'nombre', v:p0.budget ?? '', demi:true, aide:'facultatif'}
   ], onOk:v => {
     if(!v.nom) return 'Donne un nom au projet.';
@@ -3606,7 +3612,7 @@ function formProjet(p0 = {}){
 function formProchaine(p){
   formulaire({titre:'Prochaine action · ' + p.nom, icone:'fleche', couleur:'bleu', champs:[
     {n:'prochaineAction', l:'Action concrète', v:p.prochaineAction, aide:'faisable en une session'},
-    {n:'echeance', l:'Échéance', t:'date', v:p.echeance, aide:'facultatif'}
+    {n:'echeance', l:'Échéance', t:'date', effacable:true, v:p.echeance, aide:'facultatif'}
   ], onOk:v => { p.prochaineAction = v.prochaineAction; p.echeance = v.echeance; p.modif = maintenant(); toast('Prochaine action enregistrée'); }});
 }
 function formContact(c0 = {}){
@@ -3616,8 +3622,8 @@ function formContact(c0 = {}){
     {n:'telephone', l:'Téléphone', t:'tel', v:c0.telephone, demi:true, aide:'facultatif'},
     {n:'autreTelephone', l:'Autre téléphone', t:'tel', v:c0.autreTelephone, demi:true, aide:'facultatif'},
     {n:'email', l:'E-mail', t:'email', v:c0.email, aide:'facultatif'},
-    {n:'anniversaire', l:'Anniversaire', t:'date', v:c0.anniversaire, demi:true},
-    {n:'derniereConversation', l:'Dernier échange', t:'date', v:c0.derniereConversation, demi:true},
+    {n:'anniversaire', l:'Anniversaire', t:'date', effacable:true, v:c0.anniversaire, demi:true},
+    {n:'derniereConversation', l:'Dernier échange', t:'date', effacable:true, v:c0.derniereConversation, demi:true},
     {n:'adresse', l:'Adresse postale', t:'zone', v:c0.adresse, aide:'facultatif'},
     {n:'projet', l:'Projet lié', t:'select', o:optionsProjets(c0.projet), v:c0.projet || ''},
     {n:'nouvelles', l:'Ses nouvelles', t:'zone', v:c0.nouvelles},
@@ -3645,8 +3651,8 @@ function ficheContact(id){
         <label class="champ demi"><span>Téléphone</span><input ${d} name="telephone" type="tel" inputmode="tel" value="${esc(c.telephone)}" placeholder="facultatif" autocomplete="off"></label>
         <label class="champ demi"><span>Autre téléphone</span><input ${d} name="autreTelephone" type="tel" inputmode="tel" value="${esc(c.autreTelephone)}" placeholder="facultatif" autocomplete="off"></label>
         <label class="champ"><span>E-mail</span><input ${d} name="email" type="email" inputmode="email" value="${esc(c.email)}" placeholder="facultatif" autocomplete="off" spellcheck="false"></label>
-        <label class="champ demi"><span>Anniversaire</span><input ${d} name="anniversaire" type="date" value="${esc(c.anniversaire)}"></label>
-        <label class="champ demi"><span>Dernier échange</span><input ${d} name="derniereConversation" type="date" value="${esc(c.derniereConversation)}"></label>
+        <label class="champ demi"><span>Anniversaire</span>${champDate(`${d} name="anniversaire"`, c.anniversaire, 'Anniversaire')}</label>
+        <label class="champ demi"><span>Dernier échange</span>${champDate(`${d} name="derniereConversation"`, c.derniereConversation, 'Dernier échange')}</label>
         <label class="champ"><span>Adresse postale</span><textarea ${d} name="adresse" rows="3" placeholder="facultatif">${esc(c.adresse)}</textarea></label>
         <label class="champ"><span>Projet lié</span><select ${d} name="projet">${optionsProjets(c.projet).map(o => `<option value="${esc(o.v)}"${o.v === proj ? ' selected' : ''}>${esc(o.t)}</option>`).join('')}</select></label>
         <label class="champ"><span>Ses nouvelles</span><textarea ${d} name="nouvelles" rows="6" placeholder="Ce qu’il ou elle t’a raconté la dernière fois…">${esc(c.nouvelles)}</textarea></label>
@@ -3708,7 +3714,7 @@ function formDocument(x0 = {}, {puis = null, retour = null, apres = null} = {}){
   formulaire({titre:ex ? 'Modifier le document' : 'Nouveau document', icone:'document', couleur:'bleu', ok:ex ? 'Enregistrer' : 'Ajouter', puis, retour, champs:[
     {n:'titre', l:'Titre', v:x0.titre, aide:'ex. Passeport, Assurance auto, Certificat médical'},
     {n:'url', l:'Lien', v:x0.url, aide:'facultatif — lien de partage Google Drive, page web, chemin G:\\…, ou un fichier de ton dossier Drive (bouton ci-dessous)'},
-    {n:'echeance', l:'Échéance', t:'date', v:x0.echeance, demi:true, aide:'facultatif : date d’expiration'},
+    {n:'echeance', l:'Échéance', t:'date', effacable:true, v:x0.echeance, demi:true, aide:'facultatif : date d’expiration'},
     {n:'preavis', l:'Prévenir', t:'select', o:choixPreavis.map(o => ({v:o.v, t:o.t + ' avant'})), v:pre, demi:true},
     {n:'projet', l:'Projet', t:'select', o:optionsProjets(x0.projet), v:x0.projet || '', demi:true},
     {n:'tags', l:'Tags', t:'tags', v:x0.tags || []},
@@ -3940,6 +3946,8 @@ const ACTIONS = {
   'calp-suiv': () => { moisPage = decaleMois(moisPage, 1); rendre(); },
   'calp-auj': () => { moisPage = moisCourant(); rendre(); },
   'cal-plus': () => { joursAgenda += JOURS_AGENDA; rendre(); },
+  'date-effacer': el => { const i = el.closest('.champ-date') && $('input', el.closest('.champ-date')); if(!i || !i.value) return;
+    i.value = ''; i.dispatchEvent(new Event('input', {bubbles:true})); i.dispatchEvent(new Event('change', {bubbles:true})); },   /* « change » : la fiche contact enregistre aussitôt */
   /* Tâches et Focus */
   'etapes-basculer': el => { const id = el.dataset.id, k = 'etapes-' + id, ouvert = !etatDepliage[k]; etatDepliage[k] = ouvert;
     $$('li[data-tache]').filter(li => li.dataset.tache === id).forEach(li => { const z = $('.etapes', li), b = $('.compte-etapes', li); if(z) z.hidden = !ouvert;
