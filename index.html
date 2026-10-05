@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
-<!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (node tests/outils/csp.js --maj après chaque modification) -->
+<!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-o5f8jOODnge8TuCmZw5vErD3m5p0WNJSsboFNMeOplE='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
@@ -107,7 +107,7 @@
   v3.22.4 : « Tout déplier / Tout replier » marche aussi avec un filtre actif (Contacts, Notes, Documents) et n'agit que sur les fiches affichées.
   v3.22.5 : sécurité : la CSP n'autorise plus que CE script (empreinte sha256, plus de « unsafe-inline ») ; page Contacts ~5× plus
   rapide (contenu d'une fiche construit à l'ouverture) ; clavier : Tab reste dans une fenêtre ouverte ; texte gris plus lisible.
-  Après toute modification du script : node tests/outils/csp.js --maj (sinon la page ne démarre pas ; les tests le vérifient).
+  Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
   seule architecture :
