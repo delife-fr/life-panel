@@ -5,13 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-o5f8jOODnge8TuCmZw5vErD3m5p0WNJSsboFNMeOplE='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.22.4
+  LIFE PANEL — v3.22.5
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -104,6 +105,9 @@
   v3.22.2 : durée estimée d'une tâche affichée en heures à partir de 60 min (« 1 h 30 », « 60 h »).
   v3.22.3 : bouton × pour vider une date facultative (tâche, échéances, anniversaire…) : impossible autrement sur téléphone.
   v3.22.4 : « Tout déplier / Tout replier » marche aussi avec un filtre actif (Contacts, Notes, Documents) et n'agit que sur les fiches affichées.
+  v3.22.5 : sécurité : la CSP n'autorise plus que CE script (empreinte sha256, plus de « unsafe-inline ») ; page Contacts ~5× plus
+  rapide (contenu d'une fiche construit à l'ouverture) ; clavier : Tab reste dans une fenêtre ouverte ; texte gris plus lisible.
+  Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
   seule architecture :
@@ -133,7 +137,7 @@
   --fond:#1b1b1d; --fond-2:#1f1f22; --champ:#19191c;
   --carte:#232326; --carte-survol:#2a2a2e;
   --trait:#34343a; --trait-doux:#2b2b30;
-  --texte:#f1f1f2; --texte-doux:#a9a9b1; --texte-faible:#7d7d86;
+  --texte:#f1f1f2; --texte-doux:#a9a9b1; --texte-faible:#92929c;
   /* Couleurs de données (validées pour fond sombre) */
   --bleu:#3987e5; --vert:#199e70; --jaune:#c98500; --rose:#d55181; --violet:#9085e9; --orange:#d95926; --gris:#85858e;
   /* Deux teintes de plus pour les catégories (même palette validée : 8 teintes) */
@@ -2907,18 +2911,21 @@ function carteContact(c, recherche){
   const j = joursAvantAnniv(c.anniversaire), k = 'contact-' + c.id, ouvert = estDeplie(k, recherche), d = `data-id="${esc(c.id)}"`;
   const attente = c.aRepondre.filter(i => !i.ok).length;
   const badge = c.archive ? '' : j !== null && j <= 30 ? `<span class="puce alerte">${ico('cadeau', 12)}${j === 0 ? 'aujourd’hui' : j === 1 ? 'demain' : 'dans ' + j + ' j'}</span>` : attente ? `<span class="compte" title="Réponses en attente">${attente}</span>` : '';
-  return `<article class="carte depliable${ouvert ? ' ouvert' : ''}" data-depliable="${esc(k)}">
+  return `<article class="carte depliable${ouvert ? ' ouvert' : ''}" data-depliable="${esc(k)}" data-corps="contact:${esc(c.id)}">
     <div class="depliable-tete" data-action="deplier">${avatarContact(c)}
       <span class="titre"><button class="nom-lien" data-action="contact-ouvrir" ${d} title="Ouvrir la fiche en grand">${esc(c.nom)}</button></span>${badge}
       <button class="chevron" data-action="deplier" aria-expanded="${ouvert}" aria-label="Déplier : ${esc(c.nom)}">${ico('chevronB', 14)}</button></div>
-    <div class="depliable-corps">
-      <div class="puces">${pucesContact(c)}</div>
+    <div class="depliable-corps">${ouvert ? corpsContact(c) : ''}</div></article>`;   /* contenu construit seulement à l'ouverture : 110 fiches repliées restent légères */
+}
+function corpsContact(c){
+  if(!c) return '';
+  const d = `data-id="${esc(c.id)}"`;
+  return `      <div class="puces">${pucesContact(c)}</div>
       ${c.adresse ? `<div class="adresse-contact">${ico('maison', 13)}<span>${esc(c.adresse)}</span></div>` : ''}
       ${c.nouvelles ? `<div class="nouvelles"><span class="etiq">Ses nouvelles</span><div style="margin-top:3px">${esc(c.nouvelles)}</div></div>` : ''}
       ${blocsContact(c)}
       <div class="boutons" style="margin-top:14px">${btnAction('contact-parle', ico('check', 13) + 'Je lui ai parlé aujourd’hui', 'btn compact', d)}
-        ${btnAction('contact-ouvrir', ico('agrandir', 13) + 'Ouvrir la fiche', 'btn f compact', d)}${boutonArchive('contact', c)}${btnAction('contact-supprimer', ico('corbeille', 13) + 'Supprimer', 'btn f compact danger', d)}</div>
-    </div></article>`;
+        ${btnAction('contact-ouvrir', ico('agrandir', 13) + 'Ouvrir la fiche', 'btn f compact', d)}${boutonArchive('contact', c)}${btnAction('contact-supprimer', ico('corbeille', 13) + 'Supprimer', 'btn f compact danger', d)}</div>`;
 }
 
 /* --- ARCHIVES : tout ce qui a été rangé, tous modules confondus ---
@@ -3203,7 +3210,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.22.4 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.22.5 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -3357,12 +3364,15 @@ $('#volet').addEventListener('click', e => {
 const teteModale = (titre, icone = 'plus', couleur = 'bleu') =>
   `<div class="modale-tete">${pastille(icone, couleur, 34, 17)}<h3 id="modale-titre">${titre}</h3><button class="icone-btn fermer" data-action="fermer" aria-label="Fermer">${ico('croix', 16)}</button></div>`;
 /* taille : '' | 'large' | 'fiche' (fenêtre agrandie des notes et contacts) ; saisie : placer le curseur dans le 1er champ */
+/* Fenêtre ouverte : le reste de la page devient inerte (ni clavier, ni lecteur d'écran, ni clic) : Tab reste dans la fenêtre */
+const FOND_MODALE = ['header.barre', '#vue', '#pied', '#focus'];
+const fondInerte = oui => FOND_MODALE.forEach(sel => { const el = $(sel); if(el) el.inert = oui; });
 function ouvrirModale(html, {large = false, taille = '', saisie = true} = {}){
   const cb = surFermeture; surFermeture = null; retourFormulaire = null; ficheOuverte = null; if(cb) cb();
   if(voletOuvert()) fermerVolet({historique:false});   /* la fenêtre garde l'entrée d'historique du volet */
   if(!modaleOuverte()) focusAvant = document.activeElement;
   const m = $('#modale'); m.className = 'modale' + (large ? ' large' : '') + (taille ? ' ' + taille : ''); m.innerHTML = html; m.scrollTop = 0;
-  $('#voile').classList.add('on');
+  $('#voile').classList.add('on'); fondInerte(true);
   pousserHisto();
   const cible = m.querySelector('[autofocus]') || (saisie && m.querySelector('input:not([type=radio]):not([type=checkbox]):not([type=hidden]), textarea, select')) || (saisie && m.querySelector('.btn.p')) || m;
   setTimeout(() => { if(!m.contains(document.activeElement) || document.activeElement === m) cible.focus({preventScroll:true}); }, 20);   /* jamais repris à un champ déjà en cours de saisie */
@@ -3373,7 +3383,7 @@ function fermerModale({historique = true} = {}){
   retirerHisto(historique);
   const m = $('#modale');
   if(m.contains(document.activeElement)) document.activeElement.blur();   /* enregistre un champ en cours de saisie */
-  $('#voile').classList.remove('on'); m.innerHTML = ''; ficheOuverte = null; retourFormulaire = null;
+  $('#voile').classList.remove('on'); fondInerte(false); m.innerHTML = ''; ficheOuverte = null; retourFormulaire = null;
   const cb = surFermeture; surFermeture = null; if(cb) cb();
   if(focusAvant && document.contains(focusAvant)) focusAvant.focus();
   /* Données arrivées de GitHub pendant que la fenêtre était ouverte : affichage, puis synchro reportée */
@@ -4214,7 +4224,7 @@ function basculerApercu(el, apercu){
 }
 function majCalendrier(){ const c = $('#calendrier'); if(c) c.innerHTML = calendrierAccueil(); }
 /* Dépliables : le contenu d'une note n'est construit qu'à l'ouverture */
-const CORPS = {note:id => corpsNote(note(id)), document:id => corpsDocument(unDocument(id))};
+const CORPS = {note:id => corpsNote(note(id)), document:id => corpsDocument(unDocument(id)), contact:id => corpsContact(contact(id))};
 function basculerDepliable(carte, ouvert){
   carte.classList.toggle('ouvert', ouvert); etatDepliage[carte.dataset.depliable] = ouvert;
   $$('.chevron', carte).forEach(b => { if(b.closest('[data-depliable]') === carte) b.setAttribute('aria-expanded', ouvert); });
