@@ -6,13 +6,13 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-o5f8jOODnge8TuCmZw5vErD3m5p0WNJSsboFNMeOplE='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-Y9CI0JLkWN0wHMEWHLT1xNooq1uBbQDarabV34G0bYU='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.22.5
+  LIFE PANEL — v3.23
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -107,6 +107,10 @@
   v3.22.4 : « Tout déplier / Tout replier » marche aussi avec un filtre actif (Contacts, Notes, Documents) et n'agit que sur les fiches affichées.
   v3.22.5 : sécurité : la CSP n'autorise plus que CE script (empreinte sha256, plus de « unsafe-inline ») ; page Contacts ~5× plus
   rapide (contenu d'une fiche construit à l'ouverture) ; clavier : Tab reste dans une fenêtre ouverte ; texte gris plus lisible.
+  v3.23 : tags suggérés pendant la frappe (les plus utilisés d'abord, Entrée complète) ; libellés de dépense : tous proposés
+  (avant : 80 seulement) ; téléphone : dossiers de Notes et Documents sur plusieurs lignes (le tag choisi reste visible) ;
+  fenêtre d'un jour : dépenses en liste (montant visible sur téléphone) ; menu : nombre d'éléments par module et, en couleur,
+  ce qui attend une action ; capture et Inbox : type Contact (détecté par un numéro de téléphone ou un e-mail).
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -194,6 +198,9 @@ code{font-family:var(--mono);font-size:.9em;background:#ffffff0f;padding:1px 5px
 .volet .badge,.ligne-volet kbd{margin-left:auto}
 .volet .badge{font-family:var(--mono);font-size:10.5px;background:#c9850030;color:var(--i-jaune);border-radius:99px;padding:0 6px;line-height:16px}
 .volet .badge.gris{background:#ffffff12;color:var(--texte-faible)}
+.volet .badges{margin-left:auto;display:flex;gap:4px}
+.volet .badges .badge{margin-left:0}
+.volet .badge.alerte{background:#e5484d2e;color:var(--i-rose)}
 .encart-archives .compte{margin-left:2px}
 .recherche-wrap{position:relative;flex-shrink:0}
 .recherche{display:flex;align-items:center;gap:8px;background:var(--carte);border:1px solid var(--trait);border-radius:9px;padding:7px 9px 7px 11px;width:280px;color:var(--texte-faible);transition:border-color .18s,box-shadow .18s}
@@ -529,6 +536,8 @@ a.puce.lien-tel:hover{border-color:var(--i-bleu)}
 .ligne-sans{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--texte-doux);margin:10px 0 0;cursor:pointer}
 .champ .nouveau-nom{margin-top:8px}
 tr.hors-stats td{opacity:.5}
+.liste-mvts li.hors-stats > :not(.icone-btn){opacity:.5}
+.liste-mvts .s{overflow-wrap:anywhere}
 .plus-notes{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px}
 .titre-doc{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:5px}
 .titre-doc .titre{width:100%}
@@ -825,9 +834,9 @@ td.act{text-align:right;white-space:nowrap;width:1%}
 }
 @media (max-width:980px){
   .notes-cadre{grid-template-columns:1fr}
-  .dossiers{position:static;flex-direction:row;overflow-x:auto;max-height:none;padding:8px;scrollbar-width:thin}
+  .dossiers{position:static;flex-direction:row;flex-wrap:wrap;gap:4px;overflow:visible;max-height:none;padding:8px}   /* téléphone : tous les dossiers visibles, sur plusieurs lignes */
   .dossiers .etiq{display:none}
-  .dossier-btn{width:auto;flex-shrink:0;white-space:nowrap}
+  .dossier-btn{width:auto;max-width:100%;white-space:nowrap;padding:6px 9px}
   .fiche-grille{grid-template-columns:1fr}
   .barre{padding:10px 16px}
   .recherche{width:220px}
@@ -1725,9 +1734,8 @@ function tagsDe(l){
   return [...vus.values()].sort((a, b) => a.localeCompare(b, 'fr'));
 }
 const aLeTag = (x, t) => { const c = norm(t); return x.tags.some(y => norm(y) === c); };
-/* Tous les tags utilisés, toutes listes confondues (tâches, notes, documents, contacts) */
+/* Listes qui portent des tags (tâches, notes, documents, contacts) */
 const LISTES_TAGS = ['taches', 'notes', 'documents', 'contacts'];
-const tousLesTags = () => tagsDe(LISTES_TAGS.flatMap(k => DB[k]));
 
 /* --- Ce que l'accueil doit signaler (une seule liste, plus de doublons) --- */
 function rappels(){
@@ -2185,7 +2193,12 @@ function ligneAgenda(x){
   return `<li>${pastille('euro', 'vert', 28, 14)}<span class="corps"><button type="button" class="t nom-lien" data-action="jour" data-j="${x.j}">${pluriel(x.n, 'dépense')} · ${eur(x.montant)}</button></span></li>`;
 }
 
-/* Tableau de mouvements (finances, projet, jour) */
+/* Mouvements d'un jour, en liste : la fenêtre d'un jour est trop étroite pour le tableau sur téléphone (montant coupé) */
+const listeMouvementsJour = liste => `<ul class="liste liste-mvts">${liste.map(m => `<li${dansStats(m) ? '' : ' class="hors-stats" title="Compte décoché : pas pris en compte dans les statistiques"'}>${pastille('euro', m.type === 'revenu' ? 'bleu' : 'vert', 28, 14)}
+  <span class="corps"><button type="button" class="t nom-lien" data-action="mvt-modifier" data-id="${esc(m.id)}" title="Modifier">${esc(m.libelle || 'Sans libellé')}</button><span class="s">${esc([m.type === 'revenu' ? 'entrée' : m.categorie || 'à catégoriser', m.compte, nomProjet(m.projet), m.note].filter(Boolean).join(' · '))}</span></span>
+  <span class="num${m.type === 'revenu' ? ' vert' : ''}">${m.type === 'revenu' ? '+' : '−'}${eur(m.montant)}</span>
+  <button class="icone-btn danger" data-action="mvt-supprimer" data-id="${esc(m.id)}" title="Supprimer" aria-label="Supprimer ${esc(m.libelle || 'ce mouvement')}">${ico('corbeille', 15)}</button></li>`).join('')}</ul>`;
+/* Tableau de mouvements (finances, projet) */
 /* tri : {col, sens} → en-têtes cliquables (page Finances, action « fin-tri ») ; sans tri : en-têtes simples */
 function tableMouvements(liste, avecProjet = true, tri = null){
   const th = (col, lib, cls = '') => {
@@ -3210,7 +3223,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.22.5 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.23 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -3282,6 +3295,7 @@ function rendre(){
   document.title = titrePage();
   const b = $('#badge-inbox'), n = inboxOuverte().length;
   if(b){ b.hidden = !n; b.textContent = n; }
+  majCompteursMenu();
   const bc = $('#badge-corbeille'); if(bc){ bc.hidden = !DB.corbeille.length; bc.textContent = DB.corbeille.length; }
   const ba = $('#badge-archives'), na = nbArchives(); if(ba){ ba.hidden = !na; ba.textContent = na; }
   majPied(); majFocus();
@@ -3299,6 +3313,28 @@ function rafraichirListe(nom){ const c = $('#liste-' + nom); if(!c || !LISTES[no
 const pageErreur = err => `<div class="bandeau jaune">${pastille('alerte', 'jaune')}<div class="txt"><strong>Cette page n’a pas pu s’afficher</strong>
   <span>Tes données ne sont pas touchées. Recharge la page (F5) ; si ça recommence, envoie ce message à Claude : <code>${esc(err && err.message || err)}</code></span></div>
   <div class="boutons"><button class="btn" data-action="recharger">Recharger</button><a class="btn" href="#/accueil">Accueil</a></div></div>`;
+/* Numéros du menu : en gris, le nombre d'éléments actifs ; en couleur, ce qui demande une action */
+function compteursMenu(){
+  const auj = aujourdhui(), actifs = l => l.filter(x => !x.archive), aFaire = actifs(DB.taches).filter(t => !t.fait), docs = actifs(DB.documents), contacts = contactsActifs();
+  const etats = docs.map(x => etatDocument(x).etat);
+  return {
+    aujourdhui:{n:tachesAFaire().filter(t => !t.archive).length},
+    calendrier:{n:evenementsDuJour(auj).length, titre:'événement(s) aujourd’hui'},
+    taches:{n:aFaire.length, alerte:aFaire.filter(estEnRetard).length, quoi:'en retard'},
+    projets:{n:actifs(DB.projets).length},
+    finances:{alerte:sansCategorie().length, quoi:'à catégoriser', jaune:true},
+    notes:{n:actifs(DB.notes).length},
+    documents:{n:docs.length, alerte:etats.filter(e => e === 'expire' || e === 'preavis').length, quoi:'expiré(s) ou à renouveler'},
+    contacts:{n:contacts.length, alerte:contacts.filter(c => c.aRepondre.some(i => !i.ok)).length, quoi:'à qui répondre'}
+  };
+}
+function majCompteursMenu(){
+  const c = compteursMenu();
+  MENU.forEach(([r]) => { const el = $('#badges-' + r); if(!el) return; const x = c[r] || {};
+    const h = (x.alerte ? `<span class="badge${x.jaune ? '' : ' alerte'}" title="${x.alerte} ${esc(x.quoi)}">${x.alerte}<span class="sr"> ${esc(x.quoi)}</span></span>` : '') +
+      (x.n ? `<span class="badge gris" title="${x.n}${x.titre ? ' ' + esc(x.titre) : ''}">${x.n}</span>` : '');
+    if(el.innerHTML !== h) el.innerHTML = h; });
+}
 /* Un lien vers une note ou un contact s'ouvre en fenêtre, sans quitter la page */
 function ouvrirFicheDepuisLien(h){
   const m = /^#\/(note|contact|document)\/(.+)$/.exec(h || '');
@@ -3400,6 +3436,14 @@ function confirmer({titre, texte, ok = 'Confirmer', danger = true, annuler = 'An
   });
 }
 
+/* Libellés déjà saisis, pour les proposer dans une nouvelle dépense : tous (pas seulement les premiers),
+   les plus fréquents d'abord, puis les plus récents ; même libellé à la casse ou aux espaces près = un seul */
+function libellesConnus(){
+  const v = new Map();
+  DB.mouvements.forEach(m => { const l = propreNom(m.libelle); if(!l) return; const k = norm(l), x = v.get(k);
+    if(!x) v.set(k, {l, n:1, d:m.date || ''}); else { x.n++; if((m.date || '') > x.d){ x.d = m.date; x.l = l; } } });
+  return [...v.values()].sort((a, b) => b.n - a.n || b.d.localeCompare(a.d) || a.l.localeCompare(b.l, 'fr')).map(x => x.l);
+}
 /* champs : {n, l, t:'texte|zone|markdown|nombre|date|heure|select|liste|segment', v, o:[{v,t}], aide, demi, suggestions}
    select + nouveau:'Nouveau compte' : dernière option « ＋ Nouveau compte… », qui fait apparaître un champ pour taper le nom */
 const NOUVEAU = '§nouveau';
@@ -3429,11 +3473,36 @@ function champHTML(c){
 }
 /* Date facultative : champ + bouton ×. Sur téléphone, le sélecteur de date de Chrome ne permet pas toujours de vider le champ. */
 const champDate = (attributs, v, libelle) => `<span class="champ-date"><input ${attributs} type="date" value="${esc(v)}"><button type="button" class="icone-btn" data-action="date-effacer" title="Effacer la date" aria-label="Effacer : ${esc(libelle)}">${ico('croix', 14)}</button></span>`;
-/* Saisie des tags (commune à tous les modules) : champ texte + tags déjà utilisés, cliquables */
+/* Saisie des tags (commune à tous les modules) : champ texte + tags déjà utilisés, cliquables.
+   Les suggestions suivent la frappe : le morceau en cours (après la dernière virgule) filtre la liste,
+   les tags les plus utilisés d'abord ; Entrée ou un clic remplace ce morceau par le tag choisi. */
+function tagsParUsage(){
+  const n = new Map(), nom = new Map();
+  LISTES_TAGS.forEach(k => DB[k].forEach(x => x.tags.forEach(t => { const c = norm(t); if(!nom.has(c)) nom.set(c, t); n.set(c, (n.get(c) || 0) + 1); })));
+  return [...nom.keys()].sort((a, b) => n.get(b) - n.get(a) || nom.get(a).localeCompare(nom.get(b), 'fr')).map(c => nom.get(c));
+}
+const morceauTag = v => { const i = v.lastIndexOf(','); return norm(v.slice(i + 1).trim().replace(/^#+/, '').replace(/\s+/g, '-')); };
+function suggestionsTags(v){
+  const courants = new Set(nettoyerTags(v).map(norm)), m = morceauTag(v), tous = tagsParUsage();
+  const l = m ? [...tous.filter(t => norm(t).startsWith(m)), ...tous.filter(t => !norm(t).startsWith(m) && norm(t).includes(m))].filter(t => norm(t) !== m || !courants.has(m))
+    : tous;
+  return l.slice(0, 60).map(t => `<button type="button" class="puce${courants.has(norm(t)) && norm(t) !== m ? ' actif' : ''}" data-action="tag-basculer" data-v="${esc(t)}">#${esc(t)}</button>`).join('');
+}
 function champTags(attributs, v){
-  const courants = new Set(nettoyerTags(v).map(norm)), dispo = tousLesTags();
-  return `<input ${attributs} value="${esc(Array.isArray(v) ? v.join(', ') : v)}" autocomplete="off" placeholder="ex. santé, voiture, permis-de-conduire" aria-label="Tags, séparés par des virgules (un espace devient un tiret)">
-    ${dispo.length ? `<div class="tags-dispo">${dispo.slice(0, 60).map(t => `<button type="button" class="puce${courants.has(norm(t)) ? ' actif' : ''}" data-action="tag-basculer" data-v="${esc(t)}">#${esc(t)}</button>`).join('')}</div>` : ''}`;
+  const val = Array.isArray(v) ? v.join(', ') : v || '';
+  return `<input ${attributs} data-tags-saisie value="${esc(val)}" autocomplete="off" enterkeyhint="done" placeholder="ex. santé, voiture, permis-de-conduire" aria-label="Tags, séparés par des virgules (un espace devient un tiret)">
+    ${DB && LISTES_TAGS.some(k => DB[k].some(x => x.tags.length)) ? `<div class="tags-dispo" aria-label="Tags déjà utilisés">${suggestionsTags(val)}</div>` : ''}`;
+}
+/* Choisit un tag : il remplace le morceau en cours de frappe s'il le complète, sinon il est ajouté (ou retiré s'il y est déjà) */
+function choisirTag(i, tag){
+  const v = i.value, m = morceauTag(v), k = norm(tag);
+  const avant = nettoyerTags(v.slice(0, v.lastIndexOf(',') + 1));
+  let l;
+  if(m && k.includes(m)) l = avant.some(t => norm(t) === k) ? avant : [...avant, tag];
+  else { const tous = nettoyerTags(v), deja = tous.some(t => norm(t) === k); l = deja ? tous.filter(t => norm(t) !== k) : [...tous, tag]; }
+  i.value = l.join(', ') + (l.length ? ', ' : '');
+  const d = i.parentElement.querySelector('.tags-dispo'); if(d) d.innerHTML = suggestionsTags(i.value);
+  i.dispatchEvent(new Event('change', {bubbles:true}));
 }
 
 /* onOk renvoie un texte d'erreur pour garder la fenêtre ouverte (plus de fermeture silencieuse).
@@ -3486,7 +3555,7 @@ function formMouvement(m0 = {}, apres){
     {n:'type', l:'Type', t:'segment', v:m0.type || 'depense', o:[{v:'depense', t:'Dépense'}, {v:'revenu', t:'Entrée d’argent'}]},
     {n:'montant', l:'Montant (€)', t:'nombre', v:m0.montant ?? '', demi:true},
     {n:'date', l:'Date', t:'date', v:m0.date || aujourdhui(), demi:true},
-    {n:'libelle', l:'Libellé', v:m0.libelle, aide:'ex. Barbier', suggestions:unique(DB.mouvements.map(m => m.libelle).filter(Boolean)).slice(0, 80)},
+    {n:'libelle', l:'Libellé', v:m0.libelle, aide:'ex. Barbier', suggestions:libellesConnus()},
     {n:'categorie', l:'Catégorie', t:'select', o:cats, v:m0.categorie || '', demi:true, nouveau:'Nouvelle catégorie'},
     {n:'compte', l:'Compte', t:'select', o:comptes, v:cpt, demi:true, nouveau:'Nouveau compte'},
     {n:'projet', l:'Projet', t:'select', o:optionsProjets(m0.projet), v:m0.projet || ''},
@@ -3626,7 +3695,7 @@ function formProchaine(p){
     {n:'echeance', l:'Échéance', t:'date', effacable:true, v:p.echeance, aide:'facultatif'}
   ], onOk:v => { p.prochaineAction = v.prochaineAction; p.echeance = v.echeance; p.modif = maintenant(); toast('Prochaine action enregistrée'); }});
 }
-function formContact(c0 = {}){
+function formContact(c0 = {}, apres){
   const ex = c0.id ? contact(c0.id) : null, id = ex ? ex.id : uid();
   formulaire({titre:ex ? 'Modifier la fiche' : 'Nouvelle fiche', icone:'personnes', couleur:'rose', ok:ex ? 'Enregistrer' : 'Créer la fiche', puis:() => ficheContact(id), champs:[
     {n:'nom', l:'Nom et prénom', v:c0.nom},
@@ -3645,6 +3714,7 @@ function formContact(c0 = {}){
     const d = {nom:v.nom, telephone:txt(v.telephone).trim(), autreTelephone:txt(v.autreTelephone).trim(), email:txt(v.email).trim(), adresse:txt(v.adresse).trim(), anniversaire:v.anniversaire, derniereConversation:v.derniereConversation, nouvelles:v.nouvelles, projet:v.projet || null, tags:nettoyerTags(v.tags), modif:maintenant()};
     if(ex){ Object.assign(ex, d); toast('Fiche modifiée'); }
     else { ajouter('contacts', {id, ...d}); toast('Fiche créée'); }
+    if(apres) apres();
   }});
 }
 
@@ -3779,7 +3849,7 @@ function ficheJour(j){
   if(ev.taches.length) corps += `<div class="sous-titre">${ico('coche', 12)} Tâches</div><ul class="liste">${ev.taches.map(t => ligneTache(t, {date:false})).join('')}</ul>`;
   if(ev.anniv.length) corps += `<div class="sous-titre">${ico('cadeau', 12)} Anniversaires</div><ul class="liste">${ev.anniv.map(c => { const age = Number(j.slice(0, 4)) - Number(c.anniversaire.slice(0, 4));
     return `<li>${pastille('cadeau', 'rose', 28, 14)}<span class="corps"><a class="t" href="${href('contact', c.id)}">${esc(c.nom)}</a></span>${age > 0 && age < 120 ? `<span class="pct">${age} ans</span>` : ''}</li>`; }).join('')}</ul>`;
-  if(ev.mvts.length) corps += `<div class="sous-titre">${ico('euro', 12)} Mouvements · ${eur(dep)} dépensés</div>` + tableMouvements(ev.mvts);
+  if(ev.mvts.length) corps += `<div class="sous-titre">${ico('euro', 12)} Mouvements · ${eur(dep)} dépensés</div>` + listeMouvementsJour(ev.mvts);
   if(ev.documents.length) corps += `<div class="sous-titre">${ico('document', 12)} Échéances de documents</div><ul class="liste">${ev.documents.map(x => `<li>${pastille('document', {expire:'rose', preavis:'jaune'}[etatDocument(x).etat] || 'bleu', 28, 14)}<span class="corps">${titreDocument(x, 't nom-lien')}<span class="s">${badgeEcheance(x)}</span></span></li>`).join('')}</ul>`;
   if(ev.notes.length) corps += `<div class="sous-titre">${ico('doc', 12)} Notes créées</div><ul class="liste">${ev.notes.map(n => `<li><span class="corps"><a class="t" href="${href('note', n.id)}">${esc(n.titre)}</a></span></li>`).join('')}</ul>`;
   ouvrirModale(teteModale(esc(dateLongue(j)), 'calendrier', 'bleu') + (corps || '<p class="texte">Rien de noté ce jour-là.</p>') +
@@ -3843,6 +3913,15 @@ function titreSansQuand(s){
     .replace(/(?:[\s,–—-]+(?:à|a|le|de|du|pour|vers|ce|cette|ce))+$/i, '').replace(/^(?:(?:le|à|a)\s+)+/i, '').replace(/[\s,–—:-]+$/, '').trim();
   return t || String(s).trim();
 }
+/* Coordonnées dans un texte : e-mail, et téléphone français (06 12 34 56 78) ou international (+30 694 123 4567) */
+const RE_EMAIL = /(?<![\w.+-])[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[a-z]{2,}(?![\w-])/i;
+const RE_TEL = /(?<![\d+])(?:(?:\+|00)\d{1,3}[\s.-]?(?:\(0\)[\s.-]?)?\d(?:[\s.-]?\d){6,11}|0[1-9](?:[\s.-]?\d{2}){4})(?![\d€])/;
+function lireCoordonnees(s){
+  const e = s.match(RE_EMAIL), t = s.match(RE_TEL);
+  let reste = s; [e, t].forEach(m => { if(m) reste = reste.replace(m[0], ' '); });
+  const nom = reste.split('\n')[0].replace(/\b(t[ée]l[ée]?phone|t[ée]l|portable|mobile|e-?mail|mail|num[ée]ro)\b\s*:?/gi, ' ').replace(/[\s\-–—:,;·|]+/g, ' ').trim();
+  return {email:e ? e[0] : '', telephone:t ? t[0].trim() : '', nom:nom.slice(0, 80)};
+}
 function analyserCapture(texte){
   const s = texte.trim(), n = norm(s), bords = /^[\s\-–—:,]+|[\s\-–—:,]+$/g;
   const lien = s.match(/(?:https?:\/\/|www\.)\S+/i);   /* un lien : c'est un document */
@@ -3852,6 +3931,8 @@ function analyserCapture(texte){
     return {type:'depense', montant:Number(m[1].replace(',', '.')), libelle, categorie:devinerCategorie(libelle)}; }
   const quand = lireQuand(n);
   const verbe = /^(appeler|rappeler|repondre|faire|acheter|reviser|envoyer|terminer|preparer|reserver|payer|verifier|ecrire|prendre|contacter|commander|finir|relire|imprimer|penser|aller|confirmer|regarder|ranger|nettoyer|reparer|planifier|demander|rendre|chercher)\b/.test(n);
+  const co = lireCoordonnees(s);   /* un numéro ou un e-mail, sans verbe d'action (« Rappeler le 06… » reste une tâche) : une fiche contact */
+  if(!verbe && (co.email || co.telephone)) return {type:'contact', ...co};
   if(!verbe && quand.date && quand.heure) return {type:'evenement', ...quand, titre:titreSansQuand(s)};   /* « Dentiste jeudi 14h30 » */
   if(verbe || quand.date || quand.heure) return {type:'tache', ...quand};
   return {type:'note'};
@@ -3859,12 +3940,12 @@ function analyserCapture(texte){
 function ficheCapture(texte = '', inboxId = ''){
   ouvrirModale(teteModale('Capture rapide', 'ampoule', 'jaune') + `
     <p class="texte">Écris ce qui te passe par la tête : Life Panel propose un type, tu confirmes à l’étape suivante.</p>
-    <label class="champ" for="capture-texte"><span>Que veux-tu noter ?</span><textarea id="capture-texte" style="min-height:96px" placeholder="Ex. Appeler le garage vendredi à 15h · Dentiste jeudi 14h30 · 45 € essence · Idée : … · un lien Google Drive">${esc(texte)}</textarea></label>
-    <div class="champ"><span>Type <em id="capture-devine"></em></span><div class="segment">${[['auto','Auto'],['tache','Tâche'],['evenement','Événement'],['depense','Dépense'],['note','Note'],['document','Document']].map(([v, t], i) =>
+    <label class="champ" for="capture-texte"><span>Que veux-tu noter ?</span><textarea id="capture-texte" style="min-height:96px" placeholder="Ex. Appeler le garage vendredi à 15h · Dentiste jeudi 14h30 · 45 € essence · Idée : … · Paul 06 12 34 56 78 · un lien Google Drive">${esc(texte)}</textarea></label>
+    <div class="champ"><span>Type <em id="capture-devine"></em></span><div class="segment">${[['auto','Auto'],['tache','Tâche'],['evenement','Événement'],['depense','Dépense'],['note','Note'],['document','Document'],['contact','Contact']].map(([v, t], i) =>
       `<label><input type="radio" name="capture-type" value="${v}"${i ? '' : ' checked'}><span>${t}</span></label>`).join('')}</div></div>
     <div class="actions">${inboxId ? '' : '<button class="btn f" id="capture-inbox" style="margin-right:auto">Mettre dans l’Inbox</button>'}<button class="btn" data-action="fermer">Annuler</button><button class="btn p" id="capture-valider">Continuer</button></div>`);
   const zone = $('#capture-texte');
-  const devine = () => { const t = zone.value.trim(); $('#capture-devine').textContent = t ? '— détecté : ' + ({tache:'tâche', evenement:'événement', depense:'dépense', note:'note', document:'document'})[analyserCapture(t).type] : ''; };
+  const devine = () => { const t = zone.value.trim(); $('#capture-devine').textContent = t ? '— détecté : ' + ({tache:'tâche', evenement:'événement', depense:'dépense', note:'note', document:'document', contact:'contact'})[analyserCapture(t).type] : ''; };
   const valider = () => {
     const t = zone.value.trim(); if(!t){ zone.focus(); return; }
     const a = analyserCapture(t); let type = $('#modale [name="capture-type"]:checked').value;
@@ -3876,6 +3957,8 @@ function ficheCapture(texte = '', inboxId = ''){
     else if(type === 'depense'){ const brut = (t.match(/(\d+(?:[.,]\d{1,2})?)/) || [])[1];
       const nb = a.montant !== undefined ? a.montant : (brut ? Number(brut.replace(',', '.')) : '');
       formMouvement({type:'depense', montant:nb, libelle:a.libelle || t, categorie:a.categorie || devinerCategorie(t)}, apres); }
+    else if(type === 'contact'){ const co = a.type === 'contact' ? a : lireCoordonnees(t);
+      formContact({nom:co.nom || t.split('\n')[0].slice(0, 80), telephone:co.telephone, email:co.email, nouvelles:t.includes('\n') ? t : ''}, apres); }
     else if(type === 'document') formDocument(a.type === 'document' ? {titre:a.titre, url:a.url} : {titre:t.slice(0, 120)}, {apres});
     else formNote({titre:t.split('\n')[0].slice(0, 70), contenu:t.includes('\n') || t.length > 70 ? t : ''}, apres);
   };
@@ -4087,10 +4170,7 @@ const ACTIONS = {
   'filtre-docs': el => { const v = el.dataset.v || ''; filtreDocs = filtreDocs === v ? '' : v; FILTRES.documents = ''; rendre(); },
   'filtre-projet-retirer': () => { filtreProjet = null; rendre(); },
   /* Tags : un clic sur un tag existant l'ajoute au champ (ou le retire) */
-  'tag-basculer': el => { const champ = el.closest('.champ'), i = champ && $('input', champ); if(!i) return;
-    const l = nettoyerTags(i.value), k = norm(el.dataset.v), deja = l.some(t => norm(t) === k);
-    i.value = (deja ? l.filter(t => norm(t) !== k) : [...l, el.dataset.v]).join(', ');
-    el.classList.toggle('actif', !deja); i.dispatchEvent(new Event('change', {bubbles:true})); },
+  'tag-basculer': el => { const champ = el.closest('.champ'), i = champ && $('[data-tags-saisie]', champ); if(i) choisirTag(i, el.dataset.v); },
 
   /* Corbeille */
   'corbeille-restaurer': el => { const e = DB.corbeille.find(x => x.id === el.dataset.id); if(!e) return;
@@ -4308,6 +4388,7 @@ document.addEventListener('focusout', e => {
 });
 /* Filtres de page : seule la liste est redessinée, le champ garde le curseur */
 document.addEventListener('input', e => {
+  if(e.target.matches && e.target.matches('[data-tags-saisie]')){ const d = e.target.parentElement.querySelector('.tags-dispo'); if(d) d.innerHTML = suggestionsTags(e.target.value); return; }
   if(e.target.id === 'recherche-page'){ limiteRecherche = PAR_PAGE; majRecherchePageDifferee(e.target.value); return; }
   const nom = e.target.dataset && e.target.dataset.filtre;
   if(!nom) return;
@@ -4347,6 +4428,10 @@ document.addEventListener('submit', e => {
 });
 /* Clavier : un seul gestionnaire */
 document.addEventListener('keydown', e => {
+  if(e.key === 'Enter' && !e.isComposing && e.target.matches && e.target.matches('[data-tags-saisie]')){   /* Entrée : la première suggestion complète le tag en cours */
+    const m = morceauTag(e.target.value), b = m && e.target.parentElement.querySelector('.tags-dispo [data-v]');
+    if(b && norm(b.dataset.v).includes(m)){ e.preventDefault(); choisirTag(e.target, b.dataset.v); return; }
+  }
   if(e.key === 'Escape'){
     if(paletteOuverte()) fermerPalette();
     else if(modaleOuverte()) fermerModale();
@@ -5729,7 +5814,7 @@ async function demarrer(){
     <button type="button" class="ligne-volet" data-action="palette">${ico('commande', 16)}<span>Commandes</span><kbd>Ctrl K</kbd></button>
     <a href="#/corbeille" data-route="corbeille">${ico('corbeille', 16)}<span class="lib">Corbeille</span><span class="badge gris" id="badge-corbeille" hidden></span></a>
     <a href="#/donnees" data-route="donnees">${ico('reglages', 16)}<span class="lib">Réglages et données</span></a>`;
-  $('#menu').innerHTML = MENU.map(([r, n, i]) => `<a href="#/${r}" data-route="${r}" title="${n}">${ico(i, 16)}<span class="lib">${n}</span>${r === 'inbox' ? '<span class="badge" id="badge-inbox" hidden></span>' : ''}</a>`).join('');
+  $('#menu').innerHTML = MENU.map(([r, n, i]) => `<a href="#/${r}" data-route="${r}" title="${n}">${ico(i, 16)}<span class="lib">${n}</span>${r === 'inbox' ? '<span class="badge" id="badge-inbox" hidden></span>' : `<span class="badges" id="badges-${r}"></span>`}</a>`).join('');
 
   /* Données du navigateur (IndexedDB ou copie légère), sinon reprise des versions précédentes (jamais la démo toute seule) */
   let actuel = null, choix = null;
