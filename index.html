@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-RHc1A0ncDuIJC3177K1fqSQIp9uM97jI7DfGC6aYmic='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-SIVFTsbNhHSJGhtgBrODUd7XXxxjNRJa2gn7DYwhCrc='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.24
+  LIFE PANEL — v3.24.1
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -118,6 +118,8 @@
   aux questions sur les données et fait le point du jour. Carte « IA locale » (page Données, réglage propre au navigateur),
   bouton dans la barre et sur l'Accueil. L'IA appelle 8 outils de l'appli (recherche, dépenses, tâches, agenda, contact,
   projets, documents, note) qui renvoient de petits extraits ; totaux calculés par le code. CSP : localhost et 127.0.0.1 en plus.
+  v3.24.1 : point du jour : demain avec ses tâches (pas seulement les événements), rendez-vous du jour déjà passés marqués,
+  priorités hautes des 7 prochains jours.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -3246,7 +3248,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.24 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.24.1 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -5950,8 +5952,10 @@ Repères : ${pluriel(DB.taches.filter(t => !t.fait && !t.archive).length, 'tâch
 }
 function consignePoint(){
   const auj = aujourdhui(), dem = decaleJour(1), dans7 = decaleJour(7), dans30 = decaleJour(30);
-  const jours = contenuJours(auj, dem, {evenements:true, taches:false, anniv:false, documents:false, depenses:false});
-  const evts = j => (jours.get(j) || []).map(texteItem).join(' ; ') || 'rien';
+  const jours = contenuJours(auj, dem, {evenements:true, taches:true, anniv:false, documents:false, depenses:false}), maintenantHM = heure(new Date());
+  /* jour : événements et tâches datés ; aujourd'hui, ce dont l'heure est passée est marqué « passé » */
+  const evts = j => (jours.get(j) || []).map(x => (x.type === 'tache' ? 'tâche : ' : '') + texteItem(x) + (x.type === 'tache' && x.t.priorite === 'p1' ? ' (priorité haute)' : '')
+    + (j === auj && x.tri && x.tri < maintenantHM && x.tri !== '99' ? ' (passé)' : '')).join(' ; ') || 'rien';
   const t = l => l.map(x => x.nom + (x.heure ? ' à ' + x.heure : '') + ' (' + ({p1:'priorité haute', p2:'normale', p3:'basse'}[x.priorite] || 'normale') + ')' + (x.date && x.date < auj ? ', prévue le ' + dateCourte(x.date) : '')).join(' ; ') || 'aucune';
   const ouvertes = DB.taches.filter(x => !x.fait && !x.archive);
   const anniv = contenuJours(auj, dans7, {evenements:false, taches:false, anniv:true, documents:false, depenses:false});
@@ -5959,10 +5963,12 @@ function consignePoint(){
   const repondre = contactsActifs().filter(c => c.aRepondre.some(i => !i.ok)).map(c => c.nom);
   const mois = totalMois(), bm = budgetMensuel();
   return `Fais mon point du jour en 6 à 10 lignes : d'abord ce qui est urgent (retards, échéances), puis le programme du jour, puis une priorité conseillée. N'appelle aucun outil : tout est ci-dessous.
-Aujourd'hui (${dateLongue(auj)}) : ${evts(auj)}.
-Demain : ${evts(dem)}.
+Aujourd'hui (${dateLongue(auj)}), événements et tâches à heure fixe : ${evts(auj)}.
+Demain (${dateLongue(dem)}) : ${evts(dem)}.
+Il est ${maintenantHM}.
 Tâches du jour : ${t(trierTaches(ouvertes.filter(x => x.date === auj)))}.
 Tâches en retard : ${t(trierTaches(ouvertes.filter(x => estEnRetard(x))))}.
+Priorités hautes des 7 prochains jours : ${t(trierTaches(ouvertes.filter(x => x.priorite === 'p1' && x.date > auj && x.date <= dans7)))}.
 Anniversaires (7 jours) : ${[...anniv.entries()].map(([j, l]) => l.map(x => x.c.nom + ' le ' + dateCourte(j)).join(', ')).join(', ') || 'aucun'}.
 Documents expirés ou à échéance (30 jours) : ${docs.map(x => x.titre + ' (' + (x.echeance ? dateCourte(x.echeance) : etatDocument(x).etat) + ')').join(' ; ') || 'aucun'}.
 Contacts à qui répondre : ${repondre.join(', ') || 'personne'}.
