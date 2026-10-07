@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-yAdqY3mE/PrKfnR/C4ohiddXiPAi+4mnQhCKmzLnd+s='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-S54tD8mYW/V64Ew9OFO9A0iDf6FMFi9zRpRJFaw17Lw='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.25.3
+  LIFE PANEL — v3.26
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -132,6 +132,9 @@
   gardée (« coupée ») ; point du jour : consigne « réponds directement ».
   v3.25.3 : aperçu des petites données envoyé avec les consignes (tâches ouvertes, 14 jours d'agenda, projets, documents,
   Inbox ; taille plafonnée) : réponse directe sans outil ; l'outil « dépenses » liste aussi les entrées (remboursements).
+  v3.26 : réponses sans réflexion par l'adresse native de LM Studio (/api/v1/chat, reasoning « off »), vérifiée au premier usage :
+  question simple, point du jour, analyse, rédaction, correction en quelques secondes ; Qwen répond « OUTIL » quand il lui faut
+  des données hors aperçu, et la question repasse par la voie avec outils ; jours de la semaine écrits dans l'aperçu.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -3263,7 +3266,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.25.3 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.26 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -4046,7 +4049,7 @@ const ACTIONS = {
   /* IA locale (carte de la page Données, fenêtre « Demander ») */
   'ia-tester': () => iaTester(),
   'ia-activer': () => { if(!iaCfg.modele) return; iaCfg.actif = true; sauverIa(); majCarteIa(); majBoutonIa(); rendre(); toast('IA locale activée sur cet appareil');
-    if(iaCfg.courtModele !== iaCfg.modele) sonderCourt(); },
+    natifPret().then(ok => { if(!ok && iaCfg.courtModele !== iaCfg.modele) sonderCourt(); }); },
   'ia-desactiver': () => { iaCfg.actif = false; sauverIa(); if(ia.ctrl) ia.ctrl.abort(); majCarteIa(); majBoutonIa(); rendre(); toast('IA locale désactivée sur cet appareil'); },
   'ia-ouvrir': () => ficheIa(),
   'ia-point': () => { if(!$('#ia-fil')) ficheIa(); if($('#ia-fil')) demanderIa('', {point:true}); },
@@ -4436,7 +4439,8 @@ document.addEventListener('change', e => {
     if(!urlIaValide(v)){ el.value = iaCfg.url; toast('Adresse refusée : seul un serveur de cet ordinateur est possible (http://localhost:… ou http://127.0.0.1:…).'); return; }
     if(v !== iaCfg.url){ iaCfg.url = v; iaCfg.actif = false; ia.etat = ''; ia.modeles = []; sauverIa(); majCarteIa(); majBoutonIa(); }
   } else if(el.matches('[data-ia-modele]')){
-    iaCfg.modele = el.value; iaCfg.courtModele = ''; iaCfg.court = ''; sauverIa(); ia.conv = []; ia.fil = []; if(iaCfg.actif) sonderCourt();
+    iaCfg.modele = el.value; iaCfg.courtModele = ''; iaCfg.court = ''; iaCfg.natif = ''; iaCfg.natifModele = ''; sauverIa(); ia.conv = []; ia.fil = [];
+    if(iaCfg.actif) natifPret().then(ok => { if(!ok) sonderCourt(); });
   } else if(el.matches('[data-notif-mode]')){   /* notifications : ce que reçoit cet appareil */
     actionNotif(notifMode, el.value);
   } else if(el.matches('[data-md-case]')){   /* case à cocher d'une note : coche/décoche la ligne « - [ ] » correspondante */
@@ -5845,7 +5849,8 @@ function carteNotif(){
 
 /* ==========================================================================
    Q. IA LOCALE — le modèle qui tourne sur ton PC (Bionic / LM Studio), en lecture seule
-   La page parle à un serveur « compatible OpenAI » de l'ordinateur (par défaut http://localhost:1234/v1) ;
+   La page parle à un serveur « compatible OpenAI » de l'ordinateur (par défaut http://localhost:1234/v1) ; quand le serveur le permet
+   (LM Studio : /api/v1/chat avec reasoning « off »), les réponses qui n'ont pas besoin d'outil passent sans réflexion, donc en quelques secondes ;
    la CSP n'autorise que localhost et 127.0.0.1 : rien ne part ailleurs. Réglage gardé dans ce navigateur seulement.
    L'IA ne lit jamais tout le fichier : elle appelle des outils de l'appli, qui lui renvoient de petits extraits ;
    les totaux sont calculés par le code, jamais par le modèle. Elle ne peut rien modifier.
@@ -5856,7 +5861,7 @@ const ia = {etat:'', message:'', modeles:[], conv:[], fil:[], ctrl:null, enCours
 const urlIaValide = u => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?(\/[\w\-.~/]*)?$/i.test(String(u || '').trim());
 const urlIa = () => iaCfg.url.trim().replace(/\/+$/, '');
 const iaActive = () => !!(iaCfg.actif && iaCfg.modele && urlIaValide(iaCfg.url));
-function sauverIa(){ try { localStorage.setItem(CLE_IA, JSON.stringify({url:iaCfg.url, modele:iaCfg.modele, actif:iaCfg.actif, court:iaCfg.court || '', courtModele:iaCfg.courtModele || ''})); } catch(e){ /* navigation privée : réglage pour la session */ } }
+function sauverIa(){ try { localStorage.setItem(CLE_IA, JSON.stringify({url:iaCfg.url, modele:iaCfg.modele, actif:iaCfg.actif, court:iaCfg.court || '', courtModele:iaCfg.courtModele || '', natif:iaCfg.natif || '', natifModele:iaCfg.natifModele || ''})); } catch(e){ /* navigation privée : réglage pour la session */ } }
 const ETATS_IA = {
   test:() => 'Connexion au serveur…',
   ok:() => `Connecté : ${pluriel(ia.modeles.length, 'modèle disponible', 'modèles disponibles')}.`,
@@ -5881,7 +5886,7 @@ async function iaTester(){
   ia.etat = ia.modeles.length ? 'ok' : 'vide';
   if(ia.modeles.length && !ia.modeles.includes(iaCfg.modele)){ iaCfg.modele = ia.modeles.find(m => /qwen/i.test(m)) || ia.modeles[0]; sauverIa(); }
   majCarteIa(); majBoutonIa();
-  if(ia.etat === 'ok' && iaCfg.actif && iaCfg.courtModele !== iaCfg.modele) sonderCourt();
+  if(ia.etat === 'ok' && iaCfg.actif){ iaCfg.natifModele = ''; natifPret().then(ok => { if(!ok && iaCfg.courtModele !== iaCfg.modele) sonderCourt(); }); }
   return ia.etat;
 }
 /* Mesure, une fois par modèle, quelle option fait vraiment moins réfléchir le modèle (aucune n'est standard) :
@@ -5902,6 +5907,26 @@ async function sonderCourt(){
 }
 const ETATS_COURT = {cours:'Mesure de la réflexion courte…', ok:'Réflexion courte : disponible (analyse, rédaction, correction, point du jour).',
   non:'Réflexion courte : non prise en charge par ce serveur ; les petites demandes réfléchissent normalement, avec une limite de longueur.', inutile:'Réflexion courte : inutile, ce modèle réfléchit déjà peu.'};
+/* Adresse « native » de LM Studio (/api/v1/chat) : elle accepte reasoning « off » (réponse sans réflexion) mais pas les outils de l'appli.
+   Vérifiée une fois par modèle, au premier usage, par une petite question ; refusée ou absente : tout passe par l'adresse habituelle */
+const urlNatif = () => urlIa().replace(/\/v1$/i, '') + '/api/v1/chat';
+const natifOk = () => iaCfg.natif === 'ok' && iaCfg.natifModele === iaCfg.modele;
+let sondeNatif = null;
+function natifPret(){
+  if(!iaCfg.modele) return Promise.resolve(false);
+  if(iaCfg.natif && iaCfg.natifModele === iaCfg.modele) return Promise.resolve(natifOk());
+  if(!sondeNatif) sondeNatif = (async () => {
+    const ctrl = new AbortController(), minuterie = setTimeout(() => ctrl.abort(), 60000);
+    let ok = false, conclu = true;
+    try { const r = await appelNatif('', 'Combien font 17 × 23 ? Réponds seulement par le nombre.', {max:300, signal:ctrl.signal});
+      ok = /391/.test(separerPensee(r.contenu).texte) && r.mesure.pensee < 20; }
+    catch(e){ conclu = !(e instanceof TypeError || (e && e.name === 'AbortError')); }   /* serveur éteint ou trop lent : on ne conclut pas */
+    finally { clearTimeout(minuterie); sondeNatif = null; }
+    if(conclu){ iaCfg.natif = ok ? 'ok' : 'non'; iaCfg.natifModele = iaCfg.modele; sauverIa(); majCarteIa(); }
+    return ok;
+  })();
+  return sondeNatif;
+}
 function carteIa(){
   const e = ia.etat, ok = e === 'ok';
   const modeles = ia.modeles.length ? ia.modeles : iaCfg.modele ? [iaCfg.modele] : [];
@@ -5910,7 +5935,8 @@ function carteIa(){
     <label class="champ" style="margin:0 0 10px"><span>Adresse du serveur</span><input data-ia-url value="${esc(iaCfg.url)}" autocomplete="off" spellcheck="false" placeholder="http://localhost:1234/v1"></label>
     ${modeles.length ? `<label class="champ" style="margin:0 0 10px"><span>Modèle</span><select data-ia-modele>${modeles.map(m => `<option${m === iaCfg.modele ? ' selected' : ''}>${esc(m)}</option>`).join('')}</select></label>` : ''}
     ${e ? `<p class="etat-ia ${ok ? 'ok' : e === 'test' ? '' : 'ko'}" role="status">${esc(ETATS_IA[e]())}</p>` : ''}
-    ${ia.sonde ? `<p class="etat-ia" role="status">${esc(ETATS_COURT[ia.sonde])}</p>` : ''}
+    ${natifOk() ? `<p class="etat-ia ok" role="status">Réponses rapides : disponibles (sans réflexion quand aucun outil n’est nécessaire).</p>`
+      : ia.sonde ? `<p class="etat-ia" role="status">${esc(ETATS_COURT[ia.sonde])}</p>` : ''}
     <div class="boutons">${btnAction('ia-tester', ico('sync', 14) + 'Tester la connexion', iaActive() ? 'btn' : 'btn p')}${
       iaCfg.actif ? btnAction('ia-desactiver', 'Désactiver ici', 'btn f') + btnAction('ia-ouvrir', ico('bulle', 14) + 'Demander', 'btn p')
         : ok ? btnAction('ia-activer', ico('check', 14) + 'Activer sur cet appareil', 'btn p') : ''}</div></section>`;
@@ -5998,6 +6024,7 @@ function resumeOutil(nom, a){
 function apercuIa(){
   const auj = aujourdhui(), fin = decaleJour(13), dans30 = decaleJour(30);
   const court = (x, n) => { x = String(x || '').replace(/\s+/g, ' ').trim(); return x.length > n ? x.slice(0, n - 1) + '…' : x; };
+  const jour = j => j + ' ' + dateLongue(j).split(' ')[0].toLowerCase();   /* « 2026-10-08 jeudi » : pas de calcul de jour à faire */
   const liste = (l, n, f, outil, budget) => { if(!l.length) return '- aucun';
     const lignes = []; let t = 0; for(const x of l.slice(0, n)){ const s = '- ' + f(x); if(t + s.length > budget) break; lignes.push(s); t += s.length + 1; }
     return lignes.join('\n') + (l.length > lignes.length ? `${lignes.length ? '\n' : ''}- … et ${l.length - lignes.length} de plus (outil « ${outil} »)` : ''); };
@@ -6006,10 +6033,10 @@ function apercuIa(){
   const docs = documentsActifs().filter(x => ['expire', 'preavis'].includes(etatDocument(x).etat) || (x.echeance && x.echeance <= dans30));
   const repondre = contactsActifs().filter(c => c.aRepondre.some(i => !i.ok)), inbox = inboxOuverte();
   return `Tâches à faire (${taches.length}) :
-${liste(taches, 40, t => [court(t.nom, 90), t.date ? t.date + (t.heure ? ' ' + t.heure : '') : 'sans date', t.priorite === 'p1' ? 'priorité haute' : t.priorite === 'p3' ? 'priorité basse' : '',
+${liste(taches, 40, t => [court(t.nom, 90), t.date ? jour(t.date) + (t.heure ? ' ' + t.heure : '') : 'sans date', t.priorite === 'p1' ? 'priorité haute' : t.priorite === 'p3' ? 'priorité basse' : '',
     court(nomProjet(t.projet), 40), t.etapes.length ? t.etapes.filter(e => e.ok).length + '/' + t.etapes.length + ' étapes' : '', estEnRetard(t) ? 'EN RETARD' : ''].filter(Boolean).join(' · '), 'taches', 5000)}
 Agenda du ${auj} au ${fin} (événements, anniversaires, échéances ; les tâches datées sont ci-dessus) :
-${liste(agenda, 60, ({j, x}) => j + ' : ' + court(texteItem(x), 80) + (x.type === 'evt' ? (s => s ? ' (' + court(s, 100) + ')' : '')(sousEvenement(x.ev, j)) : ''), 'agenda', 4500)}
+${liste(agenda, 60, ({j, x}) => jour(j) + ' : ' + court(texteItem(x), 80) + (x.type === 'evt' ? (s => s ? ' (' + court(s, 100) + ')' : '')(sousEvenement(x.ev, j)) : ''), 'agenda', 4500)}
 Projets actifs :
 ${liste(projetsActifs(), 15, p => [court(p.nom, 60), p.prochaineAction ? 'prochaine action : ' + court(p.prochaineAction, 100) : '', p.echeance ? 'échéance ' + p.echeance : ''].filter(Boolean).join(' · '), 'projets', 1500)}
 Documents expirés ou à échéance sous 30 jours :
@@ -6020,7 +6047,7 @@ ${liste(inbox, 10, x => court(x.text, 140), 'rechercher', 1200)}`;
 }
 function consignesIa(apercu = apercuIa()){
   return `Tu es l'assistant de LIFE PANEL, l'appli personnelle d'organisation de l'utilisateur (tâches, projets, calendrier, notes, documents, contacts, finances).
-Nous sommes le ${dateLongue(aujourdhui())}, il est ${heure(new Date())} (fuseau ${fuseauIci()}).
+Nous sommes le ${dateLongue(aujourdhui())} (${aujourdhui()}), il est ${heure(new Date())} (fuseau ${fuseauIci()}). Demain : ${dateLongue(decaleJour(1))} (${decaleJour(1)}).
 Règles :
 - Réponds en français, tutoie l'utilisateur, sois bref et concret.
 - L'aperçu ci-dessous est exact et à jour : pour ce qu'il contient, réponds directement, sans outil.
@@ -6107,13 +6134,69 @@ async function appelIa(messages, {outils = true, surFil = () => {}, court = fals
   const pensee = (usage && usage.completion_tokens_details && usage.completion_tokens_details.reasoning_tokens) || Math.round((pense + sp.pense) / 4);
   return {contenu, pense, appels:appels.filter(a => a && a.nom), fin, mesure:{ms:tFin - t0, ecriture:tPremier ? tFin - tPremier : 0, ecrits, pensee:Math.min(pensee, ecrits)}};
 }
+/* Adresse native (/api/v1/chat) : sans réflexion, sans outils ; événements SSE « message.delta », « reasoning.delta », « error », « chat.end » */
+async function appelNatif(systeme, entree, {surFil = () => {}, max = 0, signal = null} = {}){
+  const t0 = performance.now();
+  const r = await fetch(urlNatif(), {method:'POST', headers:{'Content-Type':'application/json'}, signal:signal || ia.ctrl.signal,
+    body:JSON.stringify({model:iaCfg.modele, ...(systeme ? {system_prompt:systeme} : {}), input:entree, reasoning:'off', stream:true, store:false, ...(max ? {max_output_tokens:max} : {})})});
+  if(!r.ok){ let t = ''; try { const j = await r.json(); t = (j.error && (j.error.message || j.error)) || ''; } catch(e){ t = ''; }
+    throw new Error('Le serveur a refusé la demande (code ' + r.status + ')' + (t ? ' : ' + String(t).slice(0, 200) : '')); }
+  const lecteur = r.body.getReader(), dec = new TextDecoder();
+  let tampon = '', contenu = '', pense = 0, stats = null, erreur = '', tPremier = 0;
+  for(;;){
+    const {done, value} = await lecteur.read(); if(done) break;
+    tampon += dec.decode(value, {stream:true});
+    let i;
+    while((i = tampon.indexOf('\n')) >= 0){
+      const ligne = tampon.slice(0, i).trim(); tampon = tampon.slice(i + 1);
+      if(!ligne.startsWith('data:')) continue;
+      let j; try { j = JSON.parse(ligne.slice(5).trim()); } catch(e){ continue; }
+      if(!j || typeof j !== 'object') continue;
+      if(j.type === 'message.delta' && j.content){ if(!tPremier) tPremier = performance.now(); contenu += j.content; }
+      else if(j.type === 'reasoning.delta' && j.content){ if(!tPremier) tPremier = performance.now(); pense += String(j.content).length; }
+      else if(j.type === 'error') erreur = String((j.error && (j.error.message || j.error.type)) || 'erreur');
+      else if(j.type === 'chat.end' && j.result){ stats = j.result.stats || null;
+        if(!contenu) contenu = (j.result.output || []).filter(o => o && o.type === 'message').map(o => o.content || '').join(''); }
+      else continue;
+      surFil(contenu, pense);
+    }
+  }
+  if(erreur && !contenu) throw new Error('Le serveur a refusé la demande : ' + erreur.slice(0, 200));
+  const tFin = performance.now(), ecrits = (stats && stats.total_output_tokens) || Math.round((contenu.length + pense) / 4);
+  const pensee = stats ? stats.reasoning_output_tokens || 0 : Math.round((pense + separerPensee(contenu).pense) / 4);
+  return {contenu, pense, appels:[], fin:max && ecrits >= max ? 'length' : 'stop', mesure:{ms:tFin - t0, ecriture:tPremier ? tFin - tPremier : 0, ecrits, pensee:Math.min(pensee, ecrits), direct:true}};
+}
+/* L'adresse native prend des consignes et un message : la conversation précédente passe à la fin des consignes */
+function aplatir(messages){
+  const sys = messages[0] && messages[0].role === 'system' ? String(messages[0].content || '') : '', reste = sys ? messages.slice(1) : messages.slice();
+  const der = reste.length && reste[reste.length - 1].role === 'user' ? String(reste.pop().content || '') : '';
+  const lignes = reste.map(m => m.role === 'user' ? 'Utilisateur : ' + m.content : m.role === 'tool' ? 'Données consultées : ' + String(m.content || '').slice(0, 4000)
+    : m.content ? 'Assistant : ' + m.content : '').filter(Boolean);
+  return {systeme:sys + (lignes.length ? '\n\nCONVERSATION JUSQU’ICI\n' + lignes.join('\n') : ''), entree:der};
+}
+/* Demande sans outils (point du jour, capture, rédaction, note) : sans réflexion si possible, sinon par l'adresse habituelle */
+async function appelSansOutils(messages, {surFil = () => {}, court = true, max = 0} = {}){
+  if(await natifPret()){
+    try { const {systeme, entree} = aplatir(messages); return await appelNatif(systeme, entree, {surFil, max}); }
+    catch(e){ if(e instanceof TypeError || (e && e.name === 'AbortError')) throw e; iaCfg.natif = 'non'; sauverIa(); }   /* refusée : plus tentée pour ce modèle */
+  }
+  return appelIa(messages, {outils:false, surFil, court, max});
+}
 /* Mesures cumulées d'une réponse (plusieurs appels quand l'IA consulte des outils) */
-const ajouterMesure = (a, b) => ({ms:(a.ms || 0) + b.ms, ecriture:(a.ecriture || 0) + b.ecriture, ecrits:(a.ecrits || 0) + b.ecrits, pensee:(a.pensee || 0) + b.pensee});
-const texteMesure = x => !x || !x.ms ? '' : Math.round(x.ms / 1000) + ' s · ' + pluriel(x.ecrits, 'token écrit', 'tokens écrits') + (x.pensee ? ', dont ~' + x.pensee + ' de réflexion' : '') +
+const ajouterMesure = (a, b) => ({ms:(a.ms || 0) + b.ms, ecriture:(a.ecriture || 0) + b.ecriture, ecrits:(a.ecrits || 0) + b.ecrits, pensee:(a.pensee || 0) + b.pensee,
+  direct:(a.ms ? !!a.direct : true) && !!b.direct});
+const texteMesure = x => !x || !x.ms ? '' : Math.round(x.ms / 1000) + ' s · ' + (x.direct ? 'sans réflexion · ' : '') + pluriel(x.ecrits, 'token écrit', 'tokens écrits') + (x.pensee ? ', dont ~' + x.pensee + ' de réflexion' : '') +
   (x.ecriture > 500 ? ' · ' + Math.round(x.ecrits / (x.ecriture / 1000)) + ' tokens/s' : '');
 /* Limites de longueur : au-dessus du budget de réflexion du serveur (8 192 tokens dans Bionic) pour laisser la place à la réponse ;
    elles n'arrêtent qu'une réponse qui s'emballe vraiment */
-const LIMITES_IA = {question:10000, capture:9000, redaction:9000, point:10000};
+const LIMITES_IA = {question:10000, capture:9000, redaction:9000, point:10000, direct:3000};
+/* Réponse directe (sans réflexion ni outil) : Qwen répond, ou dit « OUTIL » et la question repasse par la voie avec outils */
+const REGLE_DIRECTE = `
+
+RÈGLE POUR CETTE RÉPONSE : tu n'as aucun outil ici.
+- Si l'aperçu ou la conversation suffisent, réponds directement.
+- Sinon (dépenses ou montants, fiche ou coordonnées d'un contact, contenu d'une note, tâches terminées, dates au-delà de l'aperçu, recherche dans les données), réponds uniquement par le mot OUTIL, sans rien d'autre.`;
+const versOutil = t => { const x = String(t || '').replace(/^[\s*«"'`]+/, '').toLowerCase(); return x.length <= 5 ? 'outil'.startsWith(x) : /^outil\b/.test(x); };
 const messageLimite = n => `Réflexion trop longue : la limite de ${n} tokens est atteinte avant la réponse. Reformule plus simplement, ou pose une question plus précise.`;
 /* Historique envoyé : consignes + la fin de la conversation (≈ 40 000 caractères au plus), qui commence toujours par une question */
 function historiqueIa(){
@@ -6132,6 +6215,17 @@ async function demanderIa(question, {point = false} = {}){
   const bulle = {qui:'ia', texte:'', pense:0, attente:true}; ia.fil.push(bulle); majFilIa();
   try {
     let fini = false;
+    if(await natifPret()){
+      try {
+        const h = historiqueIa(), {systeme, entree} = aplatir([{role:'system', content:h[0].content + (point ? '' : REGLE_DIRECTE)}, ...h.slice(1)]), max = point ? LIMITES_IA.point : LIMITES_IA.direct;
+        const r = await appelNatif(systeme, entree, {max, surFil:c => { const t = separerPensee(c).texte; bulle.texte = !point && versOutil(t) ? '' : t; majFilIa(); }});
+        bulle.mesure = ajouterMesure(bulle.mesure || {}, r.mesure);
+        const t = separerPensee(r.contenu).texte;
+        if(point || (t && !versOutil(t))){
+          ia.conv.push({role:'assistant', content:t}); bulle.texte = (t || '(réponse vide)') + (r.fin === 'length' ? '\n\n(coupée : limite de longueur atteinte)' : ''); fini = true;
+        } else bulle.texte = '';   /* il faut un outil : voie habituelle ci-dessous */
+      } catch(e){ if(e instanceof TypeError || (e && e.name === 'AbortError')) throw e; iaCfg.natif = 'non'; sauverIa(); bulle.texte = ''; }
+    }
     for(let tour = 0; tour < 6 && !fini; tour++){
       const r = await appelIa(historiqueIa(), {outils:!point, court:point, max:point ? LIMITES_IA.point : LIMITES_IA.question,
         surFil:(c, p) => { const s = separerPensee(c); bulle.texte = s.texte; bulle.pense = p + s.pense; majFilIa(); }});
@@ -6213,7 +6307,7 @@ async function genererIa(messages, {surFil = () => {}, court = true, max = LIMIT
   if(!iaActive()) throw new Error('IA locale non activée sur cet appareil');
   if(ia.enCours) throw new Error('l’IA est déjà en train de répondre : attends la fin ou arrête-la');
   ia.enCours = true; ia.ctrl = new AbortController();
-  try { const r = await appelIa(messages, {outils:false, surFil, court, max}); ia.derniereMesure = r.mesure;
+  try { const r = await appelSansOutils(messages, {surFil, court, max}); ia.derniereMesure = r.mesure;
     if(r.fin === 'length' && !separerPensee(r.contenu).texte) throw new Error(messageLimite(max)); return separerPensee(r.contenu).texte; }   /* commencé mais coupé : on garde le début */
   catch(e){ if(e instanceof TypeError){ await iaTester(); throw new Error(ETATS_IA[ia.etat === 'ok' ? 'erreur' : ia.etat]()); } throw e; }
   finally { ia.enCours = false; ia.ctrl = null; }
