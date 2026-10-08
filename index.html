@@ -818,14 +818,14 @@ th.triable .fleche{display:inline-block;min-width:.8em;font-size:1.15em;line-hei
 /* 2 semaines : deux rangées de 7 cases hautes (liste de 14 jours sur téléphone) */
 .deux-sem{display:flex;flex-direction:column;gap:10px}
 .deux-sem .sem{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
-.deux-sem .jour-s{min-height:150px;min-width:0;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:3px;text-align:left;padding:6px 6px 7px;border-radius:9px;border:1px solid var(--trait-doux);background:rgb(var(--sur) / 0.016);color:var(--texte-doux);overflow:hidden;transition:background .15s,border-color .15s}
+.deux-sem .jour-s{min-height:clamp(220px, calc((100vh - 340px) / 2), 420px);min-width:0;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:3px;text-align:left;padding:6px 6px 7px;border-radius:9px;border:1px solid var(--trait-doux);background:rgb(var(--sur) / 0.016);color:var(--texte-doux);overflow:hidden;transition:background .15s,border-color .15s}
 .deux-sem .jour-s:hover{background:rgb(var(--sur) / 0.047);border-color:var(--trait)}
 .deux-sem .jour-s.passe{opacity:.62}
 .deux-sem .num{font-size:12px;margin:0 0 3px 2px;line-height:22px;white-space:nowrap}
-.deux-sem .elts{display:flex;flex-direction:column;gap:3px;min-width:0}
+.deux-sem .elts{display:flex;flex-direction:column;gap:5px;min-width:0}   /* cases hautes : les deux semaines remplissent l'écran */
 .deux-sem .jour-s.auj{border-color:var(--bleu)}
 .deux-sem .jour-s.auj .num{color:var(--i-bleu);font-weight:650}
-.deux-sem .lig{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:11.5px;line-height:1.4;overflow:hidden;overflow-wrap:anywhere;padding:1px 5px;border-radius:5px;background:rgb(var(--sur) / 0.039);color:var(--texte);border-left:2px solid var(--c)}   /* titre sur 2 lignes au plus */
+.deux-sem .lig{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:11.5px;line-height:1.4;overflow:hidden;overflow-wrap:anywhere;padding:3px 6px;border-radius:5px;background:rgb(var(--sur) / 0.039);color:var(--texte);border-left:2px solid var(--c)}   /* titre sur 2 lignes au plus */
 .deux-sem .plus{font-size:10.5px;color:var(--texte-faible);padding-left:5px}
 .deux-sem .rien{display:none}
 .agenda-jour + .agenda-jour{margin-top:16px}
