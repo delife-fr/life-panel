@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-uXmxWiPkx+InqgZsG8J5p2axtuoOJFrqTkwdPwLJOzQ='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-/hInlrZZauF8lG4dfjlOTRpFQJgnm0z1joiXR8lBs3o='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.27
+  LIFE PANEL — v3.27.1
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -142,6 +142,10 @@
   v3.27 : calendrier, vue « 2 semaines » (cette semaine et la suivante, du lundi au dimanche, cases hautes ; liste de
   14 jours sur téléphone) ; thème clair (bouton soleil / lune de la barre du haut, choix gardé sur chaque appareil,
   appliqué avant l'affichage par un petit script de <head> qui a sa propre empreinte dans la CSP).
+  v3.27.1 : démonstration retirée (plus de carte « Démonstration » dans la page Données ni de bouton dans le bandeau
+  de bienvenue ; un appareil encore en mode démo garde « Revenir à mes données » et « Effacer la démo », et rien n'en
+  part vers GitHub ni le dossier) ; Accueil : « Local · synchro GitHub » quand la synchro est active (au lieu de
+  « hors ligne ») ; page Données : les événements figurent dans « Ce qu'il y a dedans » ; plus de prénom par défaut.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -156,9 +160,9 @@
       life-panel.html (« lifepanel.v6 ») ; les anciennes clés ne sont pas effacées.
     - Option : dossier LIFE PANEL relié → donnees.json + finances.csv écrits à
       chaque modification, puis relus pour vérification (Chrome, Edge, Opera).
-    - La démo vient du fichier demo-data.json (page Données > Charger la démo).
-      Elle n'est jamais chargée toute seule, ses dates sont recalées sur
-      aujourd'hui, et une copie de secours de tes données est gardée.
+    - Démonstration retirée en v3.27.1 : un navigateur où elle était chargée reste
+      en « mode démo » (rien n'est écrit ni synchronisé) jusqu'à « Revenir à mes
+      données » ou « Effacer la démo ».
 
   RACCOURCIS : « / » rechercher · « c » capture rapide · Ctrl+K commandes · Échap fermer
   ============================================================================
@@ -1052,7 +1056,7 @@ const LIENS_PROJET = ['taches', 'notes', 'documents', 'mouvements', 'contacts', 
 const aDesDonnees = d => !!d && (compter(d) > 0 || (Array.isArray(d.corbeille) && d.corbeille.length > 0));
 
 const DBVide = () => ({
-  version: VERSION, prenom: 'Alexis',
+  version: VERSION, prenom: '',
   projets: [], taches: [], notes: [], documents: [], mouvements: [], contacts: [], inbox: [], evenements: [], corbeille: [],
   categories: CATEGORIES_DEFAUT.slice(),
   couleursCategories: [],   /* {nom, couleur} : couleur gardée par chaque catégorie (graphique « Par catégorie ») */
@@ -2384,12 +2388,14 @@ function bandeauxEtat(){
     return `<div class="bandeau jaune">${pastille('ampoule', 'jaune')}<div class="txt"><strong>Mode démonstration</strong><span>Ces données viennent de demo-data.json. Rien n’est écrit dans ton dossier LIFE PANEL.</span></div>
       <div class="boutons">${s ? btnAction('secours-restaurer', 'Revenir à mes données', 'btn p') : ''}${btnAction('effacer', 'Effacer la démo', 'btn')}</div></div>`;
   }
-  if(!compter(DB)) return `<div class="bandeau bleu">${pastille('maison', 'bleu')}<div class="txt"><strong>Bienvenue ! Ton tableau est vide.</strong><span>Charge la démo pour voir à quoi il ressemble, ou reprends tes données depuis ton dossier LIFE PANEL.</span></div>
-      <div class="boutons">${btnAction('demo', 'Charger la démo', 'btn ghost')}${'showDirectoryPicker' in window ? btnAction('dossier-relier', 'Relier mon dossier', 'btn') : ''}${btnAction('importer', 'Importer une sauvegarde', 'btn')}</div></div>`;
+  if(!compter(DB)) return `<div class="bandeau bleu">${pastille('maison', 'bleu')}<div class="txt"><strong>Bienvenue ! Ton tableau est vide.</strong><span>Commence à saisir, ou reprends tes données depuis ton dossier LIFE PANEL ou une sauvegarde.</span></div>
+      <div class="boutons">${'showDirectoryPicker' in window ? btnAction('dossier-relier', 'Relier mon dossier', 'btn') : ''}${btnAction('importer', 'Importer une sauvegarde', 'btn')}</div></div>`;
   return '';
 }
 
 /* --- ACCUEIL --- */
+/* Sous la date : où vivent les données (tenu à jour par majPied, la synchro GitHub démarrant après le premier affichage) */
+const etatAccueil = () => ghActif() ? 'Local · synchro GitHub' : 'Local · hors ligne';
 function pageAccueil(){
   const h = new Date().getHours();
   const salut = (h >= 18 || h < 5 ? 'Bonsoir' : 'Bonjour') + (DB.prenom ? ', ' + esc(DB.prenom) : '') + ' !';
@@ -2397,7 +2403,7 @@ function pageAccueil(){
   const aFaire = tachesAFaire(), faites = tachesFaitesAujourdhui(), total = aFaire.length + faites.length, retard = tachesEnRetard().length;
   const actifs = projetsActifs(), inbox = inboxOuverte().length;
   return `<div class="bonjour"><div><h1>${salut}</h1><p>Voici un aperçu de ta journée, de tes projets et de tes finances.</p></div>
-      <div class="meta"><span>${dateLongue(aujourdhui())}</span><span class="sep"></span><span>Local · hors ligne</span>${iaActive() ? btnAction('ia-point', ico('bulle', 14) + 'Point du jour', 'btn compact') : ''}</div></div>
+      <div class="meta"><span>${dateLongue(aujourdhui())}</span><span class="sep"></span><span id="etat-accueil">${etatAccueil()}</span>${iaActive() ? btnAction('ia-point', ico('bulle', 14) + 'Point du jour', 'btn compact') : ''}</div></div>
     ${bandeauxEtat()}
     <div class="grille">
       <div class="c12 chiffres">
@@ -3322,29 +3328,24 @@ function pageDonnees(){
           <label class="champ demi"><span>Prénom affiché</span><input name="prenom" value="${esc(DB.prenom)}" autocomplete="off"></label>
           <p class="aide demi" style="margin:0;align-self:end">Les budgets se règlent pour chaque compte, par mois ou par an : bouton « Comptes et budgets ».</p>
           <div class="boutons"><button class="btn p" type="submit">Enregistrer</button>${btnAction('categories', ico('tag', 14) + `Catégories (${DB.categories.length})`)}${btnAction('comptes', ico('portefeuille', 14) + `Comptes et budgets (${DB.comptes.length})`)}</div></form></section>
-      <section class="carte c6 etire">${enteteCarte('ampoule', 'jaune', 'Démonstration')}
-        <p class="aide">Charge le jeu d’exemple <code>demo-data.json</code>. Ses dates sont recalées sur aujourd’hui et tes données actuelles sont gardées en copie de secours.</p>
-        <div class="boutons">${btnAction('demo', DB.reglages.demo ? 'Recharger la démo' : 'Charger la démo', 'btn ghost')}${DB.reglages.demo && s ? btnAction('secours-restaurer', 'Revenir à mes données', 'btn p') : ''}</div></section>
       <section class="carte c6 etire">${enteteCarte('base', 'vert', 'Ce qu’il y a dedans')}
-        <table class="table-simple"><tbody>${[['Projets', DB.projets.length], ['Tâches', DB.taches.length], ['Notes', DB.notes.length], ['Documents', DB.documents.length], ['Mouvements', DB.mouvements.length], ['Comptes', DB.comptes.length], ['Contacts', DB.contacts.length], ['Inbox (à trier)', inboxOuverte().length], ['Catégories', DB.categories.length],
+        <table class="table-simple"><tbody>${[['Projets', DB.projets.length], ['Tâches', DB.taches.length], ['Notes', DB.notes.length], ['Documents', DB.documents.length], ['Mouvements', DB.mouvements.length], ['Comptes', DB.comptes.length], ['Contacts', DB.contacts.length], ['Événements', DB.evenements.length], ['Inbox (à trier)', inboxOuverte().length], ['Catégories', DB.categories.length],
             ['dont archivés (tâches, notes, documents, contacts)', [DB.taches, DB.notes, DB.documents, DB.contacts].reduce((n, l) => n + l.filter(x => x.archive).length, 0)], ['Corbeille', DB.corbeille.length],
             ['Taille des données', tailleLisible(stockage.taille)]]
           .map(([l, n]) => `<tr><td>${l}</td><td class="num">${n}</td></tr>`).join('')}</tbody></table>
         <p class="aide" style="margin:10px 0 0">Gardées dans la mémoire du navigateur (IndexedDB, plusieurs centaines de Mo possibles)${dossier ? ' et dans <code>donnees.json</code>' : ''}.${stockage.idb ? '' : ' <b>Ce navigateur refuse IndexedDB : seule la petite mémoire (environ 4 Mo) est utilisée, relie ton dossier pour ne rien risquer.</b>'}</p></section>
-      <div class="c6 pile">
-        <section class="carte">${enteteCarte('corbeille', 'gris', 'Corbeille', DB.corbeille.length ? `<span class="compte">${DB.corbeille.length}</span>` : '')}
-          <p class="aide">Tout ce que tu supprimes y reste ${JOURS_CORBEILLE} jours : tu peux le restaurer, puis c’est effacé pour de bon.</p>
-          <div class="boutons"><a class="btn" href="#/corbeille">${ico('corbeille', 14)}Ouvrir la corbeille</a></div></section>
-        <section class="carte">${enteteCarte('alerte', 'rose', 'Repartir de zéro')}
-          <p class="aide">Efface tout le contenu de Life Panel dans ce navigateur, corbeille comprise. Une copie de secours est gardée juste avant.</p>
-          <div class="boutons">${btnAction('effacer', ico('corbeille', 14) + 'Tout effacer', 'btn danger')}</div></section>
-      </div>
+      <section class="carte c6 etire">${enteteCarte('corbeille', 'gris', 'Corbeille', DB.corbeille.length ? `<span class="compte">${DB.corbeille.length}</span>` : '')}
+        <p class="aide">Tout ce que tu supprimes y reste ${JOURS_CORBEILLE} jours : tu peux le restaurer, puis c’est effacé pour de bon.</p>
+        <div class="boutons"><a class="btn" href="#/corbeille">${ico('corbeille', 14)}Ouvrir la corbeille</a></div></section>
+      <section class="carte c6 etire">${enteteCarte('alerte', 'rose', 'Repartir de zéro')}
+        <p class="aide">Efface tout le contenu de Life Panel dans ce navigateur, corbeille comprise. Une copie de secours est gardée juste avant.</p>
+        <div class="boutons">${btnAction('effacer', ico('corbeille', 14) + 'Tout effacer', 'btn danger')}</div></section>
       ${anciennes.length ? `<section class="carte c12">${enteteCarte('archive', 'gris', 'Données des versions précédentes')}
         <p class="aide">Toujours présentes dans ce navigateur, jamais effacées. Tu peux les reprendre à tout moment (tes données actuelles passent en copie de secours).</p>
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.27 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.27.1 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -4351,8 +4352,6 @@ const ACTIONS = {
   exporter: () => { telecharger(`life-panel-${aujourdhui()}.json`, JSON.stringify(DB, null, 2), 'application/json'); toast('Sauvegarde JSON téléchargée'); },
   'exporter-csv': () => { telecharger(`finances-${aujourdhui()}.csv`, csvFinances(), 'text/csv'); toast('Export CSV téléchargé'); },
   importer: () => choisirFichier(importerTexte),
-  demo: () => chargerDemo(),
-  'demo-choisir': () => choisirFichier(t => proposerDemo(t), 'demo-choisir'),
   effacer: async () => {
     const demo = DB.reglages.demo;
     if(!await confirmer({titre:demo ? 'Effacer la démo ?' : 'Tout effacer ?', texte:demo ? 'Les données de démonstration seront effacées.' : `Tout le contenu (${esc(resume(DB))}) sera effacé de ce navigateur. Une copie de secours est gardée juste avant.` + (ghActif() ? '<br><br><b>La synchronisation GitHub est active :</b> l’effacement sera aussi envoyé sur GitHub (l’ancienne version reste dans l’historique du dépôt), mais tes autres appareils ne l’appliqueront pas d’eux-mêmes.' : ''), ok:demo ? 'Effacer la démo' : 'Tout effacer'})) return;
@@ -4914,7 +4913,7 @@ panneauRecherche.addEventListener('click', e => { if(e.target.closest('.resultat
 document.addEventListener('mousedown', e => { if(!e.target.closest('#recherche-wrap')) fermerResultats(); });
 
 /* ==========================================================================
-   M. FICHIERS : export, import, démo, dossier LIFE PANEL
+   M. FICHIERS : export, import, dossier LIFE PANEL
    ========================================================================== */
 function telecharger(nom, contenu, type){
   const a = document.createElement('a');
@@ -4930,7 +4929,7 @@ function csvFinances(){
     l.push([m.date, m.type, String(m.montant).replace('.', ','), m.categorie, m.libelle, nomProjet(m.projet), m.compte, m.note].map(celluleCSV).join(';')));
   return '\uFEFF' + l.join('\r\n');
 }
-/* Choix d'un fichier sur l'ordinateur (import, démo).
+/* Choix d'un fichier sur l'ordinateur (import).
    Lecture robuste : un fichier « en ligne uniquement » du lecteur Google Drive (G:)
    ou de OneDrive peut échouer ou arriver vide le temps d'être téléchargé ; on réessaie,
    puis on explique clairement quoi faire au lieu d'un simple message furtif. */
@@ -4984,53 +4983,6 @@ async function importerTexte(texte, nom){
     texte:`<b>${esc(nom)}</b> contient ${esc(resume(d))}${derniereModif(d) ? ', modifiées ' + esc(ilya(derniereModif(d))) : ''}.` +
       (remplace ? `<br>Elle remplacera les données actuelles (${esc(resume(DB))}), qui sont gardées en copie de secours.` : '')})) return;
   remplacerDB(d, 'avant un import'); rendre(); toast('Données importées : ' + resume(DB));
-}
-
-/* La démo vient de demo-data.json. Une page ouverte par double-clic ne peut pas
-   toujours le lire seule : on essaie la lecture directe, puis le dossier relié,
-   puis on demande de choisir le fichier. */
-async function chargerDemo(){
-  let texte = null;
-  try { const r = await fetch('demo-data.json', {cache:'no-store'}); if(r.ok) texte = await r.text(); } catch(e){}
-  if(!texte && dossier){ try { texte = await (await (await dossier.getFileHandle('demo-data.json')).getFile()).text(); } catch(e){} }
-  if(texte) return proposerDemo(texte);
-  ouvrirModale(teteModale('Charger la démo', 'ampoule', 'jaune') + `<p class="texte">Par sécurité, une page ouverte par double-clic ne peut pas lire seule un fichier posé à côté d’elle. Choisis <code>demo-data.json</code> dans ton dossier LIFE PANEL.</p>
-    <div class="actions"><button class="btn" data-action="fermer">Annuler</button>${btnAction('demo-choisir', 'Choisir demo-data.json…', 'btn p')}</div>`);
-}
-async function proposerDemo(texte){
-  fermerModale();
-  const {d, cause} = analyserSauvegarde(texte);
-  if(!d) return ficheFichierProbleme('demo-data.json', cause, 'demo-choisir');
-  if(compter(DB) && !DB.reglages.demo && !await confirmer({titre:'Charger la démo ?', texte:`Tes données actuelles (${esc(resume(DB))}) seront remplacées par la démo. Elles sont gardées en copie de secours : le bouton « Revenir à mes données » les restaure.`, ok:'Charger la démo', danger:false})) return;
-  const r = rebaserDemo(d); r.reglages = Object.assign({}, r.reglages, {demo:true});
-  remplacerDB(r, 'avant le chargement de la démo'); rendre(); toast('Démonstration chargée, dates recalées sur aujourd’hui');
-}
-/* Décale toutes les dates de la démo pour que son « aujourd'hui » soit le vrai aujourd'hui */
-function rebaserDemo(src){
-  const d = JSON.parse(JSON.stringify(src));
-  const L = k => Array.isArray(d[k]) ? d[k] : [];
-  /* Référence : la date « reference » du fichier, sinon le moment le plus récent de la démo */
-  let refTs = '';
-  [...L('projets').map(p => p.modif), ...L('taches').map(t => t.modif), ...L('notes').map(n => n.modif), ...L('inbox').map(x => x.created)]
-    .forEach(v => { if(typeof v === 'string' && v.includes('T') && v > refTs) refTs = v; });
-  const ref = d.reference || jourDe(refTs);
-  if(!ref) return d;
-  const e = Math.round((versDate(aujourdhui()) - versDate(ref.slice(0, 10))) / 86400000);
-  const decalage = (!d.reference && refTs) ? Date.now() - new Date(refTs).getTime() : e * 86400000;   /* l'élément le plus récent devient « maintenant » */
-  if(!e && Math.abs(decalage) < 60000) return d;
-  const J = s => (typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s)) ? decaleJour(e, versDate(s)) : s;
-  const T = s => { if(typeof s !== 'string' || !s) return s; const t = new Date(s); return isNaN(t) ? s : new Date(t.getTime() + decalage).toISOString(); };
-  L('projets').forEach(p => { p.echeance = J(p.echeance); p.modif = T(p.modif); });
-  L('taches').forEach(t => { t.date = J(t.date); t.modif = T(t.modif); t.faitLe = T(t.faitLe); });
-  L('evenements').forEach(x => { x.date = J(x.date); x.cree = T(x.cree); x.modif = T(x.modif);
-    if(x.recurrence && typeof x.recurrence === 'object'){ x.recurrence.jusqua = J(x.recurrence.jusqua); if(Array.isArray(x.recurrence.exceptions)) x.recurrence.exceptions = x.recurrence.exceptions.map(J); } });
-  L('notes').forEach(n => { n.cree = T(n.cree); n.modif = T(n.modif); });
-  L('mouvements').forEach(m => { m.date = J(m.date); m.cree = T(m.cree); m.modif = T(m.modif); });
-  L('contacts').forEach(c => { c.derniereConversation = J(c.derniereConversation); c.modif = T(c.modif); });
-  L('inbox').forEach(x => { x.created = T(x.created); x.archived = T(x.archived); x.modif = T(x.modif); });
-  L('documents').forEach(x => { x.echeance = J(x.echeance); x.ajoute = T(x.ajoute); x.modif = T(x.modif); });
-  if(d.reglages) d.reglages.lastReview = T(d.reglages.lastReview);
-  return d;
 }
 
 /* --- Dossier LIFE PANEL (Chrome, Edge, Opera) : donnees.json + finances.csv ---
@@ -6547,6 +6499,7 @@ async function appliquerAmelioration(id, remplacer){
    N. PIED DE PAGE ET DÉMARRAGE
    ========================================================================== */
 function majPied(){
+  const ea = $('#etat-accueil'); if(ea) ea.textContent = etatAccueil();
   const p = $('#pied'); if(!p) return;
   const e = etatEcriture(), t = esc(ETATS_ECRITURE[e].texte().replace(/ Clique pour.*$/, ''));
   const led = {ok:'', cours:' b', erreur:' r', hors:' j', demo:' j', indispo:' j'}[e];
