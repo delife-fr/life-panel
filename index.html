@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-2NWeDwKZJ5+uQJEoCBUpXQLZcG+cYmnQa2NOtVDf8+M='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-mzAA7vYwFtRHPR6k1f/qCYng0cZrTm5R2Gzd0IsrGss='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.28
+  LIFE PANEL — v3.29
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -148,6 +148,9 @@
   « hors ligne ») ; page Données : les événements figurent dans « Ce qu'il y a dedans » ; plus de prénom par défaut.
   v3.28 : « Répéter » un mouvement (dépense ou entrée) : bouton sur chaque ligne (Finances, page d'un projet, fenêtre d'un
   jour) qui ouvre le formulaire déjà rempli — montant, libellé, catégorie, compte, projet, note — daté d'aujourd'hui.
+  v3.29 : couleur de chaque catégorie au choix (Finances → Catégories : un clic sur la pastille) parmi 18 couleurs —
+  9 teintes unies, dont un nouveau prune bien distinct des autres, et les mêmes rayées ; une couleur déjà prise est
+  signalée (les deux catégories la partagent). Les catégories existantes gardent leur couleur tant qu'on n'y touche pas.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -181,8 +184,8 @@
   --texte:#f1f1f2; --texte-doux:#a9a9b1; --texte-faible:#92929c;
   /* Couleurs de données (validées pour fond sombre) */
   --bleu:#3987e5; --vert:#199e70; --jaune:#c98500; --rose:#d55181; --violet:#9085e9; --orange:#d95926; --gris:#85858e;
-  /* Deux teintes de plus pour les catégories (même palette validée : 8 teintes) */
-  --herbe:#008300; --rouge:#e66767;
+  /* Teintes de plus pour les catégories (8 de la palette validée, puis le prune, v3.29 : bien distinct de toutes) */
+  --herbe:#008300; --rouge:#e66767; --prune:#a344b8;
   /* Mêmes teintes éclaircies : pictogrammes et petits textes */
   --i-bleu:#7ab0f0; --i-vert:#4ec89b; --i-jaune:#e5b54a; --i-rose:#e78aab; --i-violet:#b0a7f2; --i-orange:#ef8759; --i-gris:#b3b3ba;
   --i-rouge:#ff6b6b;   /* réservé à l'échec d'écriture */
@@ -610,6 +613,21 @@ a.puce.lien-tel:hover{border-color:var(--i-bleu)}
 .ligne-gestion.supprimee{opacity:.55}
 .ligne-gestion.supprimee input[name="nom"]{text-decoration:line-through}
 .ligne-sans{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--texte-doux);margin:10px 0 0;cursor:pointer}
+/* Couleur d'une catégorie : pastille cliquable, puis choix sous la ligne (9 unies, 9 rayées) */
+.couleur-cat{display:grid;place-items:center;width:30px;height:30px;flex-shrink:0;padding:0;border:1px solid transparent;border-radius:8px;background:none}
+.couleur-cat:hover,.couleur-cat[aria-expanded="true"]{border-color:var(--trait);background:rgb(var(--sur) / 0.05)}
+.couleur-cat:disabled{cursor:default}
+.pt-cat.grand{width:16px;height:16px;margin:0}
+.pt-cat.auto{background:none;border:1.5px dashed var(--texte-faible)}
+.ligne-gestion:has(> .choix-couleur){flex-wrap:wrap}
+.choix-couleur{flex-basis:100%;order:10;display:flex;flex-direction:column;gap:6px;padding:4px 0 2px 38px}
+.choix-couleur .rang{display:grid;grid-template-columns:repeat(9,minmax(0,30px));gap:5px}   /* 9 pastilles par rang, un peu plus petites sur téléphone */
+.choix-couleur .aide{margin:2px 0 0;font-size:12px}
+.pastille-choix{position:relative;display:grid;place-items:center;width:100%;aspect-ratio:1 / 1;padding:0;border:1px solid var(--trait);border-radius:8px;background:var(--champ)}
+.pastille-choix:hover{border-color:var(--survol-bord)}
+.pastille-choix .pt-cat{width:18px;height:18px;margin:0}
+.pastille-choix[aria-pressed="true"]{outline:2px solid var(--texte);outline-offset:1px}
+.pastille-choix.prise::after{content:'';position:absolute;top:2px;right:2px;width:5px;height:5px;border-radius:50%;background:var(--texte-faible)}
 .champ .nouveau-nom{margin-top:8px}
 tr.hors-stats td{opacity:.5}
 .liste-mvts li.hors-stats > :not(.icone-btn){opacity:.5}
@@ -987,6 +1005,7 @@ td.act{text-align:right;white-space:nowrap;width:1%}
   .ligne-gestion input[name="nom"]{flex:1 1 60%}
   .budget-gestion{flex:1 1 170px;order:5;padding-left:34px}
   .nb-gestion{order:6;min-width:0;margin-left:auto}
+  .choix-couleur{padding-left:0}
   .actions-ligne .icone-btn{width:28px}
 }
 @media (prefers-reduced-motion:reduce){
@@ -1653,10 +1672,13 @@ const VAR   = {bleu:'--i-bleu', vert:'--i-vert', jaune:'--i-jaune', rose:'--i-ro
 const FOND  = {bleu:'#3987e522', vert:'#199e7026', jaune:'#c9850026', rose:'#d5518122', violet:'#9085e922', orange:'#d9592622', gris:'#85858e22'};
 const BORD  = {bleu:'#3987e54d', vert:'#199e704d', jaune:'#c985004d', rose:'#d551814d', violet:'#9085e94d', orange:'#d959264d', gris:'#85858e4d'};
 const PLEIN = {bleu:'var(--bleu)', vert:'var(--vert)', jaune:'var(--jaune)', rose:'var(--rose)', violet:'var(--violet)', orange:'var(--orange)', gris:'var(--gris)',
-  herbe:'var(--herbe)', rouge:'var(--rouge)'};
+  herbe:'var(--herbe)', rouge:'var(--rouge)', prune:'var(--prune)'};
 /* Catégories de dépenses : 8 teintes dans l'ordre validé pour les daltoniens (voisines bien séparées sur fond
-   sombre), puis les mêmes en rayures (« -r ») ; au-delà de 16 catégories, des couleurs se répètent */
-const TEINTES_CAT = ['bleu','orange','vert','jaune','rose','herbe','violet','rouge'];
+   sombre), puis le prune (v3.29), puis les mêmes en rayures (« -r ») ; au-delà de 18 catégories, des couleurs se répètent.
+   Une couleur choisie à la main (fenêtre « Catégories ») est gardée telle quelle, même si une autre catégorie l'a aussi. */
+const TEINTES_CAT = ['bleu','orange','vert','jaune','rose','herbe','violet','rouge','prune'];
+const NOMS_TEINTES = {bleu:'Bleu', orange:'Orange', vert:'Vert', jaune:'Jaune', rose:'Rose', herbe:'Vert prairie', violet:'Violet', rouge:'Rouge', prune:'Prune'};
+const nomCouleurCat = c => (NOMS_TEINTES[teinteCat(c)] || 'Gris') + (rayeeCat(c) ? ' rayé' : '');
 const COULEURS_CAT = [...TEINTES_CAT, ...TEINTES_CAT.map(c => c + '-r')];
 const teinteCat = c => String(c).replace(/-r$/, '');
 const rayeeCat = c => /-r$/.test(String(c));
@@ -3349,7 +3371,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.28 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.29 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -3709,14 +3731,32 @@ function formMouvement(m0 = {}, apres, {repete = false} = {}){
 function ligneGestion(type, x){
   const comptes = type === 'comptes', dis = x.suppr ? ' disabled' : '';
   const nb = x.orig === null ? null : comptes ? nbMouvementsCompte(x.orig) : nbMouvementsCategorie(x.orig), action = x.suppr ? 'Garder' : 'Supprimer';
-  return `<li class="ligne-gestion${x.suppr ? ' supprimee' : ''}"${x.orig === null ? ' data-nouveau="1"' : ` data-orig="${esc(x.orig)}"`}>
+  /* Catégories : couleur actuelle (ou choisie dans cette fenêtre) ; '' = automatique (nouvelle catégorie) */
+  const couleur = comptes ? '' : x.couleur !== undefined ? x.couleur : x.orig !== null ? couleurCategorie(x.orig) : '';
+  return `<li class="ligne-gestion${x.suppr ? ' supprimee' : ''}"${x.orig === null ? ' data-nouveau="1"' : ` data-orig="${esc(x.orig)}"`}${comptes ? '' : ` data-couleur="${esc(couleur)}"`}>
     ${comptes ? `<label class="case-stats" title="Pris en compte dans les statistiques"><input type="checkbox" name="stats"${x.stats ? ' checked' : ''}${dis}><span class="sr">Pris en compte dans les statistiques</span></label>`
-      : x.orig !== null ? `<span title="Couleur dans le graphique « Par catégorie »">${pastilleCat(couleurCategorie(x.orig))}</span>` : ''}
+      : boutonCouleurCat(couleur, dis)}
     <input class="saisie" name="nom" value="${esc(x.nom)}" placeholder="${comptes ? 'Nom du compte' : 'Nom de la catégorie'}" aria-label="Nom" autocomplete="off"${dis}>
     ${comptes ? `<span class="budget-gestion"><input class="saisie" name="budget" type="number" min="0" step="0.01" inputmode="decimal" value="${x.budget ?? ''}" placeholder="Budget" aria-label="Budget en euros"${dis}>
       <select class="saisie" name="periode" aria-label="Période du budget"${dis}><option value="mois"${x.periode !== 'an' ? ' selected' : ''}>€ / mois</option><option value="an"${x.periode === 'an' ? ' selected' : ''}>€ / an</option></select></span>` : ''}
     <span class="nb-gestion">${nb === null ? 'nouveau' : pluriel(nb, 'mouvement')}</span>
     <button type="button" class="icone-btn danger" data-action="gestion-suppr" title="${action}" aria-label="${action}">${ico(x.suppr ? 'retour' : 'corbeille', 15)}</button></li>`;
+}
+/* Pastille de couleur d'une catégorie (fenêtre « Catégories ») : un clic ouvre le choix des couleurs */
+const boutonCouleurCat = (c, dis = '') => `<button type="button" class="couleur-cat" data-action="couleur-ouvrir" aria-expanded="false"${dis}
+  title="Couleur dans le graphique « Par catégorie » : ${c ? esc(nomCouleurCat(c)) : 'automatique'}. Clic pour la changer" aria-label="Couleur : ${c ? esc(nomCouleurCat(c)) : 'automatique'}. Changer">${c ? pastilleCat(c, 'pt-cat grand') : '<span class="pt-cat grand auto" aria-hidden="true"></span>'}</button>`;
+/* Choix des couleurs sous une ligne : 9 teintes unies, les mêmes rayées ; un point marque celles qu'une autre ligne utilise déjà */
+function choixCouleurCat(li){
+  const prises = new Map();
+  $$('li.ligne-gestion', li.parentElement).forEach(l => { if(l === li || l.classList.contains('supprimee') || !l.dataset.couleur) return;
+    const nom = propreNom($('input[name="nom"]', l).value) || 'nouvelle catégorie';
+    prises.set(l.dataset.couleur, [...(prises.get(l.dataset.couleur) || []), nom]); });
+  const nom = propreNom($('input[name="nom"]', li).value) || 'cette catégorie';
+  const pastille = c => { const p = prises.get(c), titre = nomCouleurCat(c) + (p ? ' · déjà prise par : ' + p.join(', ') : ' · libre');
+    return `<button type="button" class="pastille-choix${p ? ' prise' : ''}" data-action="couleur-choisir" data-c="${c}" aria-pressed="${c === li.dataset.couleur}" title="${esc(titre)}" aria-label="${esc(titre)}">${pastilleCat(c, 'pt-cat')}</button>`; };
+  return `<div class="choix-couleur" role="group" aria-label="${esc('Couleur de « ' + nom + ' »')}">
+    <div class="rang">${TEINTES_CAT.map(pastille).join('')}</div><div class="rang">${TEINTES_CAT.map(c => pastille(c + '-r')).join('')}</div>
+    <p class="aide">${prises.size ? 'Un point : couleur déjà prise par une autre catégorie (les deux la partageront). ' : ''}Enregistré avec le bouton « Enregistrer ».</p></div>`;
 }
 function ficheGestion(type, brouillon = null){
   const comptes = type === 'comptes', champ = comptes ? 'compte' : 'categorie';
@@ -3724,7 +3764,7 @@ function ficheGestion(type, brouillon = null){
   const nbSans = comptes ? DB.mouvements.filter(m => !m.compte).length : 0;
   const sansStats = brouillon && brouillon.sansStats !== undefined ? brouillon.sansStats : DB.reglages.sansCompteStats !== false;
   ouvrirModale(teteModale(comptes ? 'Comptes et budgets' : 'Catégories de dépenses', comptes ? 'portefeuille' : 'tag', comptes ? 'vert' : 'jaune') +
-    `<p class="texte">${comptes ? 'Case cochée : le compte est pris en compte dans les statistiques (accueil et Finances) ; plusieurs cases cochées = statistiques fusionnées. Un budget annuel compte pour un douzième chaque mois. ' : ''}Renommer met à jour tous les mouvements ; deux noms identiques (à la casse près) sont fusionnés.</p>
+    `<p class="texte">${comptes ? 'Case cochée : le compte est pris en compte dans les statistiques (accueil et Finances) ; plusieurs cases cochées = statistiques fusionnées. Un budget annuel compte pour un douzième chaque mois. ' : 'Clique sur la pastille d’une catégorie pour changer sa couleur. '}Renommer met à jour tous les mouvements ; deux noms identiques (à la casse près) sont fusionnés.</p>
     <form id="form-gestion" novalidate><ul class="liste gestion">${lignes.map(x => ligneGestion(type, x)).join('')}</ul>
       ${nbSans ? `<label class="ligne-sans"><input type="checkbox" name="sansStats"${sansStats ? ' checked' : ''}><span>Mouvements sans compte (${pluriel(nbSans, 'mouvement')}) : pris en compte dans les statistiques</span></label>` : ''}
       <div class="boutons" style="margin-top:12px">${btnAction('gestion-ajouter', ico('plus', 14) + (comptes ? 'Ajouter un compte' : 'Ajouter une catégorie'), 'btn ghost compact', `data-type="${type}"`)}</div>
@@ -3735,7 +3775,7 @@ function ficheGestion(type, brouillon = null){
     e.preventDefault();
     const lire = li => ({orig:li.dataset.nouveau ? null : li.dataset.orig, nom:propreNom($('input[name="nom"]', li).value), suppr:li.classList.contains('supprimee'),
       stats:comptes ? $('input[name="stats"]', li).checked : true, budget:comptes ? num($('input[name="budget"]', li).value.replace(',', '.')) : null,
-      periode:comptes ? $('select[name="periode"]', li).value : 'mois'});
+      periode:comptes ? $('select[name="periode"]', li).value : 'mois', ...(comptes ? {} : {couleur:li.dataset.couleur || ''})});
     const b = {lignes:$$('li.ligne-gestion', f).map(lire), sansStats:f.elements.sansStats ? f.elements.sansStats.checked : undefined};
     const erreur = t => { const p = $('#erreur-modale'); p.textContent = t; p.hidden = false; };
     const gardees = b.lignes.filter(x => !x.suppr && (x.nom || x.orig !== null));   /* une ligne ajoutée puis laissée vide est ignorée */
@@ -3773,10 +3813,11 @@ function ficheGestion(type, brouillon = null){
     DB.corbeille.forEach(e => { if(e.type === 'mouvements') suivre(e.element, false); });   /* un mouvement restauré plus tard aura le bon nom */
     if(comptes){ DB.comptes = liste; if(b.sansStats !== undefined) DB.reglages.sansCompteStats = b.sansStats; }
     else {
-      /* Couleurs : une catégorie gardée, renommée ou fusionnée garde celle de la ligne conservée ;
-         une catégorie supprimée libère la sienne ; une nouvelle prend une couleur libre */
+      /* Couleurs : celle de la ligne conservée (choisie dans cette fenêtre, ou sa couleur actuelle) pour une catégorie gardée,
+         renommée ou fusionnée ; une catégorie supprimée libère la sienne ; une nouvelle sans choix prend une couleur libre */
       const avant = new Map((DB.couleursCategories || []).map(x => [x.nom, x.couleur])), reprises = [];
-      groupes.forEach(g => { const t = garde(g); if(t.orig !== null && avant.has(t.orig)) reprises.push({nom:t.nom, couleur:avant.get(t.orig)}); });
+      groupes.forEach(g => { const t = garde(g), c = t.couleur || (t.orig !== null ? avant.get(t.orig) : '') || (g.find(x => x.couleur) || {}).couleur;
+        if(c) reprises.push({nom:t.nom, couleur:c}); });
       liste.forEach(nom => { if(!vus.has(nom) && avant.has(nom)) reprises.push({nom, couleur:avant.get(nom)}); });
       DB.categories = liste;
       DB.couleursCategories = colorerCategories(liste, reprises, DB.mouvements);
@@ -4265,9 +4306,20 @@ const ACTIONS = {
   'gestion-suppr': el => { const li = el.closest('li'); if(!li) return;
     if(li.dataset.nouveau){ li.remove(); return; }   /* ligne ajoutée à l'instant : rien à confirmer */
     const s = !li.classList.contains('supprimee'); li.classList.toggle('supprimee', s);
-    $$('input, select', li).forEach(x => { x.disabled = s; });
+    const z = $('.choix-couleur', li); if(z) z.remove();
+    $$('input, select, .couleur-cat', li).forEach(x => { x.disabled = s; });
     el.innerHTML = ico(s ? 'retour' : 'corbeille', 15); el.title = s ? 'Garder' : 'Supprimer'; el.setAttribute('aria-label', el.title); },
   categories: () => ficheCategories(),
+  /* Fenêtre « Catégories » : choix de la couleur d'une catégorie (gardé avec le reste à « Enregistrer ») */
+  'couleur-ouvrir': el => { const li = el.closest('li.ligne-gestion'); if(!li || li.classList.contains('supprimee')) return;
+    const ouvert = $('.choix-couleur', li);
+    $$('#form-gestion .choix-couleur').forEach(z => { z.remove(); }); $$('#form-gestion .couleur-cat').forEach(b => b.setAttribute('aria-expanded', 'false'));
+    if(ouvert) return;
+    li.insertAdjacentHTML('beforeend', choixCouleurCat(li)); el.setAttribute('aria-expanded', 'true');
+    const p = $('.pastille-choix[aria-pressed="true"]', li) || $('.pastille-choix', li); if(p) p.focus(); },
+  'couleur-choisir': el => { const li = el.closest('li.ligne-gestion'); if(!li) return;
+    li.dataset.couleur = el.dataset.c; $('.choix-couleur', li).remove();
+    const b = $('.couleur-cat', li); b.outerHTML = boutonCouleurCat(el.dataset.c); $('.couleur-cat', li).focus(); },
   categoriser: () => ficheCategoriser(),
   'fin-prec': () => decalerFin(-1),
   'fin-suiv': () => decalerFin(1),
