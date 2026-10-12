@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-/hInlrZZauF8lG4dfjlOTRpFQJgnm0z1joiXR8lBs3o='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-2NWeDwKZJ5+uQJEoCBUpXQLZcG+cYmnQa2NOtVDf8+M='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.27.1
+  LIFE PANEL — v3.28
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -146,6 +146,8 @@
   de bienvenue ; un appareil encore en mode démo garde « Revenir à mes données » et « Effacer la démo », et rien n'en
   part vers GitHub ni le dossier) ; Accueil : « Local · synchro GitHub » quand la synchro est active (au lieu de
   « hors ligne ») ; page Données : les événements figurent dans « Ce qu'il y a dedans » ; plus de prénom par défaut.
+  v3.28 : « Répéter » un mouvement (dépense ou entrée) : bouton sur chaque ligne (Finances, page d'un projet, fenêtre d'un
+  jour) qui ouvre le formulaire déjà rempli — montant, libellé, catégorie, compte, projet, note — daté d'aujourd'hui.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -1638,6 +1640,7 @@ const ICONES = {
   telephone:'<path d="M5.2 4h3.1l1.7 4.1-2.1 1.4a11.5 11.5 0 0 0 6.6 6.6l1.4-2.1 4.1 1.7v3.1a1.6 1.6 0 0 1-1.7 1.6A16.5 16.5 0 0 1 3.6 5.7 1.6 1.6 0 0 1 5.2 4z"/>',
   agrandir:'<path d="M14 4h6v6M10 20H4v-6M20 4l-6.4 6.4M4 20l6.4-6.4"/>',
   menu:'<path d="M4 6.5h16M4 12h16M4 17.5h16"/>',
+  repeter:'<path d="M16.6 3.6l3.4 3.4-3.4 3.4"/><path d="M4 11.4v-.9A3.5 3.5 0 0 1 7.5 7H20"/><path d="M7.4 20.4 4 17l3.4-3.4"/><path d="M20 12.6v.9a3.5 3.5 0 0 1-3.5 3.5H4"/>',
   sync:'<path d="M19.6 10.2A8 8 0 0 0 5.4 7.2L3.8 9"/><path d="M3.8 4.6V9h4.4"/><path d="M4.4 13.8a8 8 0 0 0 14.2 3L20.2 15"/><path d="M20.2 19.4V15h-4.4"/>',
   base:'<ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/><path d="M4.5 5.5v13c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-13"/><path d="M4.5 12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8"/>'
 };
@@ -2297,6 +2300,7 @@ function ligneAgenda(x){
 const listeMouvementsJour = liste => `<ul class="liste liste-mvts">${liste.map(m => `<li${dansStats(m) ? '' : ' class="hors-stats" title="Compte décoché : pas pris en compte dans les statistiques"'}>${pastille('euro', m.type === 'revenu' ? 'bleu' : 'vert', 28, 14)}
   <span class="corps"><button type="button" class="t nom-lien" data-action="mvt-modifier" data-id="${esc(m.id)}" title="Modifier">${esc(m.libelle || 'Sans libellé')}</button><span class="s">${esc([m.type === 'revenu' ? 'entrée' : m.categorie || 'à catégoriser', m.compte, nomProjet(m.projet), m.note].filter(Boolean).join(' · '))}</span></span>
   <span class="num${m.type === 'revenu' ? ' vert' : ''}">${m.type === 'revenu' ? '+' : '−'}${eur(m.montant)}</span>
+  <button class="icone-btn" data-action="mvt-repeter" data-id="${esc(m.id)}" title="Répéter : la même, datée d’aujourd’hui" aria-label="Répéter ${esc(m.libelle || 'ce mouvement')}">${ico('repeter', 15)}</button>
   <button class="icone-btn danger" data-action="mvt-supprimer" data-id="${esc(m.id)}" title="Supprimer" aria-label="Supprimer ${esc(m.libelle || 'ce mouvement')}">${ico('corbeille', 15)}</button></li>`).join('')}</ul>`;
 /* Tableau de mouvements (finances, projet) */
 /* tri : {col, sens} → en-têtes cliquables (page Finances, action « fin-tri ») ; sans tri : en-têtes simples */
@@ -2314,7 +2318,7 @@ function tableMouvements(liste, avecProjet = true, tri = null){
       ${avecProjet ? `<td>${tagProjet(m.projet)}</td>` : ''}
       <td class="doux">${esc(m.compte || '')}</td>
       <td class="num${m.type === 'revenu' ? ' vert' : ''}">${m.type === 'revenu' ? '+' : '−'}${eur(m.montant)}</td>
-      <td class="act"><button class="icone-btn" data-action="mvt-modifier" data-id="${esc(m.id)}" title="Modifier" aria-label="Modifier">${ico('crayon', 15)}</button><button class="icone-btn danger" data-action="mvt-supprimer" data-id="${esc(m.id)}" title="Supprimer" aria-label="Supprimer">${ico('corbeille', 15)}</button></td>
+      <td class="act"><button class="icone-btn" data-action="mvt-modifier" data-id="${esc(m.id)}" title="Modifier" aria-label="Modifier">${ico('crayon', 15)}</button><button class="icone-btn" data-action="mvt-repeter" data-id="${esc(m.id)}" title="Répéter : la même, datée d’aujourd’hui" aria-label="Répéter">${ico('repeter', 15)}</button><button class="icone-btn danger" data-action="mvt-supprimer" data-id="${esc(m.id)}" title="Supprimer" aria-label="Supprimer">${ico('corbeille', 15)}</button></td>
     </tr>`).join('')}</tbody></table></div>`;
 }
 
@@ -3345,7 +3349,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.27.1 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.28 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -3668,12 +3672,13 @@ function formTache(t0 = {}, apres){
     if(apres) apres();
   }});
 }
-function formMouvement(m0 = {}, apres){
+/* repete : copie d'un mouvement existant (bouton « Répéter »), à vérifier avant d'enregistrer */
+function formMouvement(m0 = {}, apres, {repete = false} = {}){
   const ex = m0.id ? DB.mouvements.find(x => x.id === m0.id) : null;
   const cats = [{v:'', t:'— à catégoriser —'}].concat(unique([...DB.categories, ...(m0.categorie ? [m0.categorie] : [])]).map(c => ({v:c, t:c})));
   const cpt = ex ? m0.compte || '' : (m0.compte ?? compteParDefaut());
   const comptes = [{v:'', t:'— sans compte —'}].concat(unique([...DB.comptes.map(c => c.nom), ...(cpt ? [cpt] : [])]).map(c => ({v:c, t:c})));
-  formulaire({titre:ex ? 'Modifier le mouvement' : 'Nouveau mouvement', icone:'euro', couleur:'vert', ok:ex ? 'Enregistrer' : 'Ajouter', champs:[
+  formulaire({titre:ex ? 'Modifier le mouvement' : repete ? 'Répéter le mouvement' : 'Nouveau mouvement', icone:'euro', couleur:'vert', ok:ex ? 'Enregistrer' : 'Ajouter', champs:[
     {n:'type', l:'Type', t:'segment', v:m0.type || 'depense', o:[{v:'depense', t:'Dépense'}, {v:'revenu', t:'Entrée d’argent'}]},
     {n:'montant', l:'Montant (€)', t:'nombre', v:m0.montant ?? '', demi:true},
     {n:'date', l:'Date', t:'date', v:m0.date || aujourdhui(), demi:true},
@@ -4243,6 +4248,9 @@ const ACTIONS = {
   /* Finances */
   'mvt-nouveau': el => formMouvement({date:el.dataset.date || aujourdhui(), projet:el.dataset.projet || ''}),
   'mvt-modifier': el => { const m = DB.mouvements.find(x => x.id === el.dataset.id); if(m) formMouvement(m); },
+  /* Répéter : le même mouvement (montant, libellé, catégorie, compte, projet, note), daté d'aujourd'hui ; rien n'est créé avant « Ajouter » */
+  'mvt-repeter': el => { const m = DB.mouvements.find(x => x.id === el.dataset.id); if(!m) return;
+    formMouvement({type:m.type, montant:m.montant, libelle:m.libelle, categorie:m.categorie, compte:m.compte, projet:m.projet, note:m.note, date:aujourdhui()}, null, {repete:true}); },
   'mvt-supprimer': async el => { const m = DB.mouvements.find(x => x.id === el.dataset.id); if(!m) return;
     if(!await confirmerSuppression(m, {titre:'Supprimer ce mouvement ?', texte:`${esc(m.libelle || 'Mouvement')} · ${eur(m.montant)} · ${esc(dateCourte(m.date))} sera mis à la corbeille.`})) return;
     retirerVersCorbeille('mouvements', m); sauver(); rendre(); toast('Mouvement mis à la corbeille'); },
