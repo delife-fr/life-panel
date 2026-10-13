@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-6vWbMHicG4VpahnZ1T36zjIZnlmKR/VzQJGqKF/U7Xk='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-raNS7ZnX2ebvx8wE19OQkxBOh/uiPre8Lo2W4jCA2iI='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.30
+  LIFE PANEL — v3.30.1
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -155,6 +155,7 @@
   Revolut…) ou choisies, aperçu à cocher, opérations déjà présentes décochées, catégorie proposée d'après les anciennes
   dépenses ; import de contacts vCard (Contacts → Importer) : fiche préremplie pour un contact, liste pour plusieurs,
   fiches existantes complétées sans rien écraser. Fichiers lus en UTF-8, UTF-16 ou Windows-1252.
+  v3.30.1 : le raccourci Android « Inbox » (appui long sur l'icône) ouvre la page Inbox, sans la fenêtre de capture.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -3393,7 +3394,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.30 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.30.1 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -6919,7 +6920,7 @@ function majPied(){
     <span class="e droite"><span class="led"></span>${actif ? 'Synchro GitHub · dépôt privé' : 'Local · aucune connexion externe'} · <kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span>`;
 }
 /* Appli installée (Android) : raccourcis de l'icône (appui long) et « Partager → LIFE PANEL ».
-   Le lanceur ouvre « ./?action=inbox », « ./?action=depense » ou « ./?titre=…&texte=…&lien=… » (partage) ;
+   Le lanceur ouvre « ./?action=inbox » (page Inbox), « ./?action=depense » (nouvelle dépense) ou « ./?titre=…&texte=…&lien=… » (partage) ;
    l'adresse est aussitôt nettoyée pour qu'un rechargement ne refasse pas l'action. */
 function ouvertureDepuisAndroid(){
   const q = new URLSearchParams(location.search), action = q.get('action');
@@ -6927,7 +6928,7 @@ function ouvertureDepuisAndroid(){
   if(!action && !partage.length) return;
   const aller = h => { history.replaceState(null, '', location.pathname + h); rendre(); };
   if(action === 'depense'){ aller('#/finances'); formMouvement({type:'depense'}); }
-  else if(action === 'inbox'){ aller('#/inbox'); ficheCapture(); }
+  else if(action === 'inbox') aller('#/inbox');   /* la page Inbox elle-même (sa « Capture rapide » est à un appui) */
   else if(partage.length){   /* un texte partagé : titre, texte, lien sans doublon (le lien est souvent déjà dans le texte) */
     const morceaux = partage.filter((m, i) => !partage.some((n, j) => j !== i && n.includes(m) && (n.length > m.length || j < i)));
     aller('#/inbox'); ficheCapture(morceaux.join('\n'));
