@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-rMKCfpjicl1NLPo3i3+TryduJ3ujxGtgmJ9HdJrOr+A='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-PIr0+tZluTE+U6te5kJrKFgzCNT4gEPUGRp02fR97n0='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -5363,13 +5363,13 @@ function apercuVcard(texte, nomFichier){
   const etat = p => !p.existant ? 'Nouvelle fiche' : Object.keys(p.ajouts).length ? `Compléter « ${esc(p.existant.nom)} » : ${Object.keys(p.ajouts).map(k => NOMS_CHAMPS_CONTACT[k]).join(', ')}` : `Déjà à jour (« ${esc(p.existant.nom)} »)`;
   const nNouv = props.filter(p => !p.existant).length, nComp = props.filter(p => p.existant && Object.keys(p.ajouts).length).length, nRien = props.length - nNouv - nComp;
   ouvrirModale(teteModale('Contacts · ' + esc(nomFichier), 'personnes', 'rose') + `
-    <p class="texte">${pluriel(props.length, 'contact')} lu${props.length > 1 ? 's' : ''} : <b>${pluriel(nNouv, 'nouvelle fiche', 'nouvelles fiches')}</b>${nComp ? `, <b>${nComp}</b> à compléter (seulement les champs vides)` : ''}${nRien ? `, ${nRien} déjà à jour` : ''}.</p>
+    <p class="texte">${pluriel(props.length, 'contact')} lu${props.length > 1 ? 's' : ''} : ${nNouv ? `<b>${pluriel(nNouv, 'nouvelle fiche', 'nouvelles fiches')}</b>` : 'aucune nouvelle fiche'}${nComp ? `, <b>${nComp}</b> à compléter (seulement les champs vides)` : ''}${nRien ? `, ${nRien} déjà à jour` : ''}.</p>
     <ul class="liste import-liste">${props.map((p, i) => { const utile = !p.existant || Object.keys(p.ajouts).length;
       return `<li data-i="${i}"${utile ? '' : ' class="doublon"'}><input type="checkbox" class="case"${utile ? ' checked' : ' disabled'} aria-label="Importer : ${esc(p.d.nom)}">${avatarContact({id:p.d.nom, nom:p.d.nom})}
         <span class="corps"><span class="t">${esc(p.d.nom)}</span><span class="s">${esc([p.d.telephone, p.d.email, p.d.anniversaire ? 'anniv. ' + dateCourte(p.d.anniversaire) : ''].filter(Boolean).join(' · '))}</span>
         <span class="s ${p.existant ? 'jaune' : 'vert'}">${etat(p)}</span></span></li>`; }).join('')}</ul>
-    <div class="actions"><button type="button" class="btn" data-action="fermer">Annuler</button><button type="button" class="btn p" data-action="import-vcard-valider">Importer</button></div>`, {large:true, saisie:false});
-  surFermeture = () => { impVcf = null; };
+    <div class="actions"><button type="button" class="btn" data-action="fermer">${nNouv + nComp ? 'Annuler' : 'Fermer'}</button>${!nNouv && !nComp && props.length === 1 ? `<a class="btn" href="${href('contact', props[0].existant.id)}">Ouvrir la fiche</a>` : ''}<button type="button" class="btn p" data-action="import-vcard-valider"${nNouv + nComp ? '' : ' disabled'}>Importer</button></div>`, {large:true, saisie:false});
+  surFermeture = () => { impVcf = null; };   /* rien de nouveau : « Importer » désactivé */
 }
 function validerImportVcard(){
   if(!impVcf) return;
