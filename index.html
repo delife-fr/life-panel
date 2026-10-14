@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-raNS7ZnX2ebvx8wE19OQkxBOh/uiPre8Lo2W4jCA2iI='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-TBXbKJeqNOiLZeJ/VLp1LGA8NWJQTkPK34xy/S/339U='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.30.1
+  LIFE PANEL — v3.31
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -156,6 +156,9 @@
   dépenses ; import de contacts vCard (Contacts → Importer) : fiche préremplie pour un contact, liste pour plusieurs,
   fiches existantes complétées sans rien écraser. Fichiers lus en UTF-8, UTF-16 ou Windows-1252.
   v3.30.1 : le raccourci Android « Inbox » (appui long sur l'icône) ouvre la page Inbox, sans la fenêtre de capture.
+  v3.31 : Finances, « Par catégorie » : clic sur la pastille d'une catégorie = la masquer du graphique pour le mois (ou
+  l'année) affiché ; elle reste listée, grisée, et l'anneau, le total au centre et les % sont recalculés sans elle.
+  Nouveau clic ou « Tout réafficher » pour la remettre. Gardé sur cet appareil (jamais dans les données synchronisées).
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -804,7 +807,16 @@ a.puce.tag:hover{filter:brightness(1.25)}
 .legende.cats li{padding:0}
 .ligne-cat{width:100%;background:none;border:0;color:inherit;font:inherit;text-align:left;padding:6px 8px;border-radius:8px;cursor:pointer}
 .legende.cats li.choisie .ligne-cat{background:rgb(var(--sur) / 0.071);box-shadow:inset 0 0 0 1px var(--trait)}
-.ligne-cat .nom-c{display:flex;align-items:center;gap:9px;min-width:0}
+.ligne-cat .nom-c{display:flex;align-items:center;gap:9px;min-width:0;padding-left:22px}
+/* Pastille = bouton « masquer du graphique », posé sur le début de la ligne (deux boutons côte à côte, jamais l'un dans l'autre) */
+.legende.cats li{position:relative}
+.masque-cat{position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:1;width:26px;height:26px;display:grid;place-items:center;padding:0;background:none;border:0;border-radius:50%;cursor:pointer}
+.masque-cat:hover{background:rgb(var(--sur) / 0.071)}
+.masque-cat .pt{margin:0}
+.legende.cats li.masquee .masque-cat .pt{background:none;box-shadow:inset 0 0 0 1.5px var(--c)}
+.legende.cats li.masquee .nom-l,.legende.cats li.masquee .eu,.legende.cats li.masquee .nb{color:var(--texte-faible)}
+.legende.cats li.masquee .pc{font-family:inherit;font-size:11.5px;color:var(--texte-faible)}
+.ligne-cat .pc .ct{display:none}
 .ligne-cat .eu,.ligne-cat .pc,.ligne-cat .nb{min-width:0;text-align:right;font-family:var(--mono);font-size:12.5px}
 .ligne-cat .nb{color:var(--texte-doux)}
 .barre-cat{display:block;height:8px;border-radius:4px;background:rgb(var(--sur) / 0.031);overflow:hidden}
@@ -992,6 +1004,9 @@ td.act{text-align:right;white-space:nowrap;width:1%}
   .entete-cat,.ligne-cat{grid-template-columns:minmax(0,1fr) 80px 38px 24px;gap:6px}
   .ligne-cat{padding:6px 4px}
   .ligne-cat .nom-c{gap:7px}
+  .masque-cat{width:24px;height:24px}
+  .ligne-cat .pc .lg{display:none}
+  .ligne-cat .pc .ct{display:inline}
   .ligne-cat .nom-l{white-space:normal}
   .barre-cat,.entete-cat > span:nth-child(2),.entete-cat .lg{display:none}
   .entete-cat .ct{display:inline}
@@ -2097,9 +2112,12 @@ function majEtapes(t, focus = null){
 const ANNEAU = {cote:200, r:82, ep:26, epSurvol:32};
 let nAnneaux = 0;
 /* tableau : version de la page Finances — légende en tableau (barre, montant, %, nombre d'opérations),
-   lignes et parts cliquables (filtre des mouvements, action « fin-cat ») */
+   lignes et parts cliquables (filtre des mouvements, action « fin-cat »), pastille cliquable (masquer la catégorie
+   du graphique pour cette période : elle reste listée, grisée, et l'anneau, le total au centre et les % l'ignorent) */
 const cleCat = p => p.sans ? SANS_CAT : p.nom;
-function donut(parts, total, libelle, {tableau = false} = {}){
+function donut(toutes, total, libelle, {tableau = false, masquees = new Set(), periode = ''} = {}){
+  const masquee = p => masquees.has(cleCat(p)), parts = toutes.filter(p => !masquee(p)), nbMasquees = toutes.length - parts.length;
+  if(nbMasquees){ total = Math.max(0, total - toutes.filter(masquee).reduce((s, p) => s + p.val, 0)); libelle += ` · ${nbMasquees} masquée${nbMasquees > 1 ? 's' : ''}`; }
   const {cote, r:R, ep} = ANNEAU, m = cote / 2, C = 2 * Math.PI * R, n = parts.length, id = 'ray' + (++nAnneaux);
   const base = parts.reduce((s, p) => s + p.val, 0) || 1;
   const ecart = n > 1 ? Math.min(3, C * .25 / n) : 0, dispo = C - n * ecart, MIN = 3;
@@ -2111,21 +2129,24 @@ function donut(parts, total, libelle, {tableau = false} = {}){
   const rayures = [...new Set(parts.filter(p => rayeeCat(p.couleur)).map(p => teinteCat(p.couleur)))].map(t =>
     `<pattern id="${id}-${t}" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><rect width="6" height="6" style="fill:${PLEIN[t]};fill-opacity:.35"/><rect width="3" height="6" style="fill:${PLEIN[t]}"/></pattern>`).join('');
   let cumul = 0;
-  const arcs = parts.map((p, i) => {
+  const arcs = parts.map((p, j) => { const i = toutes.indexOf(p);   /* même numéro que la ligne de la légende (survol) */
     const clic = tableau ? ` data-action="fin-cat" data-cat="${esc(cleCat(p))}"` : '';
-    const s = `<circle class="arc" data-i="${i}"${clic} cx="${m}" cy="${m}" r="${R}" fill="none" style="stroke:${trait(p.couleur)}" stroke-width="${ep}" stroke-dasharray="${longs[i].toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-cumul).toFixed(2)}"><title>${esc(p.nom)} : ${eur(p.val)}</title></circle>`;
-    cumul += longs[i] + ecart; return s;
+    const s = `<circle class="arc" data-i="${i}"${clic} cx="${m}" cy="${m}" r="${R}" fill="none" style="stroke:${trait(p.couleur)}" stroke-width="${ep}" stroke-dasharray="${longs[j].toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-cumul).toFixed(2)}"><title>${esc(p.nom)} : ${eur(p.val)}</title></circle>`;
+    cumul += longs[j] + ecart; return s;
   }).join('');
   const pc = v => { const x = v / total * 100; return x > 0 && x < .5 ? '< 1 %' : Math.round(x) + ' %'; };
-  const max = Math.max(...parts.map(p => p.val)) || 1;
-  const ligneTableau = (p, i) => { const choisie = filtreCatFin === cleCat(p);
-    return `<li data-i="${i}" data-val="${esc(eur(p.val))}" data-nom="${esc(p.nom)}"${choisie ? ' class="choisie"' : ''}><button type="button" class="ligne-cat" data-action="fin-cat" data-cat="${esc(cleCat(p))}" aria-pressed="${choisie}"
-      title="${choisie ? 'Afficher toutes les catégories' : esc(`N’afficher que les mouvements « ${p.nom} »`)}"><span class="nom-c">${pastilleCat(p.couleur, 'pt')}<span class="nom-l">${esc(p.nom)}</span></span>
-      <span class="barre-cat" aria-hidden="true"><i class="${rayeeCat(p.couleur) ? 'ray' : ''}" style="width:${Math.max(1, p.val / max * 100).toFixed(1)}%;--c:${PLEIN[teinteCat(p.couleur)] || PLEIN.gris}"></i></span>
-      <span class="eu">${eur(p.val)}</span><span class="pc">${pc(p.val)}</span><span class="nb">${p.n}</span></button></li>`; };
+  const max = Math.max(0, ...parts.map(p => p.val)) || 1;
+  const ligneTableau = (p, i) => { const choisie = filtreCatFin === cleCat(p), cachee = masquee(p);
+    const bascule = cachee ? `Réafficher « ${p.nom} » dans le graphique` : `Masquer « ${p.nom} » du graphique`;
+    return `<li${cachee ? ' class="masquee' + (choisie ? ' choisie' : '') + '"' : ` data-i="${i}" data-val="${esc(eur(p.val))}" data-nom="${esc(p.nom)}"${choisie ? ' class="choisie"' : ''}`}>
+      <button type="button" class="masque-cat" data-action="cat-masquer" data-cat="${esc(cleCat(p))}" data-periode="${esc(periode)}" aria-pressed="${cachee}" title="${esc(bascule)}" aria-label="${esc(bascule)}">${pastilleCat(p.couleur, 'pt')}</button>
+      <button type="button" class="ligne-cat" data-action="fin-cat" data-cat="${esc(cleCat(p))}" aria-pressed="${choisie}"
+      title="${choisie ? 'Afficher toutes les catégories' : esc(`N’afficher que les mouvements « ${p.nom} »`)}"><span class="nom-c"><span class="nom-l">${esc(p.nom)}</span></span>
+      <span class="barre-cat" aria-hidden="true">${cachee ? '' : `<i class="${rayeeCat(p.couleur) ? 'ray' : ''}" style="width:${Math.max(1, p.val / max * 100).toFixed(1)}%;--c:${PLEIN[teinteCat(p.couleur)] || PLEIN.gris}"></i>`}</span>
+      <span class="eu">${eur(p.val)}</span><span class="pc"${cachee ? ' title="Masquée du graphique : hors du total et des %"' : ''}>${cachee ? '<span class="lg">masquée</span><span class="ct">—</span>' : pc(p.val)}</span><span class="nb">${p.n}</span></button></li>`; };
   const legende = tableau
     ? `<div class="tableau-cat"><div class="entete-cat" aria-hidden="true"><span>Catégorie</span><span></span><span>Montant</span><span>%</span><span><span class="lg">Opérations</span><span class="ct">Nb</span></span></div>
-      <ul class="legende cats">${parts.map(ligneTableau).join('')}</ul></div>`
+      <ul class="legende cats">${toutes.map(ligneTableau).join('')}</ul></div>`
     : `<ul class="legende">${parts.map((p, i) => `<li data-i="${i}" data-val="${esc(eur(p.val))}" data-nom="${esc(p.nom)}">${pastilleCat(p.couleur, 'pt')}<span class="nom-l">${esc(p.nom)}</span><span class="pc">${pc(p.val)}</span><span class="eu">${eur(p.val)}</span></li>`).join('')}</ul>`;
   return `<div class="donut bloc-anneau${tableau ? ' large' : ''}">
     <div class="anneau" data-total="${esc(eur(total))}" data-lib="${esc(libelle)}">
@@ -2766,11 +2787,25 @@ const boutonsFinances = () => { const sc = sansCategorie().length;
 const carteMouvements = (periode, lib) => cartePliable('mouvements', 'carte', 'bleu', 'Mouvements', `<span class="compte" title="Mouvements de ${esc(lib)}">${mouvementsStats().filter(duMois(periode)).length}</span>`,
   champFiltre('finances', 'Filtrer…'), `<div id="liste-finances">${listeFinances()}</div>`, !!FILTRES.finances.trim() || filtreCatFin !== null);
 /* « Par catégorie » (page Finances) : anneau + tableau de toutes les catégories de la période, sur toute la largeur.
-   Clic sur une ligne ou une part : la carte Mouvements n'affiche plus que cette catégorie (nouveau clic : tout). */
-function carteCategories(liste, total, libelle, videTxt){
-  const parts = total ? repartition(liste) : [];
+   Clic sur une ligne ou une part : la carte Mouvements n'affiche plus que cette catégorie (nouveau clic : tout).
+   Clic sur la pastille : catégorie masquée du graphique pour cette période (mois « 2026-07 » ou année « 2026 »). */
+function carteCategories(liste, total, libelle, videTxt, periode){
+  const parts = total ? repartition(liste) : [], masquees = masqueesPeriode(periode);
+  const cachees = parts.filter(p => masquees.has(cleCat(p))).map(p => `« ${esc(p.nom)} »`), quand = periode.length === 4 ? 'l’année ' + periode : nomMois(periode).toLowerCase();
+  const aide = cachees.length
+    ? `${cachees.length > 1 ? cachees.slice(0, -1).join(', ') + ' et ' + cachees[cachees.length - 1] + ' sont masquées' : cachees[0] + ' est masquée'} du graphique pour ${esc(quand)} : le total au centre et les % ne ${cachees.length > 1 ? 'les' : 'la'} comptent pas. ${btnAction('cat-tout-afficher', 'Tout réafficher', 'lien-sous', `data-periode="${esc(periode)}"`)}`
+    : 'Clique sur une catégorie pour n’afficher que ses mouvements, ou sur sa pastille pour la masquer du graphique.';
   return `<section class="carte c12">${enteteCarte('euro', 'vert', 'Par catégorie', filtreCatFin !== null ? btnAction('fin-cat', 'Toutes les catégories', 'lien-sous', 'data-cat=""') : '')}
-    ${parts.length ? donut(parts, total, libelle, {tableau:true}) + '<p class="aide" style="margin:10px 0 0">Clique sur une catégorie pour n’afficher que ses mouvements.</p>' : vide(videTxt)}</section>`;
+    ${parts.length ? donut(parts, total, libelle, {tableau:true, masquees, periode}) + `<p class="aide" style="margin:10px 0 0">${aide}</p>` : vide(videTxt)}</section>`;
+}
+/* Catégories masquées du graphique « Par catégorie », par période : propres à cet appareil (comme le thème), jamais dans
+   les données synchronisées. Seul ce graphique les ignore : mouvements, budgets et totaux de la page restent complets. */
+const CLE_MASQUEES = 'lifepanel.categories-masquees';
+let catsMasquees = (() => { try { const o = JSON.parse(localStorage.getItem(CLE_MASQUEES) || '{}'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; } catch(e){ return {}; } })();
+const masqueesPeriode = periode => new Set(Array.isArray(catsMasquees[periode]) ? catsMasquees[periode].filter(c => typeof c === 'string') : []);
+function garderMasquees(periode, s){
+  if(s.size) catsMasquees[periode] = [...s]; else delete catsMasquees[periode];
+  try { localStorage.setItem(CLE_MASQUEES, JSON.stringify(catsMasquees)); } catch(e){ /* navigation privée : pour cette visite seulement */ }
 }
 function pageFinances(){
   if(vueFin === 'an') return pageFinancesAnnee();
@@ -2795,7 +2830,7 @@ function pageFinances(){
              note:ba ? nbA.note : 'depuis le 1er janvier' + (ym !== cour ? ' jusqu’à fin ' + nomMois(ym).split(' ')[0].toLowerCase() : ''),
              cls:nbA.cls || (rythme && ta > rythme * 1.05 ? 'att' : ''), prog:barreRythme(ta, ba, rythme)})}
     </div>
-    ${carteCategories(depenses(duMois(ym)), t, nomMois(ym, true), 'Aucune dépense ce mois-ci.')}
+    ${carteCategories(depenses(duMois(ym)), t, nomMois(ym, true), 'Aucune dépense ce mois-ci.', ym)}
     ${carteMouvements(ym, nomMois(ym).toLowerCase())}
     <div class="grille">
       <section class="carte c4 etire">${enteteCarte('calendrier', 'violet', 'Calendrier du mois')}${calendrierChaleur(ym)}</section>
@@ -2830,7 +2865,7 @@ function pageFinancesAnnee(){
       ${troisieme}
       ${quatrieme}
     </div>
-    ${carteCategories(dep, ta, an, 'Aucune dépense cette année.')}
+    ${carteCategories(dep, ta, an, 'Aucune dépense cette année.', an)}
     ${carteMouvements(an, an)}
     <div class="grille">
       <section class="carte c8 etire graph">${enteteCarte('graphique', 'bleu', 'Mois par mois')}${graphDouzeMois(an, parMois, bm)}<p class="aide" style="margin:8px 0 0">Clique sur une colonne pour voir le détail du mois.${bm ? ' Tirets : budget mensuel.' : ''}</p></section>
@@ -3394,7 +3429,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.30.1 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.31 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -4367,6 +4402,11 @@ const ACTIONS = {
     if(filtreCatFin === null){ rendre(); return; }
     etatDepliage.mouvements = true; rendre();
     const carte = $('[data-depliable="mouvements"]'); if(carte) carte.scrollIntoView({behavior:'smooth', block:'start'}); },
+  /* Pastille d'une catégorie (« Par catégorie ») : la masquer du graphique pour cette période, ou la réafficher */
+  'cat-masquer': el => { const {cat, periode} = el.dataset, s = masqueesPeriode(periode);
+    s.has(cat) ? s.delete(cat) : s.add(cat); garderMasquees(periode, s); rendre();
+    const b = $$('.masque-cat').find(x => x.dataset.cat === cat && x.dataset.periode === periode); if(b) b.focus(); },
+  'cat-tout-afficher': el => { garderMasquees(el.dataset.periode, new Set()); rendre(); },
   'fin-mois': el => { const m = el.dataset.m || moisCourant(), deja = m === moisFin && vueFin === 'mois';
     moisFin = m; vueFin = 'mois'; FILTRES.finances = ''; filtreCatFin = null; limiteMvts = MVTS_PAR_PAGE;
     if(lireRoute().nom !== 'finances'){ location.hash = '#/finances'; return; }
@@ -4701,7 +4741,7 @@ $('#voile').addEventListener('mousedown', e => { if(e.target.id === 'voile') fer
 /* Survol de l'anneau / de la légende : la part s'affiche au centre */
 let anneauActif = null;
 document.addEventListener('mouseover', e => {
-  const el = e.target.closest('.bloc-anneau .arc, .bloc-anneau .legende li');
+  const el = e.target.closest('.bloc-anneau .arc, .bloc-anneau .legende li:not(.masquee)');
   const bloc = el ? el.closest('.bloc-anneau') : null, i = el ? el.dataset.i : null;
   if(anneauActif && (anneauActif.bloc !== bloc || anneauActif.i !== i)){ if(document.contains(anneauActif.bloc)) surligner(anneauActif.bloc, null); anneauActif = null; }
   if(el && !anneauActif){ surligner(bloc, i); anneauActif = {bloc, i}; }
