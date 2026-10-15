@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-TBXbKJeqNOiLZeJ/VLp1LGA8NWJQTkPK34xy/S/339U='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-sRI2XwraxGbR1ppCD6VPQ/N0+2r6RSdLGEx/peOYyvU='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.31
+  LIFE PANEL — v3.32
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -159,6 +159,10 @@
   v3.31 : Finances, « Par catégorie » : clic sur la pastille d'une catégorie = la masquer du graphique pour le mois (ou
   l'année) affiché ; elle reste listée, grisée, et l'anneau, le total au centre et les % sont recalculés sans elle.
   Nouveau clic ou « Tout réafficher » pour la remettre. Gardé sur cet appareil (jamais dans les données synchronisées).
+  v3.32 : 18 catégories de dépenses de référence (Logement, Énergie et eau, Courses alimentaires… Frais professionnels, Divers),
+  couleur unie pour les 9 principales, rayée pour les autres. Fenêtre « Catégories » → « Passer aux 18 catégories de
+  référence » : la fenêtre se remplit (anciens noms convertis, ex. Formation → Frais professionnels, DAB → Divers,
+  catégories manquantes ajoutées, couleurs), on vérifie puis « Enregistrer ». Mots-clés des libellés mis à jour.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -616,6 +620,7 @@ a.puce.lien-tel:hover{border-color:var(--i-bleu)}
 .budget-gestion input{flex:1 1 90px;min-width:0}
 .budget-gestion select{flex:0 0 auto}
 .nb-gestion{font-size:11.5px;color:var(--texte-faible);white-space:nowrap;min-width:88px;text-align:right}
+.nb-gestion .ex{display:block;max-width:150px;margin-left:auto;overflow:hidden;text-overflow:ellipsis;color:var(--texte-doux)}
 .case-stats{display:grid;place-items:center;width:26px;flex-shrink:0;cursor:pointer}
 .case-stats input,.ligne-sans input{width:18px;height:18px;accent-color:var(--i-vert);cursor:pointer}
 .ligne-gestion.supprimee{opacity:.55}
@@ -1106,7 +1111,22 @@ const CLES_ANCIENNES = [
   {cle:'lifepanel.v1', nom:'la v1 à v3.2'},
   {cle:'lifepanel.v6', nom:'life-panel.html'}
 ];
-const CATEGORIES_DEFAUT = ['Courses','Restaurants','Transport','Logement','Santé','Soins perso','Loisirs','Voyages','Formation','Cadeaux','Abonnements','Divers'];
+/* Catégories de dépenses de référence (v3.32) : liste d'une nouvelle installation, proposée aux anciennes (fenêtre « Catégories ») */
+const CATEGORIES_DEFAUT = ['Logement', 'Énergie et eau', 'Courses alimentaires', 'Restaurants et sorties', 'Transports et véhicule', 'Santé',
+  'Hygiène et beauté', 'Assurances', 'Impôts et taxes', 'Abonnements et télécoms', 'Vêtements et accessoires', 'Maison et entretien',
+  'High-tech et informatique', 'Loisirs et culture', 'Voyages et vacances', 'Cadeaux et dons', 'Frais professionnels', 'Divers'];
+/* Les 9 principales, en couleur unie (dans cet ordre : bleu, orange, vert…) ; les 9 autres en couleur rayée */
+const UNIES_REFERENCE = ['Logement', 'Courses alimentaires', 'Transports et véhicule', 'Santé', 'High-tech et informatique', 'Frais professionnels',
+  'Abonnements et télécoms', 'Impôts et taxes', 'Hygiène et beauté'];
+/* Ancien nom de catégorie (sans accents ni majuscules) → catégorie de référence */
+const ANCIENNES_CATEGORIES = [[/^(courses|alimentation|supermarches?|nourriture)$/, 'Courses alimentaires'], [/^(restaurants?|restos?|sorties|bars?)$/, 'Restaurants et sorties'],
+  [/^(transports?|voitures?|vehicules?|essence|carburant|auto)$/, 'Transports et véhicule'], [/^(logement|loyer|habitation)$/, 'Logement'],
+  [/^(energie|electricite|eau|gaz)$/, 'Énergie et eau'], [/^(sante|medical|pharmacie)$/, 'Santé'], [/^(soins( perso(nnels)?)?|hygiene|beaute|coiffeur)$/, 'Hygiène et beauté'],
+  [/^assurances?$/, 'Assurances'], [/^(impots?|taxes?)$/, 'Impôts et taxes'], [/^(abonnements?|telecoms?|telephone|internet|forfaits?)$/, 'Abonnements et télécoms'],
+  [/^(vetements?|habits|mode)$/, 'Vêtements et accessoires'], [/^(maison|travaux|bricolage|entretien|ameublement)$/, 'Maison et entretien'],
+  [/^(multimedia|high[ -]?tech|informatique|electronique)$/, 'High-tech et informatique'], [/^(loisirs?|culture|sports?)$/, 'Loisirs et culture'],
+  [/^(voyages?|vacances)$/, 'Voyages et vacances'], [/^(cadeaux?|dons?)$/, 'Cadeaux et dons'], [/^(formations?|frais pro(fessionnels)?)$/, 'Frais professionnels'],
+  [/^(dab|retraits?|especes|liquide|divers|autres?)$/, 'Divers']];
 const LISTES_DONNEES = ['projets','taches','notes','documents','mouvements','contacts','inbox','evenements'];
 const JOURS_CORBEILLE = 30;
 const PREAVIS_DEFAUT = 30;   /* jours avant l'échéance d'un document où il passe « à renouveler » */
@@ -1257,7 +1277,8 @@ function normaliser(brut){
   (Array.isArray(brut.categories) ? brut.categories : []).forEach(categorie);
   if(!d.categories.length) CATEGORIES_DEFAUT.forEach(categorie);
   d.mouvements.forEach(m => { m.categorie = m.categorie ? categorie(m.categorie) : ''; });
-  d.couleursCategories = colorerCategories(d.categories, brut.couleursCategories, d.mouvements);
+  d.couleursCategories = colorerCategories(d.categories, Array.isArray(brut.couleursCategories) && brut.couleursCategories.length ? brut.couleursCategories
+    : Object.entries(couleursReference()).map(([nom, couleur]) => ({nom, couleur})), d.mouvements);   /* sans couleurs : celles de la liste de référence */
   /* Comptes : liste gérée comme les catégories. Ceux qui n'existent que dans les dépenses y sont ajoutés
      (à l'écriture la plus fréquente : Revolut ×100 et revolut ×2 donnent « Revolut ») */
   const vusK = new Map(); d.comptes = [];
@@ -3429,7 +3450,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.31 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.32 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -3797,7 +3818,7 @@ function ligneGestion(type, x){
     <input class="saisie" name="nom" value="${esc(x.nom)}" placeholder="${comptes ? 'Nom du compte' : 'Nom de la catégorie'}" aria-label="Nom" autocomplete="off"${dis}>
     ${comptes ? `<span class="budget-gestion"><input class="saisie" name="budget" type="number" min="0" step="0.01" inputmode="decimal" value="${x.budget ?? ''}" placeholder="Budget" aria-label="Budget en euros"${dis}>
       <select class="saisie" name="periode" aria-label="Période du budget"${dis}><option value="mois"${x.periode !== 'an' ? ' selected' : ''}>€ / mois</option><option value="an"${x.periode === 'an' ? ' selected' : ''}>€ / an</option></select></span>` : ''}
-    <span class="nb-gestion">${nb === null ? 'nouveau' : pluriel(nb, 'mouvement')}</span>
+    <span class="nb-gestion">${nb === null ? 'nouveau' : pluriel(nb, 'mouvement')}${!comptes && x.orig !== null && x.nom !== x.orig ? `<span class="ex" title="${esc('Nom actuel : ' + x.orig)}">ex-${esc(x.orig)}</span>` : ''}</span>
     <button type="button" class="icone-btn danger" data-action="gestion-suppr" title="${action}" aria-label="${action}">${ico(x.suppr ? 'retour' : 'corbeille', 15)}</button></li>`;
 }
 /* Pastille de couleur d'une catégorie (fenêtre « Catégories ») : un clic ouvre le choix des couleurs */
@@ -3822,10 +3843,11 @@ function ficheGestion(type, brouillon = null){
   const nbSans = comptes ? DB.mouvements.filter(m => !m.compte).length : 0;
   const sansStats = brouillon && brouillon.sansStats !== undefined ? brouillon.sansStats : DB.reglages.sansCompteStats !== false;
   ouvrirModale(teteModale(comptes ? 'Comptes et budgets' : 'Catégories de dépenses', comptes ? 'portefeuille' : 'tag', comptes ? 'vert' : 'jaune') +
+    (brouillon && brouillon.reference ? `<p class="ia-bandeau">${ico('tag', 15)}<span><b>Liste de référence préparée</b> : chaque catégorie a son nouveau nom (l’ancien est indiqué à droite), celles qui portent le même nom seront fusionnées, les 9 principales ont une couleur unie. Vérifie, change ce que tu veux, puis « Enregistrer ».</span></p>` : '') +
     `<p class="texte">${comptes ? 'Case cochée : le compte est pris en compte dans les statistiques (accueil et Finances) ; plusieurs cases cochées = statistiques fusionnées. Un budget annuel compte pour un douzième chaque mois. ' : 'Clique sur la pastille d’une catégorie pour changer sa couleur. '}Renommer met à jour tous les mouvements ; deux noms identiques (à la casse près) sont fusionnés.</p>
     <form id="form-gestion" novalidate><ul class="liste gestion">${lignes.map(x => ligneGestion(type, x)).join('')}</ul>
       ${nbSans ? `<label class="ligne-sans"><input type="checkbox" name="sansStats"${sansStats ? ' checked' : ''}><span>Mouvements sans compte (${pluriel(nbSans, 'mouvement')}) : pris en compte dans les statistiques</span></label>` : ''}
-      <div class="boutons" style="margin-top:12px">${btnAction('gestion-ajouter', ico('plus', 14) + (comptes ? 'Ajouter un compte' : 'Ajouter une catégorie'), 'btn ghost compact', `data-type="${type}"`)}</div>
+      <div class="boutons" style="margin-top:12px">${btnAction('gestion-ajouter', ico('plus', 14) + (comptes ? 'Ajouter un compte' : 'Ajouter une catégorie'), 'btn ghost compact', `data-type="${type}"`)}${!comptes && !brouillon && !aListeReference() ? btnAction('categories-reference', ico('tag', 14) + 'Passer aux 18 catégories de référence', 'btn ghost compact') : ''}</div>
       <p class="erreur" id="erreur-modale" hidden></p>
       <div class="actions"><button type="button" class="btn" data-action="fermer">Annuler</button><button class="btn p" type="submit">Enregistrer</button></div></form>`, {large:true});
   const f = $('#form-gestion');
@@ -3885,6 +3907,32 @@ function ficheGestion(type, brouillon = null){
 }
 const ficheComptes = () => ficheGestion('comptes');
 const ficheCategories = () => ficheGestion('categories');
+/* Couleurs de la liste de référence : unie pour les 9 principales, rayée pour les autres, chaque couleur une seule fois.
+   candidates(c) : couleurs déjà connues pour c (reprise si elle est du bon genre et encore libre) */
+function couleursReference(candidates = () => []){
+  const res = {}, prises = new Set(), unie = c => UNIES_REFERENCE.includes(c);
+  const prendre = (c, k) => { res[c] = k; prises.add(k); }, convient = (c, k) => COULEURS_CAT.includes(k) && rayeeCat(k) !== unie(c) && !prises.has(k);
+  CATEGORIES_DEFAUT.forEach(c => { const k = candidates(c).find(k => convient(c, k)); if(k) prendre(c, k); });
+  [...UNIES_REFERENCE, ...CATEGORIES_DEFAUT.filter(c => !unie(c))].forEach(c => { if(!res[c]){ const k = COULEURS_CAT.find(k => convient(c, k)); if(k) prendre(c, k); } });
+  return res;
+}
+const cibleReference = nom => { const k = cleNom(nom), n = norm(propreNom(nom));
+  return CATEGORIES_DEFAUT.find(c => cleNom(c) === k) || (ANCIENNES_CATEGORIES.find(([re]) => re.test(n)) || [])[1] || ''; };
+const aListeReference = () => CATEGORIES_DEFAUT.every(c => DB.categories.some(x => cleNom(x) === cleNom(c)));
+/* « Passer aux 18 catégories » : la fenêtre « Catégories » s'ouvre préremplie (rien n'est enregistré avant « Enregistrer ») :
+   chaque catégorie actuelle reçoit son nom de référence (deux anciennes pour un même nom sont fusionnées : DAB + Divers),
+   les catégories de référence manquantes sont ajoutées, celles qui ne correspondent à rien restent en fin de liste.
+   Couleurs : celle d'une ancienne catégorie est gardée quand elle est du bon genre (unie / rayée) et libre. */
+function brouillonReference(){
+  const anciennes = DB.categories.map(nom => ({nom, cible:cibleReference(nom), n:nbMouvementsCategorie(nom), couleur:couleurCategorie(nom)}));
+  const groupe = c => anciennes.filter(a => a.cible === c).sort((a, b) => (cleNom(b.nom) === cleNom(c)) - (cleNom(a.nom) === cleNom(c)) || b.n - a.n);
+  const couleurs = couleursReference(c => groupe(c).map(a => a.couleur)), lignes = [];
+  CATEGORIES_DEFAUT.forEach(c => { const g = groupe(c);
+    if(g.length) g.forEach(a => lignes.push({orig:a.nom, nom:c, suppr:false, couleur:couleurs[c]}));
+    else lignes.push({orig:null, nom:c, suppr:false, couleur:couleurs[c]}); });
+  anciennes.filter(a => !a.cible).forEach(a => lignes.push({orig:a.nom, nom:a.nom, suppr:false}));
+  return {lignes, reference:true};
+}
 function formNote(n0 = {}, apres, {puis = null, retour = null} = {}){
   const ex = n0.id ? note(n0.id) : null;
   formulaire({titre:ex ? 'Modifier la note' : 'Nouvelle note', icone:'doc', couleur:'orange', large:true, ok:ex ? 'Enregistrer' : 'Créer la note', puis, retour, champs:[
@@ -4081,11 +4129,18 @@ function ficheJour(j){
   ouvrirModale(teteModale(esc(dateLongue(j)), 'calendrier', 'bleu') + (corps || '<p class="texte">Rien de noté ce jour-là.</p>') +
     `<div class="actions" style="margin-top:16px">${btnAction('evt-nouveau', ico('plus', 14) + 'Événement', 'btn', `data-date="${j}"`)}${btnAction('tache-nouvelle', ico('plus', 14) + 'Tâche ce jour', 'btn', `data-date="${j}"`)}${btnAction('mvt-nouveau', ico('plus', 14) + 'Dépense ce jour', 'btn', `data-date="${j}"`)}<button class="btn p" data-action="fermer">Fermer</button></div>`, {large:true});
 }
-const INDICES = [['Restaurants', /restau|dejeuner|diner|repas|cafe\b|bar\b|pizza|burger|brasserie/], ['Courses', /course|supermarche|carrefour|lidl|auchan|leclerc|intermarche|aliment|marche\b/],
-  ['Transport', /essence|carburant|plein|bus\b|train|taxi|uber|peage|parking|transport|metro|navigo/], ['Abonnements', /abonnement|netflix|spotify|deezer|claude|icloud|forfait|youtube/],
-  ['Santé', /pharmac|medecin|docteur|dentiste|sante|kine/], ['Soins perso', /barbier|coiffeur|coiffure/], ['Logement', /loyer|electricite|edf|engie|internet|assurance hab/],
-  ['Formation', /formation|cours\b|manuel|atpl|examen|ecole/], ['Loisirs', /cinema|concert|sport|jeu\b|loisir|musee/], ['Voyages', /hotel|avion|billet|airbnb|voyage|vol\b/], ['Cadeaux', /cadeau/]];
-function devinerCategorie(txt){ const t = norm(txt); for(const [c, re] of INDICES) if(re.test(t) && DB.categories.includes(c)) return c; return ''; }
+/* Mots-clés du libellé → catégorie : la première des catégories citées qui existe (noms de référence, puis anciens noms) */
+const INDICES = [[['Restaurants et sorties', 'Restaurants'], /restau|dejeuner|diner|repas|cafe\b|bar\b|pizza|burger|brasserie/],
+  [['Courses alimentaires', 'Courses'], /course|supermarche|carrefour|lidl|auchan|leclerc|intermarche|aliment|marche\b/],
+  [['Transports et véhicule', 'Transport'], /essence|carburant|plein|bus\b|train|taxi|uber|peage|parking|transport|metro|navigo/],
+  [['Abonnements et télécoms', 'Abonnements'], /abonnement|netflix|spotify|deezer|claude|icloud|forfait|youtube|internet/],
+  [['Santé'], /pharmac|medecin|docteur|dentiste|sante|kine/], [['Hygiène et beauté', 'Soins perso'], /barbier|coiffeur|coiffure|parfum|cosmetique/],
+  [['Énergie et eau', 'Logement'], /electricite|edf|engie|gaz\b|veolia/], [['Assurances'], /assurance|mutuelle/], [['Logement'], /loyer|syndic|copro|assurance hab/],
+  [['Impôts et taxes'], /impot|taxe|tresor public|amende/], [['Vêtements et accessoires'], /vetement|chaussure/], [['Maison et entretien'], /ikea|leroy merlin|castorama|bricolage|pressing/],
+  [['High-tech et informatique'], /fnac|darty|informatique|ordinateur/], [['Frais professionnels', 'Formation'], /formation|cours\b|manuel|atpl|examen|ecole/],
+  [['Loisirs et culture', 'Loisirs'], /cinema|concert|sport|jeu\b|loisir|musee|theatre/], [['Voyages et vacances', 'Voyages'], /hotel|avion|billet|airbnb|voyage|vol\b/],
+  [['Cadeaux et dons', 'Cadeaux'], /cadeau|\bdons?\b|paroisse/], [['DAB', 'Divers'], /retrait|especes|\bdab\b/]];
+function devinerCategorie(txt){ const t = norm(txt); for(const [cs, re] of INDICES) if(re.test(t)){ const c = cs.find(x => DB.categories.includes(x)); if(c) return c; } return ''; }
 function ficheCategoriser(){
   const l = sansCategorie().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   if(!l.length){ toast('Toutes les dépenses ont une catégorie.'); return; }
@@ -4368,6 +4423,7 @@ const ACTIONS = {
     $$('input, select, .couleur-cat', li).forEach(x => { x.disabled = s; });
     el.innerHTML = ico(s ? 'retour' : 'corbeille', 15); el.title = s ? 'Garder' : 'Supprimer'; el.setAttribute('aria-label', el.title); },
   categories: () => ficheCategories(),
+  'categories-reference': () => ficheGestion('categories', brouillonReference()),
   /* Import d'un relevé (CSV) et de contacts (vCard) */
   'import-csv': () => ficheImportCsv(),
   'import-csv-valider': () => validerImportCsv(),
