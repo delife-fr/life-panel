@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-sRI2XwraxGbR1ppCD6VPQ/N0+2r6RSdLGEx/peOYyvU='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-7lH3yAEAuLTxkaN4a6DCYdMkWmRU1Hc0YufVKosJMns='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.32
+  LIFE PANEL — v3.33
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -163,6 +163,9 @@
   couleur unie pour les 9 principales, rayée pour les autres. Fenêtre « Catégories » → « Passer aux 18 catégories de
   référence » : la fenêtre se remplit (anciens noms convertis, ex. Formation → Frais professionnels, DAB → Divers,
   catégories manquantes ajoutées, couleurs), on vérifie puis « Enregistrer ». Mots-clés des libellés mis à jour.
+  v3.33 : liseuse Markdown : un fichier .md du dossier Drive (Documents, tuile Drive d'un projet, fiche Document) s'ouvre mis
+  en forme dans LIFE PANEL, en lecture seule ; un lien vers un autre .md du Drive l'ouvre (bouton « Retour »), « Texte brut »
+  dans un nouvel onglet ; fichiers en UTF-8 ou Windows-1252 ; au-delà de 2 Mo, téléchargé comme avant.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -596,6 +599,9 @@ a.puce.lien-tel:hover{border-color:var(--i-bleu)}
 .fiche-col .champ textarea{min-height:130px}
 .fiche-pied{align-items:center;border-top:1px solid var(--trait-doux);padding-top:14px;margin-top:14px}
 .fiche-pied .aide{margin:0 auto 0 0}
+.liseuse-chemin{display:flex;align-items:center;gap:6px;margin:-6px 0 12px;overflow-wrap:anywhere}
+.liseuse-chemin svg{flex-shrink:0}
+.md.liseuse-md{max-height:min(66vh,720px);overflow:auto;overscroll-behavior:contain;padding:16px 18px;border-radius:12px;background:var(--champ);border:1px solid var(--trait-doux);max-width:none;overflow-wrap:anywhere}
 .md.fiche-md{max-height:min(62vh,640px);overflow:auto;padding:16px 18px;border-radius:12px;background:var(--champ);border:1px solid var(--trait-doux);max-width:none}
 .item-texte{flex:1;min-width:0;border-bottom:1px solid transparent;padding:3px 2px;font-size:13.5px;color:var(--texte);outline:0;cursor:text;overflow-wrap:anywhere;border-radius:3px 3px 0 0;transition:border-color .15s,background .15s}
 .item-texte:focus{background:rgb(var(--sur) / 0.031)}
@@ -2717,14 +2723,15 @@ function pageProjet(id){
 const estDrive = url => typeof url === 'string' && url.startsWith('drive:');
 const cheminDe = url => url.slice(6);
 const nomFichier = chemin => String(chemin).split('/').pop() || String(chemin);
-const extensionDe = nom => ((String(nom).match(/\.([a-z0-9]{1,7})$/i) || [])[1] || '').toLowerCase();
-const sansExtension = nom => String(nom).replace(/\.[a-z0-9]{1,7}$/i, '') || String(nom);
+const extensionDe = nom => ((String(nom).match(/\.([a-z0-9]{1,8})$/i) || [])[1] || '').toLowerCase();   /* 8 : « .markdown » */
+const sansExtension = nom => String(nom).replace(/\.[a-z0-9]{1,8}$/i, '') || String(nom);
 function typeDocument(url){
   if(!url) return {icone:'document', couleur:'gris', nom:'Sans lien'};
   if(estDrive(url)){ const x = extensionDe(nomFichier(cheminDe(url)));
     if(x === 'pdf') return {icone:'doc', couleur:'rose', nom:'PDF du Drive'};
     if(/^(jpe?g|png|gif|webp|heic|bmp|svg)$/.test(x)) return {icone:'image', couleur:'violet', nom:'Image du Drive'};
     if(/^g(doc|sheet|slides|draw|form)$/.test(x)) return {icone:'dossier', couleur:'vert', nom:'Google Docs'};
+    if(EXT_MARKDOWN.test(x)) return {icone:'doc', couleur:'bleu', nom:'Markdown du Drive'};
     return {icone:'dossier', couleur:'vert', nom:'Fichier du Drive'}; }
   const u = url.toLowerCase(), chemin = u.split(/[?#]/)[0];
   if(/\.pdf$/.test(chemin)) return {icone:'doc', couleur:'rose', nom:'PDF'};
@@ -3450,7 +3457,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.32 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.33 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -5720,12 +5727,48 @@ const estIntrouvable = e => !!e && (e.name === 'NotFoundError' || e.name === 'Ty
 const EXT_RISQUEES = /^(html?|xhtml|svg|xml|js|mjs)$/, RACCOURCIS_GOOGLE = /^g(doc|sheet|slides|draw|form|map|site)$/;
 const TYPES_RISQUES = /^(text\/html|application\/xhtml\+xml|image\/svg\+xml|text\/xml|application\/xml|(text|application)\/(x-)?(java|ecma)script)(;|$)/i;
 const EXT_AFFICHABLES = /^(pdf|png|jpe?g|gif|webp|bmp|avif|txt|mp3|m4a|mp4|webm|ogg|oga|ogv|wav)$/;
+/* Liseuse Markdown (v3.33) : un fichier .md du Drive s'affiche mis en forme, avec le lecteur des Notes (le HTML du fichier
+   reste du texte, jamais exécuté). Lecture seule. Un lien relatif vers un autre fichier du Drive l'ouvre (un .md dans la
+   liseuse, avec « Retour ») ; un lien web s'ouvre dans un nouvel onglet ; au-delà de 2 Mo, le fichier est téléchargé. */
+const EXT_MARKDOWN = /^(md|markdown|mdown|mkd|mkdn)$/, MAX_LISEUSE = 2 * 1048576;
+/* Lien relatif écrit dans un fichier → chemin depuis le dossier Drive relié ('' : lien web, ou hors du dossier) */
+function cheminLien(base, lien){
+  let l = String(lien || '').split('#')[0].split('?')[0];
+  try { l = decodeURIComponent(l); } catch(e){ /* %… mal formé : gardé tel quel */ }
+  if(!l || /^[a-z][a-z0-9+.-]*:/i.test(l) || l.startsWith('//')) return '';
+  const segs = l.startsWith('/') ? [] : base.split('/').slice(0, -1);
+  for(const x of l.replace(/\\/g, '/').split('/')){
+    if(!x || x === '.') continue;
+    if(x === '..'){ if(!segs.length) return ''; segs.pop(); } else segs.push(x);
+  }
+  return cheminDrive(segs.join('/'));
+}
+function ficheLiseuse(chemin, texte, pile = []){
+  const i = chemin.lastIndexOf('/'), nom = chemin.slice(i + 1), dossier = i > 0 ? chemin.slice(0, i) : '', prec = pile[pile.length - 1];
+  ouvrirModale(teteModale(sansExtension(nom), 'doc', 'bleu') +
+    `<p class="aide liseuse-chemin">${ico('dossier', 13)}<span>${esc(dossier ? dossier.split('/').join(' › ') : 'Dossier Drive')} · ${esc(nom)} · lecture seule</span></p>
+    <article class="md liseuse-md" id="liseuse-md">${texte.trim() ? md(texte) : '<p class="aide">Ce fichier est vide.</p>'}</article>
+    <div class="actions">${prec ? `<button type="button" class="btn" id="liseuse-retour" style="margin-right:auto" title="${esc('Revenir à ' + prec)}">${ico('retour', 14)}${esc(sansExtension(nomFichier(prec)))}</button>` : ''}
+      <button type="button" class="btn" id="liseuse-brut" title="Le texte du fichier, sans mise en forme, dans un nouvel onglet">Texte brut</button><button type="button" class="btn p" data-action="fermer">Fermer</button></div>`, {large:true});
+  $('#liseuse-brut').onclick = () => ouvrirDrive(chemin, {brut:true});
+  if(prec) $('#liseuse-retour').onclick = () => ouvrirDrive(prec, {pile:pile.slice(0, -1)});
+  $('#liseuse-md').addEventListener('click', e => {
+    const a = e.target.closest('a[href]'); if(!a) return;
+    const h = a.getAttribute('href');
+    if(/^(https?:|mailto:)/i.test(h)) return;   /* lien web : nouvel onglet, comme dans les Notes */
+    e.preventDefault();
+    if(h.startsWith('#')) return;   /* renvoi vers un titre du même fichier : rien à ouvrir */
+    const c = cheminLien(chemin, h);
+    if(!c){ toast('Ce lien sort de ton dossier Drive : « ' + h + ' »'); return; }
+    ouvrirDrive(c, EXT_MARKDOWN.test(extensionDe(c)) ? {pile:[...pile, chemin]} : {});
+  });
+}
 function lancerLien(url, nomTelechargement = ''){
   const a = document.createElement('a'); a.href = url; a.rel = 'noopener';
   if(nomTelechargement) a.download = nomTelechargement; else a.target = '_blank';
   document.body.appendChild(a); a.click(); a.remove();
 }
-async function ouvrirDrive(chemin){
+async function ouvrirDrive(chemin, {brut = false, pile = []} = {}){
   if(etatDrive() !== 'ok'){
     if(etatDrive() === 'indispo'){ toast('Ce navigateur ne sait pas lire un dossier.'); return; }
     if(await accesDrive()) toast('Accès au Drive autorisé : clique de nouveau sur le document pour l’ouvrir.');
@@ -5743,6 +5786,11 @@ async function ouvrirDrive(chemin){
     let url = '';
     try { const j = JSON.parse(await f.text()); url = j.url || (j.doc_id ? 'https://drive.google.com/open?id=' + encodeURIComponent(j.doc_id) : ''); } catch(e){ url = ''; }
     if(/^https:\/\/(docs|drive)\.google\.com\//.test(url)){ lancerLien(url); return; }
+  }
+  if(EXT_MARKDOWN.test(ext) && f.size <= MAX_LISEUSE){   /* Markdown : la liseuse, ou le texte brut dans un nouvel onglet */
+    const texte = decoderTexte(await f.arrayBuffer());
+    if(!brut){ ficheLiseuse(chemin, texte, pile); return; }
+    const u = URL.createObjectURL(new Blob([texte], {type:'text/plain;charset=utf-8'})); lancerLien(u); setTimeout(() => URL.revokeObjectURL(u), 120000); return;
   }
   const risque = EXT_RISQUEES.test(ext) || TYPES_RISQUES.test(f.type), afficher = !risque && EXT_AFFICHABLES.test(ext);
   const u = URL.createObjectURL(risque ? new Blob([f], {type:'application/octet-stream'}) : f);
