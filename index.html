@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-7lH3yAEAuLTxkaN4a6DCYdMkWmRU1Hc0YufVKosJMns='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-p4LBVEJq+rZ4+MWiPavuSeab/0k21TOOmTBd9BAnFV0='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.33
+  LIFE PANEL — v3.34
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -166,6 +166,10 @@
   v3.33 : liseuse Markdown : un fichier .md du dossier Drive (Documents, tuile Drive d'un projet, fiche Document) s'ouvre mis
   en forme dans LIFE PANEL, en lecture seule ; un lien vers un autre .md du Drive l'ouvre (bouton « Retour »), « Texte brut »
   dans un nouvel onglet ; fichiers en UTF-8 ou Windows-1252 ; au-delà de 2 Mo, téléchargé comme avant.
+  v3.34 : allègement. Pages Aujourd'hui et Revue retirées (le lien « Tout » des tâches du jour mène à Tâches) ; « Prochaine
+  action » retirée des projets (le texte déjà saisi reste dans les données, sans être affiché) ; Accueil sans les 4 chiffres
+  du haut, calendrier à gauche ; Tâches sans les 3 chiffres du haut ; Notes et Documents sur téléphone et tablette : les
+  dossiers passent dans un menu déroulant à côté de la recherche, au lieu d'un bloc d'étiquettes.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -584,6 +588,11 @@ a.puce.lien-tel:hover{border-color:var(--i-bleu)}
 .dossier-btn.archives svg{color:var(--texte-faible)}
 .dossier-actif{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--texte-doux)}
 .dossier-actif svg{color:var(--i-jaune)}
+.choix-dossier,.barre-dossier{display:none}   /* téléphone et tablette seulement (voir plus bas) */
+.choix-dossier{position:relative;align-items:center;gap:8px;min-width:0;background:var(--champ);border:1px solid var(--trait);border-radius:9px;padding:0 10px;color:var(--i-jaune);transition:border-color .18s,box-shadow .18s}
+.choix-dossier:focus-within{border-color:#4a80c8;box-shadow:0 0 0 3px #3987e526}
+.choix-dossier select{appearance:none;-webkit-appearance:none;flex:1;min-width:0;border:0;background:transparent;outline:0;color:var(--texte);font:inherit;font-size:13.5px;padding:8px 20px 8px 0;text-overflow:ellipsis}
+.choix-dossier > svg:last-child{position:absolute;right:10px;pointer-events:none;color:var(--texte-faible)}
 .mosaique.notes{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
 .carte-note .depliable-tete{gap:11px}
 .date-t{font-size:11.5px;color:var(--texte-faible);white-space:nowrap}
@@ -678,8 +687,6 @@ tr.hors-stats td{opacity:.5}
 .liste > li.echeance.expire{background:linear-gradient(90deg,#d551811c,transparent 70%)}
 .liste > li.echeance.expire::before{background:var(--rose)}
 .liste > li.echeance + li.echeance{margin-top:4px;border-top:0}
-.liste.echeances{margin-bottom:6px}
-.liste.echeances + .liste{border-top:1px solid var(--trait-doux);padding-top:6px}
 .liste .corps .t.nom-lien{font-size:14px;font-weight:500;text-align:left;display:block}
 .infos-doc{display:grid;grid-template-columns:92px minmax(0,1fr);gap:7px 12px;font-size:13.5px;margin:0 0 4px}
 .infos-doc dt{color:var(--texte-faible)}
@@ -734,14 +741,8 @@ a.puce.tag:hover{filter:brightness(1.25)}
 .carte-projet .haut .corps{flex:1;min-width:0}
 .carte-projet strong{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .carte-projet .resume{font-size:12.5px;color:var(--texte-faible);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
-.carte-projet .prochaine{font-size:12.5px;color:var(--texte-doux);margin-top:10px}
 .carte-projet .meta-p{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--texte-faible);margin-top:10px}
 .archive{opacity:.75}
-.etape{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;padding:14px 0;border-top:1px solid var(--trait-doux)}
-.etape:first-child{border-top:0;padding-top:2px}
-.etape .num-etape{width:28px;height:28px;border-radius:9px;background:rgb(var(--sur) / 0.039);border:1px solid var(--trait);display:grid;place-items:center;font-family:var(--mono);font-size:12px;color:var(--texte-doux)}
-.etape h3{font-size:14px;margin:0 0 4px}
-.etape p{font-size:12.5px;color:var(--texte-doux);margin:0}
 .etat-dossier{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:-4px 0 14px;color:var(--texte-doux)}
 .etat-dossier svg{flex-shrink:0;margin-top:2px}
 .etat-dossier.ok svg{color:var(--i-vert)} .etat-dossier.cours svg{color:var(--i-bleu)} .etat-dossier.erreur svg{color:var(--i-rouge)} .etat-dossier.hors svg{color:var(--i-jaune)}
@@ -771,7 +772,6 @@ a.puce.tag:hover{filter:brightness(1.25)}
 .drive-form{margin:-4px 0 13px}
 #drive-form-zone{margin-top:8px;padding:10px 12px;border:1px solid var(--trait);border-radius:10px;max-height:340px;overflow:auto;background:var(--champ)}
 .modale .drive-explo{max-height:min(52vh,460px);overflow:auto;margin:0 0 6px}
-.choix-priorites{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
 
 /* ==========================================================================
    9. FINANCES — graphiques, calendriers, tableau
@@ -988,13 +988,17 @@ td.act{text-align:right;white-space:nowrap;width:1%}
 /* Barre du haut : ☰, logo, recherche, capture, état (le menu est dans le volet, à toutes les largeurs) */
 @media (max-width:1200px){
   .c3{grid-column:span 6}.c4{grid-column:span 6}.c5,.c7,.c8{grid-column:span 12}
+  .grille.accueil{grid-auto-flow:row dense}   /* « À suivre » remonte à côté du calendrier, les tâches du jour dessous */
   .chiffres{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:980px){
   .notes-cadre{grid-template-columns:1fr}
-  .dossiers{position:static;flex-direction:row;flex-wrap:wrap;gap:4px;overflow:visible;max-height:none;padding:8px}   /* téléphone : tous les dossiers visibles, sur plusieurs lignes */
-  .dossiers .etiq{display:none}
-  .dossier-btn{width:auto;max-width:100%;white-space:nowrap;padding:6px 9px}
+  .notes-cadre > .dossiers,.barre-outils .dossier-actif{display:none}   /* les dossiers passent dans le menu déroulant */
+  .choix-dossier,.barre-dossier{display:flex}
+  .notes-contenu .barre-outils{gap:8px}
+  .notes-contenu .barre-outils .filtre{flex:1 1 110px;min-width:0}   /* recherche et dossier sur la même ligne */
+  .choix-dossier{flex:1.5 1 150px}
+  .grille.accueil > .haut-tel{order:-1}   /* une colonne : tâches du jour et rappels avant le calendrier */
   .fiche-grille{grid-template-columns:1fr}
   .barre{padding:10px 16px}
   .recherche{width:220px}
@@ -1033,7 +1037,6 @@ td.act{text-align:right;white-space:nowrap;width:1%}
   .barre .marque-txt{display:none}
   .chiffres,.chiffres.trois{grid-template-columns:1fr}
   .form-grille > .champ.demi{grid-column:span 2}
-  .choix-priorites{grid-template-columns:1fr}
   .mosaique,.mosaique.notes{grid-template-columns:1fr}
   .modale.fiche{padding:18px 16px}
   .fiche-pied .aide{flex-basis:100%}
@@ -1146,7 +1149,7 @@ const DBVide = () => ({
   categories: CATEGORIES_DEFAUT.slice(),
   couleursCategories: [],   /* {nom, couleur} : couleur gardée par chaque catégorie (graphique « Par catégorie ») */
   comptes: [],   /* {nom, stats, budget, periode} : stats = pris en compte dans les statistiques ; budget par mois ou par an */
-  reglages: {focusProjets: [], lastReview: null, demo: false, maj: null, sansCompteStats: true}
+  reglages: {demo: false, maj: null, sansCompteStats: true}
 });
 
 let DB = DBVide();
@@ -1200,7 +1203,7 @@ const heureValide = v => /^([01]\d|2[0-3]):[0-5]\d$/.test(txt(v)) ? txt(v) : '';
 const fuseauValide = tz => { if(!tz || typeof tz !== 'string') return false; try { new Intl.DateTimeFormat('fr-FR', {timeZone:tz}); return true; } catch(e){ return false; } };
 const FORMES = {
   projets:p => ({id:txt(p.id) || uid(), nom:txt(p.nom) || 'Sans nom', resume:txt(p.resume),
-    budget:positif(p.budget, MAX_BUDGET), prochaineAction:txt(p.prochaineAction), echeance:dateISO(p.echeance),
+    budget:positif(p.budget, MAX_BUDGET), prochaineAction:txt(p.prochaineAction), echeance:dateISO(p.echeance),   /* plus affichées (v3.34) : gardées pour ne rien perdre */
     couleur:COULEURS.includes(p.couleur) ? p.couleur : '', dossier:cheminDrive(p.dossier), archive:!!p.archive, modif:txt(p.modif) || maintenant()}),
   taches:t => ({id:txt(t.id) || uid(), nom:txt(t.nom) || 'Sans titre', date:dateISO(t.date), heure:/^\d{2}:\d{2}$/.test(txt(t.heure)) ? txt(t.heure) : '',
     projet:t.projet || null, fait:!!t.fait, faitLe:t.fait ? txt(t.faitLe || t.modif) : '',
@@ -1308,14 +1311,13 @@ function normaliser(brut){
     const cible = d.comptes.reduce((a, c) => (usage.get(c.nom) || 0) > (usage.get(a.nom) || 0) ? c : a, d.comptes[0]);
     cible.budget = ancienBudget; cible.periode = 'mois';
   }
-  d.reglages = {focusProjets:Array.isArray(r.focusProjets) ? r.focusProjets.slice(0,3) : [], lastReview:r.lastReview || null, demo:!!(r.demo),
+  d.reglages = {demo:!!(r.demo),   /* focusProjets et lastReview (pages Aujourd'hui et Revue, retirées en v3.34) ne sont plus gardés */
     maj:typeof r.maj === 'string' ? r.maj : null,   /* maj : dernière modification, toutes données confondues */
     sansCompteStats:r.sansCompteStats !== false};    /* dépenses sans compte : prises en compte dans les statistiques */
 
   /* Plus de références fantômes vers un projet supprimé */
   const ids = new Set(d.projets.map(p => p.id));
   LIENS_PROJET.forEach(k => d[k].forEach(x => { if(x.projet && !ids.has(x.projet)) x.projet = null; }));
-  d.reglages.focusProjets = d.reglages.focusProjets.filter(id => ids.has(id));
   return d;
 }
 /* Couleur de chaque catégorie : gardée d'une fois sur l'autre, jamais recalculée d'après le classement.
@@ -1945,9 +1947,6 @@ function rappels(){
   if(rep) r.push({icone:'bulle', couleur:'violet', html:`<b>${pluriel(rep, 'message')}</b> en attente de réponse.`, label:'Voir', href:'#/contacts?q=' + encodeURIComponent('#' + TAG_REPONDRE)});
   projetsActifs().filter(p => p.budget && totalProjet(p.id) > p.budget).forEach(p => r.push({icone:'dossier', couleur:'orange',
     html:`Le projet <b>${esc(p.nom)}</b> dépasse son budget de <b>${eur(totalProjet(p.id) - p.budget)}</b>.`, label:'Ouvrir', href:href('projet', p.id)}));
-  const derniere = DB.reglages.lastReview;
-  if(compter(DB) && (!derniere || ecartJours(derniere) >= 7))
-    r.push({icone:'calendrier', couleur:'violet', html:derniere ? `Dernière revue hebdo ${ilya(derniere)}.` : 'Aucune revue hebdo pour l’instant.', label:'Faire la revue', href:'#/revue'});
   return r;
 }
 
@@ -2088,7 +2087,7 @@ const puceTag = t => `<a class="puce tag" href="#/recherche?q=${encodeURICompone
 const pucesTags = tags => tags.map(puceTag).join('');
 const badgePrio = t => `<span class="priorite ${t.priorite}" title="Priorité ${t.priorite.slice(1)}">P${t.priorite.slice(1)}</span>`;
 
-/* Une ligne de tâche — la même partout (accueil, Aujourd'hui, Tâches, projet, calendrier) */
+/* Une ligne de tâche — la même partout (accueil, Tâches, projet, calendrier) */
 /* Durée estimée : « 45 min » sous une heure, puis « 1 h », « 1 h 30 », « 60 h » (minutes arrondies) */
 const dureeTexte = min => { const m = Math.round(Number(min) || 0); if(m < 60) return m + ' min'; const h = Math.floor(m / 60), r = m % 60; return h + ' h' + (r ? ' ' + pad(r) : ''); };
 function ligneTache(t, {date = true} = {}){
@@ -2111,7 +2110,7 @@ function ligneTache(t, {date = true} = {}){
 }
 
 /* --- Étapes d'une tâche : compteur « 2/5 » (vert quand tout est coché) ; un clic déplie la liste (pendant la visite).
-   La tâche reste une seule ligne partout (Accueil, Aujourd'hui) ; terminer la tâche reste un geste à part. */
+   La tâche reste une seule ligne partout (Accueil, Tâches) ; terminer la tâche reste un geste à part. */
 function compteEtapes(t){
   if(!t.etapes.length) return '';
   const faites = t.etapes.filter(e => e.ok).length, ouvert = !!etatDepliage['etapes-' + t.id];
@@ -2496,24 +2495,14 @@ const etatAccueil = () => ghActif() ? 'Local · synchro GitHub' : 'Local · hors
 function pageAccueil(){
   const h = new Date().getHours();
   const salut = (h >= 18 || h < 5 ? 'Bonsoir' : 'Bonjour') + (DB.prenom ? ', ' + esc(DB.prenom) : '') + ' !';
-  const mois = totalMois(), bm = budgetMensuel(), nb = noteBudget(mois, bm);
-  const aFaire = tachesAFaire(), faites = tachesFaitesAujourdhui(), total = aFaire.length + faites.length, retard = tachesEnRetard().length;
-  const actifs = projetsActifs(), inbox = inboxOuverte().length;
+  /* Calendrier à gauche, puis tâches du jour et rappels ; sur téléphone (une colonne), tâches et rappels d'abord (haut-tel) */
   return `<div class="bonjour"><div><h1>${salut}</h1><p>Voici un aperçu de ta journée, de tes projets et de tes finances.</p></div>
       <div class="meta"><span>${dateLongue(aujourdhui())}</span><span class="sep"></span><span id="etat-accueil">${etatAccueil()}</span>${iaActive() ? btnAction('ia-point', ico('bulle', 14) + 'Point du jour', 'btn compact') : ''}</div></div>
     ${bandeauxEtat()}
-    <div class="grille">
-      <div class="c12 chiffres">
-        ${kpi({icone:'portefeuille', couleur:'vert', libelle:'Dépensé ce mois', valeur:eur(mois), note:nb.note, cls:nb.cls, prog:barreBudget(mois, bm), lien:'#/finances'})}
-        ${kpi({icone:'coche', couleur:'bleu', libelle:'Tâches du jour', valeur:`${faites.length}<small> / ${total}</small>`,
-               note:total ? pluriel(aFaire.length, 'restante') + (retard ? ` · dont ${retard} en retard` : '') : 'rien de prévu', cls:retard ? 'dep' : (total && !aFaire.length ? 'bien' : ''),
-               prog:total ? barre(faites.length / total * 100, 'vert') : '', lien:'#/aujourdhui'})}
-        ${kpi({icone:'cible', couleur:'violet', libelle:'Projets actifs', valeur:actifs.length, note:actifs.slice(0, 3).map(p => esc(p.nom)).join(' · ') || 'aucun projet', lien:'#/projets'})}
-        ${kpi({icone:'ampoule', couleur:'jaune', libelle:'Inbox', valeur:inbox, note:inbox ? 'à trier quand tu as un moment' : 'rien à trier', cls:inbox ? 'att' : 'bien', lien:'#/inbox'})}
-      </div>
-      <section class="carte c5 etire">${carteTachesDuJour()}</section>
-      <section class="carte c4 etire">${carteRappels()}</section>
+    <div class="grille accueil">
       <section class="carte c3" id="calendrier">${calendrierAccueil()}</section>
+      <section class="carte c5 etire haut-tel">${carteTachesDuJour()}</section>
+      <section class="carte c4 etire haut-tel">${carteRappels()}</section>
       <section class="carte c6 etire">${carteFinancesAccueil()}</section>
       <section class="carte c6 etire">${carteProjetsAccueil()}</section>
       <section class="carte c6 etire">${carteNotesAccueil()}</section>
@@ -2522,11 +2511,11 @@ function pageAccueil(){
 }
 function carteTachesDuJour(){
   const l = tachesAFaire(), f = tachesFaitesAujourdhui();
-  const tete = enteteCarte('coche', 'bleu', 'Tâches du jour', btnAction('tache-nouvelle', ico('plus', 13) + 'Tâche', 'btn f compact') + lienSous('Tout', '#/aujourdhui'));
+  const tete = enteteCarte('coche', 'bleu', 'Tâches du jour', btnAction('tache-nouvelle', ico('plus', 13) + 'Tâche', 'btn f compact') + lienSous('Tout', '#/taches'));
   if(!l.length && !f.length) return tete + vide('Rien de prévu aujourd’hui.', btnAction('tache-nouvelle', 'Ajouter une tâche'));
   const reste = l.length - 6;
   return tete + `<ul class="liste">${l.slice(0, 6).map(t => ligneTache(t)).join('')}${f.slice(0, 3).map(t => ligneTache(t, {date:false})).join('')}</ul>` +
-    (reste > 0 ? `<div style="margin-top:8px">${lienSous('et ' + pluriel(reste, 'autre tâche', 'autres tâches'), '#/aujourdhui')}</div>` : '');
+    (reste > 0 ? `<div style="margin-top:8px">${lienSous('et ' + pluriel(reste, 'autre tâche', 'autres tâches'), '#/taches')}</div>` : '');
 }
 function ligneRappel(x){
   return `<li${x.cls ? ` class="${x.cls}"` : ''}>${pastille(x.icone, x.couleur, 28, 15)}<span style="flex:1;min-width:0;font-size:13.5px;color:var(--texte-doux)">${x.html}</span>
@@ -2552,7 +2541,7 @@ function carteProjetsAccueil(){
   if(!ps.length) return tete + vide('Aucun projet actif.', btnAction('projet-nouveau', 'Créer un projet'));
   return tete + `<ul class="liste">${ps.map(p => { const pct = progressionProjet(p.id), c = couleurDe(p.id);
     return `<li>${vignetteProjet(p)}<span class="corps"><a class="t" href="${href('projet', p.id)}">${esc(p.nom)}</a>${barre(pct, 'fine', PLEIN[c])}
-      <span class="s">${p.prochaineAction ? '→ ' + esc(p.prochaineAction) : pluriel(DB.taches.filter(t => t.projet === p.id).length, 'tâche')}</span></span><span class="pct">${pct} %</span></li>`; }).join('')}</ul>`;
+      <span class="s">${pluriel(DB.taches.filter(t => t.projet === p.id).length, 'tâche')}</span></span><span class="pct">${pct} %</span></li>`; }).join('')}</ul>`;
 }
 function carteNotesAccueil(){
   const l = nonArchives(DB.notes).sort(parModif).slice(0, 5);
@@ -2567,40 +2556,6 @@ function carteJournal(){
   if(!l.length) return tete + vide('Le journal est vide.');
   return tete + `<ul class="liste">${l.map(x => `<li><span class="vignette mini" style="background:${FOND[x.couleur]}">${ico(x.icone, 15, 'var(' + VAR[x.couleur] + ')')}</span>
     <span class="corps"><a class="t" href="${x.href}">${esc(x.titre)}</a><span class="s">${esc(x.sous)} · ${ilya(x.t)}</span></span></li>`).join('')}</ul>`;
-}
-
-/* --- AUJOURD'HUI --- */
-function pageAujourdhui(){
-  const aFaire = tachesAFaire(), faites = tachesFaitesAujourdhui(), retard = tachesEnRetard().length, inbox = inboxOuverte().length;
-  const prios = aFaire.filter(t => t.priorite === 'p1').slice(0, 3);
-  const focusP = DB.reglages.focusProjets.map(projet).filter(Boolean);
-  const suivantes = projetsActifs().filter(p => p.prochaineAction).sort((a, b) => (a.echeance || '9999').localeCompare(b.echeance || '9999')).slice(0, 5);
-  const tf = focusEnCours ? tache(focusEnCours.taskId) : null, echeances = documentsARenouveler();
-  return titre('Aujourd’hui', 'Le strict nécessaire pour savoir quoi faire maintenant.',
-      `<a class="btn compact ghost" href="#/inbox">Inbox · ${inbox}</a>${btnAction('tache-nouvelle', ico('plus', 14) + 'Nouvelle tâche', 'btn p')}`) + `
-    ${focusP.length ? `<div class="bandeau bleu"><div class="txt"><span class="etiq">Priorités de la semaine</span><div class="puces" style="margin-top:6px">${focusP.map(p => tagProjet(p.id)).join('')}</div></div><a class="btn compact" href="#/revue">Ajuster</a></div>` : ''}
-    <div class="grille">
-      <section class="carte c8 etire">
-        ${enteteCarte('cible', 'bleu', 'À faire maintenant', retard ? `<span class="puce alerte" style="color:var(--i-rose);border-color:#d551814d;background:#d5518118">${retard} en retard</span>` : `<span class="compte">${aFaire.length + echeances.length}</span>`)}
-        ${echeances.length ? `<ul class="liste echeances">${echeances.map(ligneEcheance).join('')}</ul>` : ''}
-        ${aFaire.length ? `<ul class="liste">${aFaire.map(t => ligneTache(t)).join('')}</ul>` : echeances.length ? '' : vide('Rien d’urgent pour aujourd’hui.', btnAction('tache-nouvelle', 'Ajouter une tâche', 'btn p'))}
-        ${faites.length ? `<div class="sous-titre">${ico('check', 12)} Terminées aujourd’hui · ${faites.length}</div><ul class="liste">${faites.map(t => ligneTache(t, {date:false})).join('')}</ul>` : ''}
-      </section>
-      <div class="c4 pile">
-        <section class="carte">${enteteCarte('cible', 'rose', '3 priorités')}
-          ${prios.length ? `<ul class="liste">${prios.map(t => ligneTache(t)).join('')}</ul>` : '<p class="aide" style="margin:0">Aucune tâche en priorité 1. Commence par ce qui débloque le reste.</p>'}</section>
-        <section class="carte">${enteteCarte('dossier', 'violet', 'Projets à faire avancer', lienSous('Projets', '#/projets'))}
-          ${suivantes.length ? `<ul class="liste">${suivantes.map(p => `<li>${vignetteProjet(p, 30, 15)}<span class="corps"><a class="t" href="${href('projet', p.id)}">${esc(p.nom)}</a>
-            <span class="s">→ ${esc(p.prochaineAction)}${p.echeance ? ` · <span class="${p.echeance < aujourdhui() ? 'rose' : ''}">${esc(labelJour(p.echeance))}</span>` : ''}</span></span>
-            <button class="icone-btn" data-action="projet-prochaine" data-id="${esc(p.id)}" title="Modifier la prochaine action" aria-label="Modifier">${ico('crayon', 15)}</button></li>`).join('')}</ul>`
-            : '<p class="aide" style="margin:0">Définis une prochaine action sur tes projets actifs (fiche projet ou revue hebdo).</p>'}</section>
-      </div>
-      <section class="carte c4">${enteteCarte('ampoule', 'jaune', 'Inbox')}<div class="gros">${inbox}</div><p class="aide" style="margin:6px 0 12px">élément${inbox > 1 ? 's' : ''} à trier</p><a class="btn compact" href="#/inbox">Trier l’Inbox</a></section>
-      <section class="carte c4">${enteteCarte('calendrier', 'violet', 'Revue hebdo')}<div class="gros" style="font-size:20px">${DB.reglages.lastReview ? esc(ilya(DB.reglages.lastReview)) : 'Jamais faite'}</div><p class="aide" style="margin:6px 0 12px">Dix minutes par semaine pour remettre les projets au clair.</p><a class="btn compact" href="#/revue">Ouvrir la revue</a></section>
-      <section class="carte c4">${enteteCarte('horloge', 'bleu', 'Focus 25 min')}
-        ${tf ? `<p class="aide" style="margin:0 0 12px">En cours : <b style="color:var(--texte)">${esc(tf.nom)}</b></p>${btnAction('focus-arreter', 'Arrêter', 'btn compact')}`
-             : `<p class="aide" style="margin:0 0 12px">Une tâche, 25 minutes, aucune distraction. Tu peux aussi cliquer sur l’horloge d’une tâche.</p>${btnAction('focus-meilleur', 'Démarrer sur la tâche la plus importante', 'btn ghost compact')}`}</section>
-    </div>`;
 }
 
 /* --- INBOX --- */
@@ -2621,13 +2576,7 @@ function pageInbox(){
 const TACHES_PAR_PAGE = 20;   /* « File d'exécution » : les 20 premières tâches (ordre de la file), puis 20 de plus à la demande */
 let limiteTaches = TACHES_PAR_PAGE;
 function pageTaches(){
-  const ouvertes = DB.taches.filter(t => !t.fait), retard = tachesEnRetard().length, faites = DB.taches.length - ouvertes.length;
   return titre('Tâches', 'Coche pour terminer, l’horloge lance un Focus de 25 min.', encartArchives('taches') + btnAction('tache-nouvelle', ico('plus', 14) + 'Nouvelle tâche', 'btn p')) + `
-    <div class="chiffres trois">
-      ${kpi({icone:'coche', couleur:'bleu', libelle:'À traiter', valeur:ouvertes.length, note:'non terminées'})}
-      ${kpi({icone:'alerte', couleur:'rose', libelle:'En retard', valeur:retard, note:retard ? 'à faire, reporter ou supprimer' : 'aucune', cls:retard ? 'dep' : 'bien'})}
-      ${kpi({icone:'check', couleur:'vert', libelle:'Terminées', valeur:faites, note:'au total'})}
-    </div>
     <section class="carte">${enteteCarte('cible', 'bleu', 'File d’exécution', puceFiltreProjet('taches') + champFiltre('taches', 'Filtrer…'))}<div id="liste-taches">${listeTaches()}</div></section>`;
 }
 function listeTaches(){
@@ -2669,13 +2618,12 @@ function carteProjet(p){
   return `<a class="carte cliquable carte-projet${p.archive ? ' archive' : ''}" href="${href('projet', p.id)}">
     <div class="haut">${vignetteProjet(p)}<div class="corps"><strong>${esc(p.nom)}</strong><div class="resume">${esc(p.resume || 'Sans description')}</div></div><span class="pct mono doux" style="font-size:12px">${pct} %</span></div>
     ${barre(pct, '', PLEIN[c])}
-    ${p.prochaineAction ? `<div class="prochaine">→ ${esc(p.prochaineAction)}${p.echeance ? ` · <span class="${p.echeance < aujourdhui() ? 'rose' : ''}">${esc(labelJour(p.echeance))}</span>` : ''}</div>` : ''}
     ${p.budget ? `<div class="ligne-budget"><span>${eur(dep)} sur ${eur(p.budget)}</span><span class="mono">${Math.round(dep / p.budget * 100)} %</span></div>${barreBudget(dep, p.budget, 'fine')}` : ''}
     <div class="meta-p"><span>${pluriel(nbT, 'tâche')}</span><span>${pluriel(nbN, 'note')}</span>${nbD ? `<span>${pluriel(nbD, 'document')}</span>` : ''}<span>${eur(dep)} dépensés</span></div></a>`;
 }
 function listeProjets(){
   if(!DB.projets.length) return vide('Aucun projet pour l’instant. Exemples : MCC, révision ATPL, voiture, maison.', btnAction('projet-nouveau', 'Créer un projet', 'btn p'));
-  const l = DB.projets.filter(p => correspond(FILTRES.projets, p.nom, p.resume, p.prochaineAction, DB.documents.filter(x => x.projet === p.id).map(x => x.titre))).sort(parModif);
+  const l = DB.projets.filter(p => correspond(FILTRES.projets, p.nom, p.resume, DB.documents.filter(x => x.projet === p.id).map(x => x.titre))).sort(parModif);
   if(!l.length) return vide(`Aucun projet ne correspond à « ${esc(FILTRES.projets)} ».`);
   const actifs = l.filter(p => !p.archive);
   return actifs.length ? `<div class="mosaique">${actifs.map(carteProjet).join('')}</div>` : vide('Aucun projet actif.');
@@ -2698,7 +2646,6 @@ function pageProjet(id){
       ${kpi({icone:'coche', couleur:'bleu', libelle:'Progression', valeur:pct + '<small> %</small>', note:taches.length ? `${taches.filter(t => t.fait).length} / ${pluriel(taches.length, 'tâche')} terminée${taches.filter(t => t.fait).length > 1 ? 's' : ''}` : 'aucune tâche rattachée', prog:taches.length ? barre(pct, '', PLEIN[couleurDe(id)]) : ''})}
       ${kpi({icone:'horloge', couleur:'violet', libelle:'Dernière activité', valeur:`<span style="font-size:22px">${esc(ilya(p.modif))}</span>`, note:`${pluriel(toutesNotes.length, 'note')} · ${pluriel(DB.documents.filter(x => x.projet === id).length, 'document')} · ${pluriel(mvts.length, 'mouvement')} · ${pluriel(tousContacts.length, 'contact')}`})}
     </div>
-    <div class="bandeau bleu">${pastille('fleche', 'bleu')}<div class="txt"><strong>Prochaine action</strong><span>${p.prochaineAction ? esc(p.prochaineAction) : 'Aucune prochaine action définie : un projet sans prochaine action n’avance pas.'}${p.echeance ? ` · <b class="${p.echeance < aujourdhui() ? 'rose' : ''}">${esc(labelJour(p.echeance))}</b>` : ''}</span></div>${btnAction('projet-prochaine', 'Modifier', 'btn compact', d)}</div>
     <div class="grille">
       <section class="carte c7 etire">${enteteCarte('coche', 'bleu', 'Tâches du projet', btnAction('tache-nouvelle', ico('plus', 13) + 'Tâche', 'btn f compact', dp))}
         ${visibles.length ? `<ul class="liste">${visibles.map(t => ligneTache(t)).join('')}</ul>` : `<p class="aide" style="margin:0">${nbTA ? 'Aucune tâche en cours.' : 'Aucune tâche rattachée.'}</p>`}
@@ -2717,7 +2664,7 @@ function pageProjet(id){
       ${ligneArchives(nbCA, 'fiche', 'fiches', '#/archives?type=contacts&projet=' + ici)}</section>` : ''}`;
 }
 
-/* --- DOCUMENTS : briques communes (module Documents, projet, Aujourd'hui, recherche) ---
+/* --- DOCUMENTS : briques communes (module Documents, projet, recherche) ---
    Un document = un titre, un lien facultatif (Google Drive, site, fichier local) et/ou une échéance à surveiller. */
 /* Lien vers un fichier du dossier Drive relié : « drive:Habitation/Assurance.pdf » (chemin depuis ce dossier) */
 const estDrive = url => typeof url === 'string' && url.startsWith('drive:');
@@ -2953,6 +2900,9 @@ function dossiersNotes(){
   if(sans && tags.length) l.push({v:SANS_TAG, nom:'Sans dossier', n:sans});
   return l;
 }
+/* Téléphone et tablette : la colonne des dossiers laisse la place à un menu déroulant dans la barre d'outils (une ligne au lieu d'un bloc d'étiquettes) */
+const optionDossier = (d, actif) => `<option value="${esc(d.v)}"${d.v === actif ? ' selected' : ''}>${esc(d.nom)}${d.n !== '' ? ' (' + d.n + ')' : ''}</option>`;
+const choixDossier = (page, options) => `<label class="choix-dossier">${ico('dossier', 15)}<select data-choix-dossier="${page}" aria-label="Dossier">${options}</select>${ico('chevronB', 13)}</label>`;
 const dansDossier = n => (!projetFiltre('notes') || n.projet === projetFiltre('notes')) &&
   !n.archive && (!filtreTag || (filtreTag === SANS_TAG ? !n.tags.length : aLeTag(n, filtreTag)));
 const vraiTag = () => filtreTag && filtreTag !== SANS_TAG;
@@ -2971,7 +2921,7 @@ function pageNotes(){
         ${ico(icone(d), 16)}<span class="nom-d">${esc(d.nom)}</span><span class="nb">${d.n}</span></button>`).join('')}
     </nav>
     <div class="notes-contenu">
-      <div class="barre-outils">${champFiltre('notes', 'Rechercher dans les notes…')}<span class="dossier-actif">${ico(icone(actif), 15)}${esc(actif.nom)}</span>${puceFiltreProjet('notes')}</div>
+      <div class="barre-outils">${champFiltre('notes', 'Rechercher…')}<span class="dossier-actif">${ico(icone(actif), 15)}${esc(actif.nom)}</span>${choixDossier('notes', dossiers.map(d => optionDossier(d, filtreTag)).join(''))}${puceFiltreProjet('notes')}</div>
       <div id="liste-notes">${listeNotes()}</div>
     </div></div>`;
 }
@@ -3032,6 +2982,9 @@ function pageDocuments(){
   const tete = titre('Documents', vueDrive ? 'Les fichiers de ton dossier Google Drive, en lecture seule. Clic sur un fichier : il s’ouvre dans un nouvel onglet. L’icône calendrier crée une fiche pour suivre son échéance.'
     : 'Tes papiers et leurs liens, avec une échéance à surveiller si besoin. Clic sur un titre : le lien s’ouvre (ou la fiche, s’il n’y a pas de lien).', boutons);
   if(!DB.documents.length && !vueDrive) return tete + `<div id="liste-documents">${listeDocuments()}</div>`;
+  const choix = choixDossier('documents', optionDossier(g.tous, filtreDocs) + (fsDispo() ? optionDossier(drv, filtreDocs) : '') +
+    `<optgroup label="Échéances">${g.echeances.map(d => optionDossier(d, filtreDocs)).join('')}</optgroup>` +
+    (g.tags.length ? `<optgroup label="Tags">${g.tags.map(d => optionDossier(d, filtreDocs)).join('')}</optgroup>` : ''));
   const bouton = d => `<button class="dossier-btn${d.v === filtreDocs ? ' actif' : ''}${d.cls ? ' etat-' + d.cls : ''}" data-action="filtre-docs" data-v="${esc(d.v)}"${d.v === filtreDocs ? ' aria-current="true"' : ''}>
     ${ico(d.icone, 16)}<span class="nom-d">${esc(d.nom)}</span><span class="nb">${d.n}</span></button>`;
   return tete + `<div class="notes-cadre">
@@ -3039,8 +2992,8 @@ function pageDocuments(){
       <div class="etiq">Échéances</div>${g.echeances.map(bouton).join('')}
       ${g.tags.length ? `<div class="etiq">Tags</div>${g.tags.map(bouton).join('')}` : ''}
     </nav>
-    <div class="notes-contenu">${vueDrive ? `<section class="carte">${explorateurDrive('explo-drive', {base:'', mode:'parcourir'})}</section>` : `
-      <div class="barre-outils">${champFiltre('documents', 'Rechercher dans les documents…')}<span class="dossier-actif">${ico(actif.icone, 15)}${esc(actif.nom)}</span>${puceFiltreProjet('documents')}</div>
+    <div class="notes-contenu">${vueDrive ? `<div class="barre-outils barre-dossier">${choix}</div><section class="carte">${explorateurDrive('explo-drive', {base:'', mode:'parcourir'})}</section>` : `
+      <div class="barre-outils">${champFiltre('documents', 'Rechercher…')}<span class="dossier-actif">${ico(actif.icone, 15)}${esc(actif.nom)}</span>${choix}${puceFiltreProjet('documents')}</div>
       <div id="liste-documents">${listeDocuments()}</div>`}
     </div></div>`;
 }
@@ -3080,14 +3033,6 @@ function corpsDocument(x){
   if(!x) return '';
   return infosDocument(x) + `<div class="boutons" style="margin-top:12px">${btnAction('document-ouvrir', ico('agrandir', 13) + 'Fiche', 'btn compact', `data-id="${esc(x.id)}"`)}${boutonsDocument(x)}</div>`;
 }
-/* Ligne « échéance » (Aujourd'hui, revue) : signalétique propre, avec les deux gestes utiles */
-function ligneEcheance({x, etat, jours}){
-  const d = `data-id="${esc(x.id)}"`;
-  return `<li class="echeance ${etat}">${pastille('document', etat === 'expire' ? 'rose' : 'jaune', 28, 14)}<span class="corps">${titreDocument(x, 't nom-lien')}
-      <span class="s"><span class="${etat === 'expire' ? 'rose' : 'jaune'}">${esc(texteEcheance(jours))}</span> · échéance ${esc(dateCourte(x.echeance))}${x.projet ? tagProjet(x.projet) : ''}</span></span>
-    <div class="boutons">${btnAction('document-tache', ico('coche', 13) + 'Créer une tâche', 'btn compact', d)}${btnAction('document-renouveler', ico('sync', 13) + 'Renouvelé', 'btn compact', d)}</div></li>`;
-}
-
 /* Bouton Archiver / Désarchiver (notes, documents, contacts) */
 const boutonArchive = (type, x, cls = 'btn f compact') => btnAction(type + '-archiver', ico('archive', 13) + (x.archive ? 'Désarchiver' : 'Archiver'), cls, `data-id="${esc(x.id)}"`);
 
@@ -3202,35 +3147,6 @@ function listeArchives(){
   const reste = l.length - limiteArchives;
   return vider + `<ul class="liste">${l.slice(0, limiteArchives).map(ligne).join('')}</ul>` +
     (reste > 0 ? `<div class="plus-notes"><span class="aide">${limiteArchives} éléments affichés sur ${l.length}</span>${btnAction('archives-plus', `Afficher ${Math.min(ARCHIVES_PAR_PAGE, reste)} de plus`, 'btn')}</div>` : '');
-}
-
-/* --- REVUE HEBDO --- */
-function pageRevue(){
-  const debut = decaleJour(-6);
-  const faites = DB.taches.filter(t => t.fait && jourDe(t.faitLe) >= debut).length, retard = tachesEnRetard().length, inbox = inboxOuverte().length;
-  const actifs = projetsActifs(), stagnent = actifs.filter(p => ecartJours(p.modif) > 7), sansAction = actifs.filter(p => !p.prochaineAction);
-  const choix = DB.reglages.focusProjets, echeances = documentsARenouveler();
-  return titre('Revue hebdomadaire', 'Quelques minutes pour fermer les boucles et choisir la suite.' + (DB.reglages.lastReview ? ` Dernière revue : ${esc(ilya(DB.reglages.lastReview))}.` : ''),
-      btnAction('revue-enregistrer', ico('check', 14) + 'Enregistrer la revue', 'btn p')) + `
-    <div class="chiffres trois">
-      ${kpi({icone:'check', couleur:'vert', libelle:'Terminées', valeur:faites, note:'ces 7 derniers jours', cls:faites ? 'bien' : ''})}
-      ${kpi({icone:'alerte', couleur:'rose', libelle:'En retard', valeur:retard, note:'à faire, reporter ou supprimer', cls:retard ? 'dep' : ''})}
-      ${kpi({icone:'ampoule', couleur:'jaune', libelle:'Inbox', valeur:inbox, note:'éléments à trier', cls:inbox ? 'att' : ''})}
-    </div>
-    <section class="carte">
-      <div class="etape"><span class="num-etape">1</span><div><h3>Vider les boucles ouvertes</h3><p>${retard ? `<b>${pluriel(retard, 'tâche')}</b> en retard.` : 'Aucune tâche en retard.'} ${inbox ? `L’Inbox contient <b>${pluriel(inbox, 'élément')}</b>.` : 'Inbox vide.'}</p>
-        <div class="boutons" style="margin-top:8px"><a class="btn compact" href="#/taches">Voir les tâches</a><a class="btn compact" href="#/inbox">Ouvrir l’Inbox</a></div></div></div>
-      <div class="etape"><span class="num-etape">2</span><div><h3>Repérer les projets qui stagnent</h3><p>${stagnent.length ? 'Pas d’activité depuis plus de 7 jours :' : 'Tous les projets actifs ont bougé cette semaine.'}</p>
-        ${stagnent.length ? `<div class="boutons" style="margin-top:8px">${stagnent.map(p => `<a class="btn compact" href="${href('projet', p.id)}">${esc(p.nom)} · ${esc(ilya(p.modif))}</a>`).join('')}</div>` : ''}</div></div>
-      <div class="etape"><span class="num-etape">3</span><div><h3>Choisir les 3 priorités de la semaine</h3><p>Elles apparaissent ensuite en haut de la page Aujourd’hui.</p>
-        <div class="choix-priorites">${[0, 1, 2].map(i => `<select class="saisie" id="revue-p${i}" aria-label="Priorité ${i + 1}"><option value="">— aucun —</option>${actifs.map(p => `<option value="${esc(p.id)}"${choix[i] === p.id ? ' selected' : ''}>${esc(p.nom)}</option>`).join('')}</select>`).join('')}</div></div></div>
-      <div class="etape"><span class="num-etape">4</span><div><h3>Donner une prochaine action à chaque projet actif</h3><p>${sansAction.length ? 'Sans prochaine action :' : 'Tous les projets actifs ont une prochaine action.'}</p>
-        ${sansAction.length ? `<div class="boutons" style="margin-top:8px">${sansAction.map(p => btnAction('projet-prochaine', ico('plus', 13) + esc(p.nom), 'btn compact', `data-id="${esc(p.id)}"`)).join('')}</div>` : ''}</div></div>
-      <div class="etape"><span class="num-etape">5</span><div><h3>Surveiller les documents à renouveler</h3><p>${echeances.length ? 'Dans leur préavis ou déjà expirés :' : 'Aucun document à renouveler pour l’instant.'}</p>
-        ${echeances.length ? `<ul class="liste echeances" style="margin-top:8px">${echeances.map(ligneEcheance).join('')}</ul>` : ''}</div></div>
-      <div class="etape"><span class="num-etape">6</span><div><h3>Terminer par un seul engagement</h3><p>Choisis la première action concrète à exécuter, puis lance un Focus.</p>
-        <div class="boutons" style="margin-top:8px">${btnAction('tache-nouvelle', 'Créer cette première action', 'btn ghost', 'data-priorite="p1"')}</div></div></div>
-    </section>`;
 }
 
 /* --- CALENDRIER : vue Mois (titres dans les cases ; pastilles sur téléphone), 2 semaines (cette semaine et la suivante,
@@ -3457,20 +3373,20 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.33 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.34 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
 /* ==========================================================================
    G. ROUTEUR — une seule fonction rendre(), jamais redéfinie
    ========================================================================== */
-const ROUTES = {accueil:pageAccueil, aujourdhui:pageAujourdhui, inbox:pageInbox, taches:pageTaches, projets:pageProjets, projet:pageProjet,
-  finances:pageFinances, notes:pageNotes, documents:pageDocuments, contacts:pageContacts, revue:pageRevue, calendrier:pageCalendrier, donnees:pageDonnees, recherche:pageRecherche, corbeille:pageCorbeille, archives:pageArchives};
+const ROUTES = {accueil:pageAccueil, inbox:pageInbox, taches:pageTaches, projets:pageProjets, projet:pageProjet,
+  finances:pageFinances, notes:pageNotes, documents:pageDocuments, contacts:pageContacts, calendrier:pageCalendrier, donnees:pageDonnees, recherche:pageRecherche, corbeille:pageCorbeille, archives:pageArchives};
 /* Notes et contacts s'ouvrent dans une fenêtre : « #/note/ID » affiche la page Notes puis la fenêtre */
 const FICHES = {note:{page:'notes', ouvrir:id => ficheNote(id)}, contact:{page:'contacts', ouvrir:id => ficheContact(id)}, document:{page:'documents', ouvrir:id => ficheDocument(id)},
   evenement:{page:'calendrier', ouvrir:id => ficheEvenement(id)}};
-const MENU = [['accueil','Accueil','maison'],['aujourdhui','Aujourd’hui','cible'],['calendrier','Calendrier','calendrier'],['inbox','Inbox','ampoule'],['taches','Tâches','coche'],
-  ['projets','Projets','dossier'],['finances','Finances','portefeuille'],['notes','Notes','doc'],['documents','Documents','document'],['contacts','Contacts','personnes'],['revue','Revue','sync']];
+const MENU = [['accueil','Accueil','maison'],['calendrier','Calendrier','calendrier'],['inbox','Inbox','ampoule'],['taches','Tâches','coche'],
+  ['projets','Projets','dossier'],['finances','Finances','portefeuille'],['notes','Notes','doc'],['documents','Documents','document'],['contacts','Contacts','personnes']];
 const PARENT = {projet:'projets'};   /* page d'un projet : l'entrée « Projets » du volet reste en surbrillance */
 const LISTES = {taches:listeTaches, projets:listeProjets, finances:listeFinances, notes:listeNotes, documents:listeDocuments, contacts:listeContacts, archives:listeArchives};
 let routeAffichee = '', tAnim;
@@ -3486,8 +3402,8 @@ function lireRoute(){
 }
 function titrePage(){
   const r = lireRoute();
-  const t = {accueil:'Accueil', aujourdhui:'Aujourd’hui', inbox:'Inbox', taches:'Tâches', projets:'Projets', projet:nomProjet(r.id) || 'Projet',
-    finances:'Finances', notes:'Notes', documents:'Documents', contacts:'Contacts', revue:'Revue hebdo', calendrier:'Calendrier', donnees:'Données', recherche:'Recherche', corbeille:'Corbeille', archives:'Archives'}[r.nom];
+  const t = {accueil:'Accueil', inbox:'Inbox', taches:'Tâches', projets:'Projets', projet:nomProjet(r.id) || 'Projet',
+    finances:'Finances', notes:'Notes', documents:'Documents', contacts:'Contacts', calendrier:'Calendrier', donnees:'Données', recherche:'Recherche', corbeille:'Corbeille', archives:'Archives'}[r.nom];
   return t + ' · Life Panel';
 }
 function rendre(){
@@ -3552,7 +3468,6 @@ function compteursMenu(){
   const auj = aujourdhui(), actifs = l => l.filter(x => !x.archive), aFaire = actifs(DB.taches).filter(t => !t.fait), docs = actifs(DB.documents), contacts = contactsActifs();
   const etats = docs.map(x => etatDocument(x).etat);
   return {
-    aujourdhui:{n:tachesAFaire().filter(t => !t.archive).length},
     calendrier:{n:evenementsDuJour(auj).length, titre:'événement(s) aujourd’hui'},
     taches:{n:aFaire.length, alerte:aFaire.filter(estEnRetard).length, quoi:'en retard'},
     projets:{n:actifs(DB.projets).length},
@@ -3960,21 +3875,13 @@ function formProjet(p0 = {}){
   formulaire({titre:ex ? 'Modifier le projet' : 'Nouveau projet', icone:'dossier', couleur:'violet', ok:ex ? 'Enregistrer' : 'Créer le projet', champs:[
     {n:'nom', l:'Nom du projet', v:p0.nom},
     {n:'resume', l:'De quoi il s’agit', t:'zone', v:p0.resume},
-    {n:'prochaineAction', l:'Prochaine action', v:p0.prochaineAction, aide:'une action concrète, faisable en une session'},
-    {n:'echeance', l:'Échéance', t:'date', effacable:true, v:p0.echeance, demi:true, aide:'facultatif'},
     {n:'budget', l:'Budget (€)', t:'nombre', v:p0.budget ?? '', demi:true, aide:'facultatif'}
   ], onOk:v => {
     if(!v.nom) return 'Donne un nom au projet.';
-    const d = {nom:v.nom, resume:v.resume, prochaineAction:v.prochaineAction, echeance:v.echeance, budget:v.budget ? positif(Math.abs(Number(v.budget.replace(',', '.'))), MAX_BUDGET) : null, modif:maintenant()};
+    const d = {nom:v.nom, resume:v.resume, budget:v.budget ? positif(Math.abs(Number(v.budget.replace(',', '.'))), MAX_BUDGET) : null, modif:maintenant()};
     if(ex){ Object.assign(ex, d); toast('Projet modifié'); }
     else { ajouter('projets', d); toast('Projet créé'); }
   }});
-}
-function formProchaine(p){
-  formulaire({titre:'Prochaine action · ' + p.nom, icone:'fleche', couleur:'bleu', champs:[
-    {n:'prochaineAction', l:'Action concrète', v:p.prochaineAction, aide:'faisable en une session'},
-    {n:'echeance', l:'Échéance', t:'date', effacable:true, v:p.echeance, aide:'facultatif'}
-  ], onOk:v => { p.prochaineAction = v.prochaineAction; p.echeance = v.echeance; p.modif = maintenant(); toast('Prochaine action enregistrée'); }});
 }
 function formContact(c0 = {}, apres){
   const ex = c0.id ? contact(c0.id) : null, id = ex ? ex.id : uid();
@@ -4379,9 +4286,8 @@ const ACTIONS = {
   /* Projets */
   'projet-nouveau': () => formProjet(),
   'projet-modifier': el => { const p = projet(el.dataset.id); if(p) formProjet(p); },
-  'projet-prochaine': el => { const p = projet(el.dataset.id); if(p) formProchaine(p); },
   'projet-archiver': el => { const p = projet(el.dataset.id); if(!p) return;
-    p.archive = !p.archive; p.modif = maintenant(); if(p.archive) DB.reglages.focusProjets = DB.reglages.focusProjets.filter(id => id !== p.id);
+    p.archive = !p.archive; p.modif = maintenant();
     sauver(); rendre(); toast(p.archive ? 'Projet archivé : il est dans Archives (menu)' : 'Projet réactivé'); },
   'projet-supprimer': async el => { const p = projet(el.dataset.id); if(!p) return;
     if(!await confirmerSuppression(p, {titre:'Supprimer ce projet ?', ok:'Supprimer le projet',
@@ -4389,7 +4295,6 @@ const ACTIONS = {
     const liens = {};
     LIENS_PROJET.forEach(k => { liens[k] = DB[k].filter(x => x.projet === p.id).map(x => x.id); DB[k].forEach(x => { if(x.projet === p.id) x.projet = null; }); });
     retirerVersCorbeille('projets', p, {liens});
-    DB.reglages.focusProjets = DB.reglages.focusProjets.filter(id => id !== p.id);
     sauver(); location.hash = '#/projets'; toast('Projet mis à la corbeille'); },
 
   /* Notes */
@@ -4536,10 +4441,6 @@ const ACTIONS = {
   'inbox-vider': async () => { const l = DB.inbox.filter(x => x.status === 'archived'); if(!l.length) return;
     if(!await confirmer({titre:'Vider les archives de l’Inbox ?', texte:`${pluriel(l.length, 'élément archivé', 'éléments archivés')} ${l.length > 1 ? 'seront mis' : 'sera mis'} à la corbeille.` + RAPPEL_CORBEILLE, ok:'Vider'})) return;
     l.forEach(x => retirerVersCorbeille('inbox', x)); sauver(); rendre(); toast('Archives de l’Inbox mises à la corbeille'); },
-
-  /* Revue */
-  'revue-enregistrer': () => { DB.reglages.focusProjets = unique([0, 1, 2].map(i => $('#revue-p' + i) && $('#revue-p' + i).value).filter(Boolean)).slice(0, 3);
-    DB.reglages.lastReview = maintenant(); sauver(); rendre(); toast('Revue enregistrée'); },
 
   /* Données */
   exporter: () => { telecharger(`life-panel-${aujourdhui()}.json`, JSON.stringify(DB, null, 2), 'application/json'); toast('Sauvegarde JSON téléchargée'); },
@@ -4688,6 +4589,10 @@ document.addEventListener('change', e => {
   if(el.matches('select[data-nouveau]')){
     const i = document.getElementById(el.dataset.nouveau); if(!i) return;
     i.hidden = el.value !== NOUVEAU; if(!i.hidden) i.focus();
+  } else if(el.matches('select[data-choix-dossier]')){   /* téléphone : menu déroulant des dossiers (Notes, Documents) */
+    if(el.dataset.choixDossier === 'notes'){ filtreTag = el.value; FILTRES.notes = ''; limiteNotes = NOTES_PAR_PAGE; }
+    else { filtreDocs = el.value; FILTRES.documents = ''; }
+    rendre();
   } else if(el.dataset.coche === 'tache'){
     const t = tache(el.dataset.id); if(!t) return;
     cocherTache(t, el.checked);
@@ -4920,8 +4825,8 @@ function indexRecherche(){
   const l = [], noms = new Map(DB.projets.map(p => [p.id, p.nom])), nomDe = id => noms.get(id) || '';
   /* projet : nom du projet (filtre projet:) · montant : mouvements seulement (filtre montant) · jour : date principale (filtre date) */
   const ajout = (m, o) => l.push({m, textes:[], long:'', sous:'', date:'', archive:false, tags:[], projet:'', montant:null, jour:'', ...o});
-  DB.projets.forEach(p => ajout('projets', {titre:p.nom, textes:[p.resume, p.prochaineAction], h:href('projet', p.id), sous:p.archive ? 'projet archivé' : extrait(p.resume, 70), date:p.modif, archive:p.archive,
-    projet:p.nom, jour:p.echeance || jourDe(p.modif)}));
+  DB.projets.forEach(p => ajout('projets', {titre:p.nom, textes:[p.resume], h:href('projet', p.id), sous:p.archive ? 'projet archivé' : extrait(p.resume, 70), date:p.modif, archive:p.archive,
+    projet:p.nom, jour:jourDe(p.modif)}));
   DB.documents.forEach(x => ajout('documents', {titre:x.titre, textes:[x.url, nomDe(x.projet)], long:x.note, h:x.url && !estDrive(x.url) ? x.url : href('document', x.id), externe:!!x.url && !estDrive(x.url),
     sous:[typeDocument(x.url).nom, x.echeance ? 'échéance ' + dateCourte(x.echeance) : '', nomDe(x.projet)].filter(Boolean).join(' · '), date:x.modif, archive:x.archive, tags:x.tags,
     projet:nomDe(x.projet), jour:x.echeance || jourDe(x.modif)}));
@@ -6576,9 +6481,9 @@ const OUTILS_IA = [
       const c = l[0], it = x => x.map(i => i.t + (i.ok ? ' (fait)' : ''));
       return sansVide({nom:c.nom, telephone:c.telephone, autre_telephone:c.autreTelephone, email:c.email, anniversaire:c.anniversaire, dernier_echange:c.derniereConversation, projet:nomProjet(c.projet),
         tags:c.tags, nouvelles:c.nouvelles.slice(0, 1500), a_dire:it(c.aDire), a_repondre:it(c.aRepondre), idees:it(c.idees), archive:c.archive || undefined}); }},
-  {nom:'projets', desc:'Projets actifs avec leurs chiffres (tâches ouvertes, dépenses, échéance, prochaine action).', params:{},
+  {nom:'projets', desc:'Projets actifs avec leurs chiffres (tâches ouvertes, dépenses, budget).', params:{},
     f:() => ({projets:projetsActifs().map(p => { const dep = mouvementsStats().filter(m => m.projet === p.id && m.type !== 'revenu');
-      return sansVide({nom:p.nom, resume:p.resume.slice(0, 300), prochaine_action:p.prochaineAction, echeance:p.echeance, budget:p.budget || '', depense:arrondi(somme(dep)) || '',
+      return sansVide({nom:p.nom, resume:p.resume.slice(0, 300), budget:p.budget || '', depense:arrondi(somme(dep)) || '',
         taches_ouvertes:DB.taches.filter(t => t.projet === p.id && !t.fait && !t.archive).length, notes:DB.notes.filter(n => n.projet === p.id && !n.archive).length}); })}) },
   {nom:'documents', desc:'Documents suivis et leur échéance.', params:{etat:{type:'string', enum:['expire', 'preavis', 'plus-tard', 'sans', 'tous'], description:'expire = expiré, preavis = à renouveler ; défaut : tous'}},
     f:a => { const l = documentsActifs().filter(x => !a.etat || a.etat === 'tous' || etatDocument(x).etat === a.etat);
@@ -6625,7 +6530,7 @@ ${liste(taches, 40, t => [court(t.nom, 90), t.date ? jour(t.date) + (t.heure ? '
 Agenda du ${auj} au ${fin} (événements, anniversaires, échéances ; les tâches datées sont ci-dessus) :
 ${liste(agenda, 60, ({j, x}) => jour(j) + ' : ' + court(texteItem(x), 80) + (x.type === 'evt' ? (s => s ? ' (' + court(s, 100) + ')' : '')(sousEvenement(x.ev, j)) : ''), 'agenda', 4500)}
 Projets actifs :
-${liste(projetsActifs(), 15, p => [court(p.nom, 60), p.prochaineAction ? 'prochaine action : ' + court(p.prochaineAction, 100) : '', p.echeance ? 'échéance ' + p.echeance : ''].filter(Boolean).join(' · '), 'projets', 1500)}
+${liste(projetsActifs(), 15, p => court(p.nom, 60), 'projets', 1500)}
 Documents expirés ou à échéance sous 30 jours :
 ${liste(docs, 15, x => court(x.titre, 80) + ' · ' + (x.echeance || etatDocument(x).etat), 'documents', 1000)}
 Contacts à qui répondre : ${repondre.slice(0, 20).map(c => court(c.nom, 40)).join(', ') || 'personne'}${repondre.length > 20 ? ' … (' + repondre.length + ' en tout)' : ''}
