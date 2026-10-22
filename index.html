@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-p4LBVEJq+rZ4+MWiPavuSeab/0k21TOOmTBd9BAnFV0='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-kTaUX/4thvJlctJbI/4Mj88yN0NK/3/ngIqt1jKEMSw='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.34
+  LIFE PANEL — v3.35
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -170,6 +170,9 @@
   action » retirée des projets (le texte déjà saisi reste dans les données, sans être affiché) ; Accueil sans les 4 chiffres
   du haut, calendrier à gauche ; Tâches sans les 3 chiffres du haut ; Notes et Documents sur téléphone et tablette : les
   dossiers passent dans un menu déroulant à côté de la recherche, au lieu d'un bloc d'étiquettes.
+  v3.35 : Notes et Documents sur téléphone et tablette : les dossiers (tags) passent dans un volet à droite, caché par défaut
+  (au lieu du menu déroulant). Le bouton à côté de la recherche, qui montre le dossier choisi et son nombre, l'ouvre ; choisir
+  un dossier le referme, comme ×, un appui à côté, Échap ou Retour. Grand écran : colonne de gauche inchangée.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -588,11 +591,15 @@ a.puce.lien-tel:hover{border-color:var(--i-bleu)}
 .dossier-btn.archives svg{color:var(--texte-faible)}
 .dossier-actif{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--texte-doux)}
 .dossier-actif svg{color:var(--i-jaune)}
-.choix-dossier,.barre-dossier{display:none}   /* téléphone et tablette seulement (voir plus bas) */
-.choix-dossier{position:relative;align-items:center;gap:8px;min-width:0;background:var(--champ);border:1px solid var(--trait);border-radius:9px;padding:0 10px;color:var(--i-jaune);transition:border-color .18s,box-shadow .18s}
-.choix-dossier:focus-within{border-color:#4a80c8;box-shadow:0 0 0 3px #3987e526}
-.choix-dossier select{appearance:none;-webkit-appearance:none;flex:1;min-width:0;border:0;background:transparent;outline:0;color:var(--texte);font:inherit;font-size:13.5px;padding:8px 20px 8px 0;text-overflow:ellipsis}
-.choix-dossier > svg:last-child{position:absolute;right:10px;pointer-events:none;color:var(--texte-faible)}
+.dossiers-tete{display:flex;align-items:center}
+.dossiers-tete .fermer,.dossiers-docs .dossiers-tete{display:none}   /* en-tête du volet : téléphone et tablette seulement */
+.choix-dossier,.barre-dossier,.voile-dossiers{display:none}   /* téléphone et tablette seulement (voir plus bas) */
+.choix-dossier{align-items:center;gap:8px;min-width:0;background:var(--champ);border:1px solid var(--trait);border-radius:9px;padding:8px 10px;font-size:13.5px;text-align:left;transition:border-color .18s,box-shadow .18s}
+.choix-dossier:focus-visible{outline:0;border-color:#4a80c8;box-shadow:0 0 0 3px #3987e526}
+.choix-dossier > svg{color:var(--texte-faible);flex-shrink:0}
+.choix-dossier > svg:first-child{color:var(--i-jaune)}
+.choix-dossier .nom-d{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.choix-dossier .nb{font-family:var(--mono);font-size:11px;color:var(--texte-faible)}
 .mosaique.notes{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
 .carte-note .depliable-tete{gap:11px}
 .date-t{font-size:11.5px;color:var(--texte-faible);white-space:nowrap}
@@ -993,8 +1000,16 @@ td.act{text-align:right;white-space:nowrap;width:1%}
 }
 @media (max-width:980px){
   .notes-cadre{grid-template-columns:1fr}
-  .notes-cadre > .dossiers,.barre-outils .dossier-actif{display:none}   /* les dossiers passent dans le menu déroulant */
+  .barre-outils .dossier-actif{display:none}   /* le bouton des dossiers montre déjà le dossier choisi */
   .choix-dossier,.barre-dossier{display:flex}
+  .voile-dossiers{display:block}
+  /* Dossiers : volet à droite, caché tant qu'on n'appuie pas sur le bouton des dossiers (comme le volet du menu, à gauche) */
+  .notes-cadre > .dossiers{position:fixed;top:0;right:0;bottom:0;z-index:56;width:min(284px,86vw);max-height:none;padding:0 12px 16px;border:0;border-left:1px solid var(--trait);border-radius:0;box-shadow:-18px 0 50px #00000080;overscroll-behavior:contain;transform:translateX(104%);visibility:hidden;transition:transform .22s ease,visibility 0s linear .22s;animation:none}
+  .notes-cadre > .dossiers.ouvert{transform:none;visibility:visible;transition:transform .22s ease}
+  .notes-cadre > .dossiers .dossiers-tete{display:flex;position:sticky;top:0;z-index:1;gap:10px;padding:12px 0 10px 8px;margin-bottom:4px;background:var(--carte);border-bottom:1px solid var(--trait-doux)}
+  .notes-cadre > .dossiers .dossiers-tete .etiq{padding:0}
+  .notes-cadre > .dossiers .dossiers-tete .fermer{display:inline-grid;margin-left:auto}
+  .notes-cadre > .dossiers .dossier-btn{padding:10px;font-size:14px}
   .notes-contenu .barre-outils{gap:8px}
   .notes-contenu .barre-outils .filtre{flex:1 1 110px;min-width:0}   /* recherche et dossier sur la même ligne */
   .choix-dossier{flex:1.5 1 150px}
@@ -2900,9 +2915,13 @@ function dossiersNotes(){
   if(sans && tags.length) l.push({v:SANS_TAG, nom:'Sans dossier', n:sans});
   return l;
 }
-/* Téléphone et tablette : la colonne des dossiers laisse la place à un menu déroulant dans la barre d'outils (une ligne au lieu d'un bloc d'étiquettes) */
-const optionDossier = (d, actif) => `<option value="${esc(d.v)}"${d.v === actif ? ' selected' : ''}>${esc(d.nom)}${d.n !== '' ? ' (' + d.n + ')' : ''}</option>`;
-const choixDossier = (page, options) => `<label class="choix-dossier">${ico('dossier', 15)}<select data-choix-dossier="${page}" aria-label="Dossier">${options}</select>${ico('chevronB', 13)}</label>`;
+/* Téléphone et tablette : la colonne des dossiers devient un volet à droite (voir ouvrirDossiers), ouvert par ce bouton
+   de la barre d'outils, qui montre le dossier choisi */
+const boutonDossiers = (icone, d) => `<button class="choix-dossier" data-action="dossiers-ouvrir" aria-controls="dossiers" aria-expanded="${dossiersOuverts}" title="Dossiers">
+  ${ico(icone, 15)}<span class="nom-d">${esc(d.nom)}</span>${d.n !== '' ? `<span class="nb">${d.n}</span>` : ''}${ico('chevronG', 13)}</button>`;
+const teteDossiers = () => `<div class="dossiers-tete"><span class="etiq">Dossiers</span>
+  <button class="icone-btn fermer" data-action="dossiers-fermer" aria-label="Fermer les dossiers" title="Fermer (Échap)">${ico('croix', 16)}</button></div>`;
+const voileDossiers = () => `<div class="voile-volet voile-dossiers${dossiersOuverts ? ' on' : ''}" id="voile-dossiers" data-action="dossiers-fermer"></div>`;
 const dansDossier = n => (!projetFiltre('notes') || n.projet === projetFiltre('notes')) &&
   !n.archive && (!filtreTag || (filtreTag === SANS_TAG ? !n.tags.length : aLeTag(n, filtreTag)));
 const vraiTag = () => filtreTag && filtreTag !== SANS_TAG;
@@ -2916,12 +2935,12 @@ function pageNotes(){
   const tete = titre('Notes', 'Chaque tag est un dossier. Clique sur un titre pour ouvrir la note, sur la flèche pour la déplier.', boutons);
   if(!DB.notes.length) return tete + `<div id="liste-notes">${listeNotes()}</div>`;
   return tete + `<div class="notes-cadre">
-    <nav class="carte dossiers" aria-label="Dossiers de notes"><div class="etiq">Dossiers</div>
+    <nav class="carte dossiers${dossiersOuverts ? ' ouvert' : ''}" id="dossiers" aria-label="Dossiers de notes">${teteDossiers()}
       ${dossiers.map(d => `<button class="dossier-btn${d.v === filtreTag ? ' actif' : ''}" data-action="filtre-tag" data-v="${esc(d.v)}"${d.v === filtreTag ? ' aria-current="true"' : ''}>
         ${ico(icone(d), 16)}<span class="nom-d">${esc(d.nom)}</span><span class="nb">${d.n}</span></button>`).join('')}
-    </nav>
+    </nav>${voileDossiers()}
     <div class="notes-contenu">
-      <div class="barre-outils">${champFiltre('notes', 'Rechercher…')}<span class="dossier-actif">${ico(icone(actif), 15)}${esc(actif.nom)}</span>${choixDossier('notes', dossiers.map(d => optionDossier(d, filtreTag)).join(''))}${puceFiltreProjet('notes')}</div>
+      <div class="barre-outils">${champFiltre('notes', 'Rechercher…')}<span class="dossier-actif">${ico(icone(actif), 15)}${esc(actif.nom)}</span>${boutonDossiers(icone(actif), actif)}${puceFiltreProjet('notes')}</div>
       <div id="liste-notes">${listeNotes()}</div>
     </div></div>`;
 }
@@ -2982,16 +3001,14 @@ function pageDocuments(){
   const tete = titre('Documents', vueDrive ? 'Les fichiers de ton dossier Google Drive, en lecture seule. Clic sur un fichier : il s’ouvre dans un nouvel onglet. L’icône calendrier crée une fiche pour suivre son échéance.'
     : 'Tes papiers et leurs liens, avec une échéance à surveiller si besoin. Clic sur un titre : le lien s’ouvre (ou la fiche, s’il n’y a pas de lien).', boutons);
   if(!DB.documents.length && !vueDrive) return tete + `<div id="liste-documents">${listeDocuments()}</div>`;
-  const choix = choixDossier('documents', optionDossier(g.tous, filtreDocs) + (fsDispo() ? optionDossier(drv, filtreDocs) : '') +
-    `<optgroup label="Échéances">${g.echeances.map(d => optionDossier(d, filtreDocs)).join('')}</optgroup>` +
-    (g.tags.length ? `<optgroup label="Tags">${g.tags.map(d => optionDossier(d, filtreDocs)).join('')}</optgroup>` : ''));
+  const choix = boutonDossiers(actif.icone, actif);
   const bouton = d => `<button class="dossier-btn${d.v === filtreDocs ? ' actif' : ''}${d.cls ? ' etat-' + d.cls : ''}" data-action="filtre-docs" data-v="${esc(d.v)}"${d.v === filtreDocs ? ' aria-current="true"' : ''}>
     ${ico(d.icone, 16)}<span class="nom-d">${esc(d.nom)}</span><span class="nb">${d.n}</span></button>`;
   return tete + `<div class="notes-cadre">
-    <nav class="carte dossiers dossiers-docs" aria-label="Dossiers de documents">${bouton(g.tous)}${fsDispo() ? bouton(drv) : ''}
+    <nav class="carte dossiers dossiers-docs${dossiersOuverts ? ' ouvert' : ''}" id="dossiers" aria-label="Dossiers de documents">${teteDossiers()}${bouton(g.tous)}${fsDispo() ? bouton(drv) : ''}
       <div class="etiq">Échéances</div>${g.echeances.map(bouton).join('')}
       ${g.tags.length ? `<div class="etiq">Tags</div>${g.tags.map(bouton).join('')}` : ''}
-    </nav>
+    </nav>${voileDossiers()}
     <div class="notes-contenu">${vueDrive ? `<div class="barre-outils barre-dossier">${choix}</div><section class="carte">${explorateurDrive('explo-drive', {base:'', mode:'parcourir'})}</section>` : `
       <div class="barre-outils">${champFiltre('documents', 'Rechercher…')}<span class="dossier-actif">${ico(actif.icone, 15)}${esc(actif.nom)}</span>${choix}${puceFiltreProjet('documents')}</div>
       <div id="liste-documents">${listeDocuments()}</div>`}
@@ -3373,7 +3390,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.34 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.35 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -3509,10 +3526,10 @@ function pousserHisto(){
 window.addEventListener('popstate', () => {
   if(histo.retourEnCours){   /* fin du retour demandé par fermerModale / fermerVolet */
     histo.retourEnCours = false;
-    if(histo.aPousser){ histo.aPousser = false; if(modaleOuverte() || voletOuvert()) pousserHisto(); }
+    if(histo.aPousser){ histo.aPousser = false; if(modaleOuverte() || voletOuvert() || dossiersOuverts) pousserHisto(); }
     return;
   }
-  if(histo.pousse){ histo.pousse = false; if(modaleOuverte()) fermerModale({historique:false}); else if(voletOuvert()) fermerVolet({historique:false}); }
+  if(histo.pousse){ histo.pousse = false; if(modaleOuverte()) fermerModale({historique:false}); else if(voletOuvert()) fermerVolet({historique:false}); else if(dossiersOuverts) fermerDossiers({historique:false}); }
 });
 /* Retire l'entrée d'historique de la fenêtre (ou du volet) qui se ferme autrement que par Retour */
 function retirerHisto(historique){
@@ -3523,7 +3540,7 @@ function retirerHisto(historique){
 const voletOuvert = () => $('#volet').classList.contains('ouvert');
 function ouvrirVolet(){
   if(voletOuvert() || modaleOuverte()) return;
-  fermerResultats(); fermerPalette();
+  fermerResultats(); fermerPalette(); fermerDossiers({historique:false});   /* le volet garde l'entrée d'historique des dossiers */
   const v = $('#volet'); v.inert = false; v.classList.add('ouvert'); $('#voile-volet').classList.add('on');
   $('#btn-volet').setAttribute('aria-expanded', 'true');
   pousserHisto();
@@ -3546,6 +3563,40 @@ $('#volet').addEventListener('click', e => {
   if(a && a.getAttribute('href') === (location.hash || '#/accueil')) fermerVolet();
   else if(b && b.dataset.action !== 'volet-fermer') fermerVolet();
 });
+/* --- Dossiers de Notes et Documents, téléphone et tablette : volet à droite (la colonne de gauche des grands écrans).
+   Il fait partie de la page : son état est gardé ici pour qu'une page redessinée (synchro) le laisse ouvert.
+   Voile, Échap et Retour le ferment, comme le volet du menu ; choisir un dossier aussi (choisirDossier). --- */
+let dossiersOuverts = false;
+function montrerDossiers(){
+  const d = $('#dossiers'), v = $('#voile-dossiers');
+  if(d) d.classList.toggle('ouvert', dossiersOuverts);
+  if(v) v.classList.toggle('on', dossiersOuverts);
+  $$('[aria-controls="dossiers"]').forEach(b => b.setAttribute('aria-expanded', String(dossiersOuverts)));
+}
+function ouvrirDossiers(){
+  const d = $('#dossiers');
+  if(dossiersOuverts || !d || modaleOuverte()) return;
+  fermerResultats();
+  dossiersOuverts = true; montrerDossiers();
+  pousserHisto();
+  const b = $('.dossier-btn.actif', d) || $('.dossier-btn', d); if(b) setTimeout(() => b.focus({preventScroll:true}), 30);
+}
+/* historique : false quand la fermeture vient d'un changement de page, du bouton Retour, ou d'une fenêtre qui prend le relais */
+function fermerDossiers({historique = true, focus = false} = {}){
+  if(!dossiersOuverts) return;
+  const d = $('#dossiers'), avait = focus || (d && d.contains(document.activeElement));
+  dossiersOuverts = false; montrerDossiers();
+  if(historique) retirerHisto(true);
+  const b = $('[aria-controls="dossiers"]'); if(avait && b) b.focus({preventScroll:true});
+}
+/* Un dossier choisi : la liste change tout de suite, puis le volet se referme en glissant par-dessus */
+function choisirDossier(){
+  const d = $('#dossiers'), focus = !!d && d.contains(document.activeElement);
+  rendre();
+  if(!dossiersOuverts) return;
+  const n = $('#dossiers'); if(n) void n.offsetWidth;   /* le volet redessiné part de l'état ouvert : sa fermeture est animée */
+  fermerDossiers({focus});
+}
 const teteModale = (titre, icone = 'plus', couleur = 'bleu') =>
   `<div class="modale-tete">${pastille(icone, couleur, 34, 17)}<h3 id="modale-titre">${titre}</h3><button class="icone-btn fermer" data-action="fermer" aria-label="Fermer">${ico('croix', 16)}</button></div>`;
 /* taille : '' | 'large' | 'fiche' (fenêtre agrandie des notes et contacts) ; saisie : placer le curseur dans le 1er champ */
@@ -3555,6 +3606,7 @@ const fondInerte = oui => FOND_MODALE.forEach(sel => { const el = $(sel); if(el)
 function ouvrirModale(html, {large = false, taille = '', saisie = true} = {}){
   const cb = surFermeture; surFermeture = null; retourFormulaire = null; ficheOuverte = null; if(cb) cb();
   if(voletOuvert()) fermerVolet({historique:false});   /* la fenêtre garde l'entrée d'historique du volet */
+  fermerDossiers({historique:false});   /* … ou celle des dossiers */
   if(!modaleOuverte()) focusAvant = document.activeElement;
   const m = $('#modale'); m.className = 'modale' + (large ? ' large' : '') + (taille ? ' ' + taille : ''); m.innerHTML = html; m.scrollTop = 0;
   $('#voile').classList.add('on'); fondInerte(true);
@@ -4196,6 +4248,8 @@ const ACTIONS = {
   volet: () => voletOuvert() ? fermerVolet() : ouvrirVolet(),
   theme: () => appliquerTheme(!themeClair()),
   'volet-fermer': () => fermerVolet(),
+  'dossiers-ouvrir': () => ouvrirDossiers(),
+  'dossiers-fermer': () => fermerDossiers(),
   recharger: () => location.reload(),
   palette: () => ouvrirPalette(),
   capture: () => ficheCapture(),
@@ -4309,7 +4363,7 @@ const ACTIONS = {
   'note-archiver': el => { const n = note(el.dataset.id); if(!n) return;
     const a = basculerArchive(n), depuisFiche = ficheOuverte && ficheOuverte.id === n.id; sauver(); rendre(); if(depuisFiche) ficheNote(n.id);
     toast(a ? 'Note archivée : elle est dans Archives (menu)' : 'Note sortie des archives'); },
-  'filtre-tag': el => { const v = el.dataset.v || ''; filtreTag = filtreTag === v ? '' : v; FILTRES.notes = ''; limiteNotes = NOTES_PAR_PAGE; rendre(); },
+  'filtre-tag': el => { const v = el.dataset.v || ''; filtreTag = filtreTag === v ? '' : v; FILTRES.notes = ''; limiteNotes = NOTES_PAR_PAGE; choisirDossier(); },
 
   /* Finances */
   'mvt-nouveau': el => formMouvement({date:el.dataset.date || aujourdhui(), projet:el.dataset.projet || ''}),
@@ -4416,7 +4470,7 @@ const ACTIONS = {
   'document-tache': el => { const x = unDocument(el.dataset.id); if(!x) return; const {etat} = etatDocument(x);
     formTache({nom:'Renouveler : ' + x.titre, date:aujourdhui(), projet:x.projet || '', priorite:etat === 'expire' ? 'p1' : 'p2', tags:x.tags}); },
   'documents-deplier': () => toutDeplier('document-', documentsAffiches(), FILTRES.documents),
-  'filtre-docs': el => { const v = el.dataset.v || ''; filtreDocs = filtreDocs === v ? '' : v; FILTRES.documents = ''; rendre(); },
+  'filtre-docs': el => { const v = el.dataset.v || ''; filtreDocs = filtreDocs === v ? '' : v; FILTRES.documents = ''; choisirDossier(); },
   'filtre-projet-retirer': () => { filtreProjet = null; rendre(); },
   /* Tags : un clic sur un tag existant l'ajoute au champ (ou le retire) */
   'tag-basculer': el => { const champ = el.closest('.champ'), i = champ && $('[data-tags-saisie]', champ); if(i) choisirTag(i, el.dataset.v); },
@@ -4589,10 +4643,6 @@ document.addEventListener('change', e => {
   if(el.matches('select[data-nouveau]')){
     const i = document.getElementById(el.dataset.nouveau); if(!i) return;
     i.hidden = el.value !== NOUVEAU; if(!i.hidden) i.focus();
-  } else if(el.matches('select[data-choix-dossier]')){   /* téléphone : menu déroulant des dossiers (Notes, Documents) */
-    if(el.dataset.choixDossier === 'notes'){ filtreTag = el.value; FILTRES.notes = ''; limiteNotes = NOTES_PAR_PAGE; }
-    else { filtreDocs = el.value; FILTRES.documents = ''; }
-    rendre();
   } else if(el.dataset.coche === 'tache'){
     const t = tache(el.dataset.id); if(!t) return;
     cocherTache(t, el.checked);
@@ -4694,6 +4744,7 @@ document.addEventListener('keydown', e => {
     if(paletteOuverte()) fermerPalette();
     else if(modaleOuverte()) fermerModale();
     else if(voletOuvert()) fermerVolet();
+    else if(dossiersOuverts) fermerDossiers();
     else if(!$('#resultats-globaux').hidden){ fermerResultats(); $('#recherche-globale').blur(); }
     return;
   }
@@ -4785,7 +4836,7 @@ function commandes(){
     {titre:'Exporter une sauvegarde', sous:'Tout, dans un fichier JSON daté', icone:'telecharger', action:'exporter'}
   ];
 }
-function ouvrirPalette(){ fermerModale(); fermerVolet(); fermerResultats(); palette.index = 0; $('#palette').classList.add('on'); const i = $('#palette-saisie'); i.value = ''; rendrePalette(); i.focus(); }
+function ouvrirPalette(){ fermerModale(); fermerVolet(); fermerDossiers(); fermerResultats(); palette.index = 0; $('#palette').classList.add('on'); const i = $('#palette-saisie'); i.value = ''; rendrePalette(); i.focus(); }
 function fermerPalette(){ $('#palette').classList.remove('on'); }
 function rendrePalette(){
   palette.items = commandes().filter(c => correspond($('#palette-saisie').value, c.titre, c.sous));
@@ -7073,7 +7124,7 @@ async function demarrer(){
   window.addEventListener('online', () => { if(ghActif()) ghSynchroniser('reseau'); });
   /* Vérification toutes les 30 s tant que la page est affichée (sauf si une synchro vient d'avoir lieu) */
   setInterval(() => { if(ghActif() && document.visibilityState === 'visible' && !gh.enCours && Date.now() - gh.controle > 25000) ghSynchroniser('periodique'); }, 30000);
-  window.addEventListener('hashchange', () => { fermerModale({historique:false}); fermerVolet({historique:false}); fermerPalette(); rendre(); });
+  window.addEventListener('hashchange', () => { fermerModale({historique:false}); fermerVolet({historique:false}); fermerDossiers({historique:false}); fermerPalette(); rendre(); });
   /* Une erreur imprévue n'est plus silencieuse : un message l'annonce */
   const signaler = m => { console.error(m); toast('Un problème est survenu : ' + (m && m.message || m) + '. Recharge la page (F5) si quelque chose ne répond plus.'); };
   window.addEventListener('error', e => signaler(e.error || e.message));
