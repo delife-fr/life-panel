@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-kTaUX/4thvJlctJbI/4Mj88yN0NK/3/ngIqt1jKEMSw='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-bYCzAB2IDCWz6RewRwDocjTX4SCZoPRGnLboRqDS/Ng='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.35
+  LIFE PANEL — v3.36
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -173,6 +173,14 @@
   v3.35 : Notes et Documents sur téléphone et tablette : les dossiers (tags) passent dans un volet à droite, caché par défaut
   (au lieu du menu déroulant). Le bouton à côté de la recherche, qui montre le dossier choisi et son nombre, l'ouvre ; choisir
   un dossier le referme, comme ×, un appui à côté, Échap ou Retour. Grand écran : colonne de gauche inchangée.
+  v3.36 : mise en page. Téléphone : mouvements (Finances, projet) en liste, libellé et montant sur la 1re ligne (le montant était hors
+  de l'écran), le libellé ouvre la modification ; chiffres clés deux par ligne ; boutons d'une tâche derrière « ⋯ » ; aucun texte sous
+  12 px ; choix des formulaires en cases égales. Écran tactile : boutons de 40 px, zones d'appui agrandies. Tablette : deux colonnes,
+  cases des calendriers ≤ 52 px. Graphiques redessinés à la largeur de leur carte (textes à leur vraie taille), à la hauteur de leur
+  voisine. Cartes sans vide : Données en deux colonnes « maçonnerie », projet en deux piles, Budgets projets seulement s'il y en a.
+  Contacts : anniversaires des 30 jours en tête, puis annuaire A, B, C… une ligne par fiche. Tâches sur grand écran : deux colonnes.
+  Documents : échéance à droite du titre. Chiffres en police normale (alignés) au lieu de la chasse fixe ; pied de page sans Ctrl + K
+  sur écran tactile. Échelle commune : 10 tailles de texte (--t1 à --t10), 6 arrondis, espacements 2 à 24 px.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -211,7 +219,10 @@
   /* Mêmes teintes éclaircies : pictogrammes et petits textes */
   --i-bleu:#7ab0f0; --i-vert:#4ec89b; --i-jaune:#e5b54a; --i-rose:#e78aab; --i-violet:#b0a7f2; --i-orange:#ef8759; --i-gris:#b3b3ba;
   --i-rouge:#ff6b6b;   /* réservé à l'échec d'écriture */
-  --rayon:14px;
+  /* Échelle commune (v3.36) : 10 tailles de texte et 6 arrondis ; les espacements (gap) suivent 2, 4, 6, 8, 10, 12, 16, 20, 24 px.
+     Sur téléphone, --t1 passe à 12 px (aucun texte plus petit, voir « 11. Écrans plus petits »). */
+  --t1:11px; --t2:12px; --t3:13px; --t4:14px; --t5:15px; --t6:16px; --t7:18px; --t8:21px; --t9:24px; --t10:30px;
+  --r1:4px; --r2:6px; --r3:8px; --r4:10px; --rayon:14px; --r6:16px;
   --ombre:0 1px 2px #00000040, 0 8px 24px #00000030;
   --police:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   --mono:ui-monospace,"Cascadia Mono","Segoe UI Mono",Consolas,monospace;
@@ -240,30 +251,30 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
-body{background:var(--fond);color:var(--texte);font-family:var(--police);font-size:15px;line-height:1.45;min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+body{background:var(--fond);color:var(--texte);font-family:var(--police);font-size:var(--t5);line-height:1.45;min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 a{color:inherit;text-decoration:none}
-:focus-visible{outline:2px solid var(--i-bleu);outline-offset:2px;border-radius:6px}
+:focus-visible{outline:2px solid var(--i-bleu);outline-offset:2px;border-radius:var(--r2)}
 ::selection{background:#3987e555}
 .doux{color:var(--texte-doux)} .faible{color:var(--texte-faible)}
 .vert{color:var(--i-vert)} .rose{color:var(--i-rose)} .jaune{color:var(--i-jaune)}
-.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.mono{font-variant-numeric:tabular-nums}
 .tronque{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.aide{font-size:13px;color:var(--texte-doux);margin:0 0 14px}
+.aide{font-size:var(--t3);color:var(--texte-doux);margin:0 0 14px}
 .boutons{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .boutons > .btn{max-width:100%;white-space:normal}   /* un bouton plus large que la carte revient à la ligne au lieu de déborder */
-code{font-family:var(--mono);font-size:.9em;background:rgb(var(--sur) / 0.059);padding:1px 5px;border-radius:4px}
+code{font-family:var(--mono);font-size:max(.9em, var(--t1));background:rgb(var(--sur) / 0.059);padding:1px 5px;border-radius:var(--r1)}
 [hidden]{display:none !important}
 
 /* ==========================================================================
    2. BARRE DU HAUT
    ========================================================================== */
 .barre{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:12px;padding:10px 24px;background:var(--barre);backdrop-filter:blur(12px);border-bottom:1px solid var(--trait-doux)}
-.marque{display:flex;align-items:center;gap:11px;flex-shrink:0;border-radius:10px}
-.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(145deg,#5b72d6,#7d5fc1);color:#fff;box-shadow:0 2px 8px #0006}
-.marque-txt strong{display:block;font-size:14px;line-height:1.2}
-.marque-txt span{display:block;font-size:11px;color:var(--texte-faible)}
+.marque{display:flex;align-items:center;gap:10px;flex-shrink:0;border-radius:var(--r4)}
+.logo{width:34px;height:34px;border-radius:var(--r4);display:grid;place-items:center;background:linear-gradient(145deg,#5b72d6,#7d5fc1);color:#fff;box-shadow:0 2px 8px #0006}
+.marque-txt strong{display:block;font-size:var(--t4);line-height:1.2}
+.marque-txt span{display:block;font-size:var(--t1);color:var(--texte-faible)}
 .barre .marque{margin-right:auto}
 /* Volet de navigation : caché à gauche, ouvert par ☰ par-dessus la page (voile derrière) ; se referme au choix d'une entrée */
 .volet{position:fixed;top:0;left:0;bottom:0;z-index:56;width:min(284px,86vw);display:flex;flex-direction:column;gap:4px;padding:12px 12px 16px;background:var(--carte);border-right:1px solid var(--trait);box-shadow:18px 0 50px #00000080;overflow-y:auto;overscroll-behavior:contain;transform:translateX(-104%);visibility:hidden;transition:transform .22s ease,visibility 0s linear .22s}
@@ -274,65 +285,65 @@ code{font-family:var(--mono);font-size:.9em;background:rgb(var(--sur) / 0.059);p
 .volet-tete .fermer{margin-left:auto}
 .volet .menu{display:flex;flex-direction:column;gap:2px}
 .volet-pied{margin-top:auto;padding-top:8px;border-top:1px solid var(--trait-doux);display:flex;flex-direction:column;gap:2px}
-.volet a,.ligne-volet{display:flex;align-items:center;gap:11px;width:100%;color:var(--texte-doux);font:inherit;font-size:14px;text-align:left;padding:9px 12px;border:0;border-radius:10px;background:none;cursor:pointer;transition:background .15s,color .15s}
+.volet a,.ligne-volet{display:flex;align-items:center;gap:10px;width:100%;color:var(--texte-doux);font:inherit;font-size:var(--t4);text-align:left;padding:9px 12px;border:0;border-radius:var(--r4);background:none;cursor:pointer;transition:background .15s,color .15s}
 .volet a:hover,.ligne-volet:hover{background:rgb(var(--sur) / 0.051);color:var(--texte)}
 .volet a.actif{background:rgb(var(--sur) / 0.078);color:var(--texte)}
 .volet a svg,.ligne-volet svg{color:var(--texte-faible);flex-shrink:0}
 .volet a.actif svg{color:var(--i-bleu)}
 .volet .badge,.ligne-volet kbd{margin-left:auto}
-.volet .badge{font-family:var(--mono);font-size:10.5px;background:#c9850030;color:var(--i-jaune);border-radius:99px;padding:0 6px;line-height:16px}
+.volet .badge{font-variant-numeric:tabular-nums;font-size:var(--t1);background:#c9850030;color:var(--i-jaune);border-radius:99px;padding:0 6px;line-height:16px}
 .volet .badge.gris{background:rgb(var(--sur) / 0.071);color:var(--texte-faible)}
 /* IA locale : carte et fenêtre « Demander » */
-.etat-ia{margin:0 0 12px;font-size:13px;color:var(--texte-doux)} .etat-ia.ok{color:var(--i-vert)} .etat-ia.ko{color:var(--i-jaune)}
+.etat-ia{margin:0 0 12px;font-size:var(--t3);color:var(--texte-doux)} .etat-ia.ok{color:var(--i-vert)} .etat-ia.ko{color:var(--i-jaune)}
 .ia-fil{display:flex;flex-direction:column;gap:10px;max-height:min(56vh,560px);overflow:auto;padding:2px 2px 8px;overscroll-behavior:contain}
-.ia-moi{align-self:flex-end;max-width:85%;background:#7c5ec133;border:1px solid #9085e955;border-radius:14px 14px 4px 14px;padding:8px 12px;white-space:pre-wrap;overflow-wrap:anywhere}
-.ia-rep{align-self:flex-start;max-width:100%;background:var(--fond-2);border:1px solid var(--trait);border-radius:14px 14px 14px 4px;padding:10px 13px;line-height:1.5;overflow-wrap:anywhere}
+.ia-moi{align-self:flex-end;max-width:85%;background:#7c5ec133;border:1px solid #9085e955;border-radius:var(--rayon) var(--rayon) var(--r1) var(--rayon);padding:8px 12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.ia-rep{align-self:flex-start;max-width:100%;background:var(--fond-2);border:1px solid var(--trait);border-radius:var(--rayon) var(--rayon) var(--rayon) var(--r1);padding:10px 13px;line-height:1.5;overflow-wrap:anywhere}
 .ia-rep.ia-erreur{border-color:#e5b54a66;color:var(--i-jaune)}
-.ia-outil{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--texte-faible);padding-left:6px}
-.ia-mesure{display:block;margin-top:6px;font-size:11.5px;color:var(--texte-faible);font-family:var(--mono)}
-.ia-attente{display:block;font-size:12px;color:var(--texte-faible);animation:ia-pulse 1.4s ease-in-out infinite}
+.ia-outil{display:flex;align-items:center;gap:6px;font-size:var(--t2);color:var(--texte-faible);padding-left:6px}
+.ia-mesure{display:block;margin-top:6px;font-size:var(--t2);color:var(--texte-faible);font-variant-numeric:tabular-nums}
+.ia-attente{display:block;font-size:var(--t2);color:var(--texte-faible);animation:ia-pulse 1.4s ease-in-out infinite}
 @keyframes ia-pulse{50%{opacity:.45}}
 @media (prefers-reduced-motion:reduce){.ia-attente{animation:none}}
 .ia-suggestions{display:flex;flex-wrap:wrap;gap:6px} .ia-suggestions .puce{cursor:pointer;text-align:left}
 .ia-saisie{margin-top:10px} .ia-saisie textarea{width:100%;resize:vertical;min-height:52px}
 .ia-saisie .actions{margin-top:8px}
 .bonjour .meta .btn{margin-left:4px}
-.ia-bandeau{display:flex;align-items:center;gap:8px;margin:0 0 12px;padding:8px 11px;border-radius:10px;background:#7c5ec126;border:1px solid #9085e955;color:var(--texte);font-size:13px;grid-column:1/-1}
+.ia-bandeau{display:flex;align-items:center;gap:8px;margin:0 0 12px;padding:8px 11px;border-radius:var(--r4);background:#7c5ec126;border:1px solid #9085e955;color:var(--texte);font-size:var(--t3);grid-column:1/-1}
 .ia-bandeau svg{color:var(--i-violet);flex-shrink:0}
 .volet .badges{margin-left:auto;display:flex;gap:4px}
 .volet .badges .badge{margin-left:0}
 .volet .badge.alerte{background:#e5484d2e;color:var(--i-rose)}
 .encart-archives .compte{margin-left:2px}
 .recherche-wrap{position:relative;flex-shrink:0}
-.recherche{display:flex;align-items:center;gap:8px;background:var(--carte);border:1px solid var(--trait);border-radius:9px;padding:7px 9px 7px 11px;width:280px;color:var(--texte-faible);transition:border-color .18s,box-shadow .18s}
+.recherche{display:flex;align-items:center;gap:8px;background:var(--carte);border:1px solid var(--trait);border-radius:var(--r4);padding:7px 9px 7px 11px;width:280px;color:var(--texte-faible);transition:border-color .18s,box-shadow .18s}
 .recherche:focus-within{border-color:#4a80c8;box-shadow:0 0 0 3px #3987e526}
-.recherche input{border:0;background:transparent;outline:0;color:var(--texte);font-size:13.5px;width:100%;min-width:0}
+.recherche input{border:0;background:transparent;outline:0;color:var(--texte);font-size:var(--t4);width:100%;min-width:0}
 .recherche input::placeholder{color:var(--texte-faible)}
-kbd{font-family:var(--mono);font-size:10.5px;color:var(--texte-faible);border:1px solid var(--trait);border-radius:5px;padding:0 5px;line-height:17px;white-space:nowrap}
-.resultats{position:absolute;right:0;top:calc(100% + 8px);width:min(460px,92vw);max-height:70vh;overflow:auto;background:var(--carte-survol);border:1px solid var(--trait);border-radius:14px;box-shadow:0 24px 60px #000000a0;padding:10px}
+kbd{font-family:var(--mono);font-size:var(--t1);color:var(--texte-faible);border:1px solid var(--trait);border-radius:var(--r2);padding:0 5px;line-height:17px;white-space:nowrap}
+.resultats{position:absolute;right:0;top:calc(100% + 8px);width:min(460px,92vw);max-height:70vh;overflow:auto;background:var(--carte-survol);border:1px solid var(--trait);border-radius:var(--rayon);box-shadow:0 24px 60px #000000a0;padding:10px}
 .resultats .groupe{padding:4px 0 8px}
 .resultats .groupe + .groupe{border-top:1px solid var(--trait-doux);padding-top:8px}
-.resultat{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:7px 9px;border-radius:8px;font-size:13.5px;transition:background .15s}
+.resultat{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:7px 9px;border-radius:var(--r3);font-size:var(--t4);transition:background .15s}
 .resultat:hover,.resultat:focus{background:rgb(var(--sur) / 0.051);outline:none}
-.resultat .r-sous{font-size:11.5px;color:var(--texte-faible);text-align:right;max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.resultat .r-sous{font-size:var(--t2);color:var(--texte-faible);text-align:right;max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .resultat.tous{justify-content:flex-start;align-items:center;gap:8px;margin-top:4px;color:var(--i-bleu)}
 .resultat.tous kbd{margin-left:auto}
-mark{background:#e5b54a3d;color:inherit;border-radius:3px;padding:0 1px}
+mark{background:#e5b54a3d;color:inherit;border-radius:var(--r1);padding:0 1px}
 .tag-r{color:var(--i-violet)}
 .tag-r mark{padding:0}
 /* Page de recherche */
 .filtre.recherche-page{flex:1 1 560px;max-width:760px;padding:10px 14px}
-.filtre.recherche-page input{font-size:15px}
+.filtre.recherche-page input{font-size:var(--t5)}
 .onglets-recherche{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
-.onglet-r{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--trait);background:transparent;color:var(--texte-doux);border-radius:99px;padding:5px 12px;font-size:13px;transition:background .15s,color .15s,border-color .15s}
+.onglet-r{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--trait);background:transparent;color:var(--texte-doux);border-radius:99px;padding:5px 12px;font-size:var(--t3);transition:background .15s,color .15s,border-color .15s}
 .onglet-r:hover{background:rgb(var(--sur) / 0.051);color:var(--texte)}
 .onglet-r.actif{background:#3987e522;border-color:#3987e566;color:var(--i-bleu)}
 .liste.resultats-page > li{padding:2px 0}
-.resultat-ligne{display:flex;gap:11px;align-items:flex-start;width:100%;min-width:0;padding:8px 6px;border-radius:9px;transition:background .15s}
+.resultat-ligne{display:flex;gap:10px;align-items:flex-start;width:100%;min-width:0;padding:8px 6px;border-radius:var(--r4);transition:background .15s}
 .resultat-ligne:hover,.resultat-ligne:focus-visible{background:rgb(var(--sur) / 0.031)}
 .resultat-ligne .corps .t{white-space:normal}
-.extrait-r{display:block;font-size:12.5px;color:var(--texte-doux);margin-top:4px;line-height:1.45;overflow-wrap:anywhere}
-.rond{flex-shrink:0;width:36px;height:36px;border-radius:10px;border:1px solid var(--trait);background:var(--carte);display:grid;place-items:center;color:var(--texte-doux);transition:background .18s,color .18s,transform .15s}
+.extrait-r{display:block;font-size:var(--t3);color:var(--texte-doux);margin-top:4px;line-height:1.45;overflow-wrap:anywhere}
+.rond{flex-shrink:0;width:36px;height:36px;border-radius:var(--r4);border:1px solid var(--trait);background:var(--carte);display:grid;place-items:center;color:var(--texte-doux);transition:background .18s,color .18s,transform .15s}
 .rond:hover{background:var(--carte-survol);color:var(--texte)}
 .rond:active{transform:scale(.93)}
 .rond.plus{background:#3987e518;border-color:#3987e545;color:var(--i-bleu)}
@@ -349,13 +360,13 @@ mark{background:#e5b54a3d;color:inherit;border-radius:3px;padding:0 1px}
    3. PAGE ET GRILLES
    ========================================================================== */
 .page{display:block;max-width:1560px;margin:0 auto;padding:26px 24px 30px}
-.bonjour{display:flex;align-items:flex-end;justify-content:space-between;gap:14px 20px;flex-wrap:wrap;margin-bottom:22px}
-.bonjour h1{margin:0;font-size:30px;letter-spacing:-.02em;font-weight:650;line-height:1.15}
-.bonjour p{margin:6px 0 0;color:var(--texte-doux);font-size:14.5px;max-width:75ch}
+.bonjour{display:flex;align-items:flex-end;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;margin-bottom:22px}
+.bonjour h1{margin:0;font-size:var(--t10);letter-spacing:-.02em;font-weight:650;line-height:1.15}
+.bonjour p{margin:6px 0 0;color:var(--texte-doux);font-size:var(--t5);max-width:75ch}
 .bonjour .boutons{flex-shrink:0;max-width:100%}
-.meta{display:flex;align-items:center;gap:14px;color:var(--texte-doux);font-size:13px;flex-wrap:wrap}
+.meta{display:flex;align-items:center;gap:12px;color:var(--texte-doux);font-size:var(--t3);flex-wrap:wrap}
 .meta .sep{width:1px;height:16px;background:var(--trait)}
-.retour{display:inline-flex;align-items:center;gap:6px;margin:0 0 8px -6px;padding:3px 8px 3px 4px;border-radius:7px;color:var(--texte-faible);font-size:13px;transition:color .15s,background .15s}
+.retour{display:inline-flex;align-items:center;gap:6px;margin:0 0 8px -6px;padding:3px 8px 3px 4px;border-radius:var(--r2);color:var(--texte-faible);font-size:var(--t3);transition:color .15s,background .15s}
 .retour:hover{color:var(--i-bleu);background:#3987e51a}
 .grille{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;align-items:start}
 #vue > * + *{margin-top:16px}
@@ -368,29 +379,32 @@ mark{background:#e5b54a3d;color:inherit;border-radius:3px;padding:0 1px}
 .mosaique{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;align-items:start}
 .pile{display:flex;flex-direction:column;gap:16px;min-width:0}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-h2.section{font-size:14px;font-weight:600;color:var(--texte-doux);margin:28px 0 12px}
+h2.section{font-size:var(--t4);font-weight:600;color:var(--texte-doux);margin:28px 0 12px}
+/* Cartes en colonnes « maçonnerie » (page Données) : chacune garde sa hauteur, sans trou ni carte étirée */
+.colonnes-cartes{columns:2 340px;column-gap:16px;margin-bottom:-16px}
+.colonnes-cartes > .carte{break-inside:avoid;margin:0 0 16px}
 
 /* ==========================================================================
    4. CARTE
    ========================================================================== */
-.carte{position:relative;min-width:0;background:var(--carte);border:1px solid var(--trait-doux);border-radius:var(--rayon);padding:16px 17px;box-shadow:var(--ombre);transition:border-color .2s,background .2s,transform .15s,box-shadow .2s}
+.carte{position:relative;min-width:0;background:var(--carte);border:1px solid var(--trait-doux);border-radius:var(--rayon);padding:16px;box-shadow:var(--ombre);transition:border-color .2s,background .2s,transform .15s,box-shadow .2s}
 a.carte{display:block;color:inherit}
 .carte.cliquable{cursor:pointer}
 .carte.cliquable:hover{border-color:var(--trait);background:var(--carte-survol);transform:translateY(-2px);box-shadow:0 2px 4px #00000040,0 14px 30px #00000045}
 .anim .carte{animation:monte .4s cubic-bezier(.2,.8,.3,1) both;animation-delay:calc(var(--i,0) * 35ms)}
 @keyframes monte{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .entete-carte{display:flex;align-items:center;gap:10px;margin-bottom:14px;min-height:32px}
-.entete-carte h2{margin:0;font-size:15.5px;font-weight:600;letter-spacing:-.01em}
+.entete-carte h2{margin:0;font-size:var(--t6);font-weight:600;letter-spacing:-.01em}
 .entete-carte .droite{margin-left:auto;display:flex;align-items:center;gap:6px}
-.pastille{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;flex-shrink:0}
-.lien-sous{display:flex;align-items:center;gap:5px;color:var(--texte-faible);font-size:12.5px;padding:4px 6px;border-radius:7px;white-space:nowrap;border:0;background:transparent;transition:color .18s,background .18s}
+.pastille{width:32px;height:32px;border-radius:var(--r4);display:grid;place-items:center;flex-shrink:0}
+.lien-sous{display:flex;align-items:center;gap:4px;color:var(--texte-faible);font-size:var(--t3);padding:4px 6px;border-radius:var(--r2);white-space:nowrap;border:0;background:transparent;transition:color .18s,background .18s}
 .lien-sous:hover{color:var(--i-bleu);background:#3987e51f}
-.etiq{font-size:11px;color:var(--texte-faible);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
-.compte{font-family:var(--mono);font-size:11px;background:rgb(var(--sur) / 0.071);color:var(--texte-doux);border-radius:99px;padding:1px 8px}
-.bandeau{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:13px 16px;border-radius:var(--rayon);border:1px solid var(--trait-doux);background:var(--carte)}
+.etiq{font-size:var(--t1);color:var(--texte-faible);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.compte{font-variant-numeric:tabular-nums;font-size:var(--t1);background:rgb(var(--sur) / 0.071);color:var(--texte-doux);border-radius:99px;padding:1px 8px}
+.bandeau{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 16px;border-radius:var(--rayon);border:1px solid var(--trait-doux);background:var(--carte)}
 .bandeau .txt{flex:1;min-width:200px}
-.bandeau .txt strong{display:block;font-size:13.5px}
-.bandeau .txt span{display:block;font-size:12.5px;color:var(--texte-doux)}
+.bandeau .txt strong{display:block;font-size:var(--t4)}
+.bandeau .txt span{display:block;font-size:var(--t3);color:var(--texte-doux)}
 .bandeau.bleu{border-color:#3987e538;background:#3987e50d}
 .bandeau.jaune{border-color:#c9850040;background:linear-gradient(90deg,#c9850014,transparent 70%),var(--carte)}
 
@@ -398,10 +412,10 @@ a.carte{display:block;color:inherit}
    5. CHIFFRES CLÉS ET JAUGES
    ========================================================================== */
 .kpi .haut{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.kpi .haut span{font-size:13px;color:var(--texte-doux)}
-.kpi .valeur,.gros{font-size:29px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1;white-space:nowrap}
-.kpi .valeur small,.gros small{font-size:17px;color:var(--texte-faible);font-weight:500}
-.kpi .note{margin-top:6px;font-size:12.5px;color:var(--texte-doux);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kpi .haut span{font-size:var(--t3);color:var(--texte-doux)}
+.kpi .valeur,.gros{font-size:var(--t10);font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1;white-space:nowrap}
+.kpi .valeur small,.gros small{font-size:var(--t7);color:var(--texte-faible);font-weight:500}
+.kpi .note{margin-top:6px;font-size:var(--t3);color:var(--texte-doux);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .kpi .note.bien{color:var(--i-vert)} .kpi .note.att{color:var(--i-jaune)} .kpi .note.dep{color:var(--i-rose)}
 .barre-prog{display:block;height:6px;border-radius:99px;background:rgb(var(--sur) / 0.071);overflow:hidden;margin-top:11px}
 .barre-prog > i{display:block;height:100%;border-radius:99px;background:var(--bleu)}
@@ -413,13 +427,13 @@ a.carte{display:block;color:inherit}
 .barre-prog .repere{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--texte);opacity:.75}
 .anim .barre-prog > i{animation:remplit 1s cubic-bezier(.22,.8,.3,1) .2s both}
 @keyframes remplit{from{width:0}}
-.ligne-budget{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--texte-doux);margin-top:10px}
+.ligne-budget{display:flex;justify-content:space-between;gap:10px;font-size:var(--t3);color:var(--texte-doux);margin-top:10px}
 
 /* ==========================================================================
    6. LISTES, TÂCHES, CASES À COCHER
    ========================================================================== */
 .liste{list-style:none;margin:0;padding:0}
-.liste > li{display:flex;align-items:center;gap:11px;padding:10px 2px;border-top:1px solid var(--trait-doux);min-width:0}
+.liste > li{display:flex;align-items:center;gap:10px;padding:10px 2px;border-top:1px solid var(--trait-doux);min-width:0}
 .liste > li:first-child{border-top:0;padding-top:2px}
 /* Ligne avec des boutons (échéances, Inbox, corbeille…) : quand la place manque, les boutons passent
    sous le texte au lieu de l'écraser (sur téléphone, le texte n'avait plus que quelques pixels) */
@@ -427,27 +441,27 @@ a.carte{display:block;color:inherit}
 .liste > li:has(> .boutons) > .corps{flex:1 1 190px}
 .liste > li:has(> .boutons) > .boutons{margin-left:auto}
 .liste .corps{flex:1;min-width:0;display:flex;flex-direction:column}
-.liste .corps .t{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.liste .corps .s{font-size:11.5px;color:var(--texte-faible);margin-top:3px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;overflow-wrap:anywhere}
+.liste .corps .t{font-size:var(--t4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.liste .corps .s{font-size:var(--t2);color:var(--texte-faible);margin-top:3px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;overflow-wrap:anywhere}
 .liste .corps a.t:hover{color:var(--i-bleu)}
-.liste .pct{font-family:var(--mono);font-size:12px;color:var(--texte-doux);font-variant-numeric:tabular-nums;white-space:nowrap}
-.liste .num{font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.vignette{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex-shrink:0}
-.vignette.mini{width:30px;height:30px;border-radius:9px}
+.liste .pct{font-size:var(--t2);color:var(--texte-doux);font-variant-numeric:tabular-nums;white-space:nowrap}
+.liste .num{font-size:var(--t3);font-variant-numeric:tabular-nums;white-space:nowrap}
+.vignette{width:38px;height:38px;border-radius:var(--r4);display:grid;place-items:center;flex-shrink:0}
+.vignette.mini{width:30px;height:30px;border-radius:var(--r4)}
 .liste > li.tache + li.tache{border-top-color:var(--trait-tache)}   /* trait bien visible entre deux tâches, partout où elles sont listées */
-.tache .corps .t{display:flex;align-items:center;gap:7px;white-space:normal}
+.tache .corps .t{display:flex;align-items:center;gap:6px;white-space:normal}
 .tache .corps .t > span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .tache.faite .corps .t > span:first-child{text-decoration:line-through;color:var(--texte-faible)}
 .tache .s .retard{color:var(--i-rose)}
 .tache .s .auj{color:var(--i-vert)}
 /* Priorité et compteur des étapes : toujours côte à côte (passent ensemble à la ligne si le titre est long) */
 .pastilles-tache{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap}
-.compte-etapes{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;font-size:11px;font-family:var(--mono);padding:1px 7px;border-radius:99px;border:1px solid var(--trait);background:rgb(var(--sur) / 0.031);color:var(--texte-doux);cursor:pointer;transition:border-color .15s,color .15s}
+.compte-etapes{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;font-size:var(--t1);font-variant-numeric:tabular-nums;padding:1px 7px;border-radius:99px;border:1px solid var(--trait);background:rgb(var(--sur) / 0.031);color:var(--texte-doux);cursor:pointer;transition:border-color .15s,color .15s}
 .compte-etapes:hover{color:var(--texte);border-color:rgb(var(--sur) / 0.188)}
 .compte-etapes.fini{color:var(--i-vert);border-color:#4ec89b55;background:#4ec89b14}
 .etapes{margin:6px 0 2px}
 .etapes .items li{min-height:26px;padding:3px 0;align-items:flex-start;line-height:1.4}   /* étape sur plusieurs lignes : case et × en face de la 1re ligne */
-.etapes .case{width:16px;height:16px;border-radius:5px;margin-top:1px}
+.etapes .case{width:16px;height:16px;border-radius:var(--r2);margin-top:1px}
 .etapes .items li .icone-btn{margin-top:-5px}
 .etapes .et{flex:1;min-width:0;overflow-wrap:anywhere}
 .etapes li.fait .et{text-decoration:line-through;color:var(--texte-faible)}
@@ -455,16 +469,17 @@ a.carte{display:block;color:inherit}
 li.tache:has(> .corps > .etapes:not([hidden])){align-items:flex-start}   /* étapes dépliées : case et boutons restent en face du titre */
 li.tache:has(> .corps > .etapes:not([hidden])) > .case{margin-top:2px}
 .actions-ligne{display:flex;gap:2px;flex-shrink:0}
+.actions-ligne .plus-actions{display:none}   /* « ⋯ » : téléphone seulement (voir plus bas) */
 @media (hover:hover){
   .actions-ligne .icone-btn{opacity:.35}
   li:hover .actions-ligne .icone-btn,.actions-ligne .icone-btn:focus-visible{opacity:1}
 }
-.case{appearance:none;-webkit-appearance:none;margin:0;flex-shrink:0;width:18px;height:18px;border-radius:6px;border:1.6px solid var(--case-bord);background:transparent;cursor:pointer;display:grid;place-items:center;transition:border-color .18s,background .18s,transform .12s}
+.case{appearance:none;-webkit-appearance:none;margin:0;flex-shrink:0;width:18px;height:18px;border-radius:var(--r2);border:1.6px solid var(--case-bord);background:transparent;cursor:pointer;display:grid;place-items:center;transition:border-color .18s,background .18s,transform .12s}
 .case:hover{border-color:var(--i-bleu)}
 .case:active{transform:scale(.86)}
 .case:checked{background:var(--vert);border-color:var(--vert)}
 .case:checked::after{content:"";width:9px;height:5px;border:solid #fff;border-width:0 0 2px 2px;transform:translate(0,-1px) rotate(-45deg)}
-.priorite{font-size:10px;padding:1px 7px;border-radius:99px;border:1px solid transparent;font-weight:650;letter-spacing:.02em;white-space:nowrap;flex-shrink:0}
+.priorite{font-size:var(--t1);padding:1px 7px;border-radius:99px;border:1px solid transparent;font-weight:650;letter-spacing:.02em;white-space:nowrap;flex-shrink:0}
 .priorite.p1{color:var(--i-rose);background:#d5518118;border-color:#d5518138}
 .priorite.p2{color:var(--i-jaune);background:#c9850015;border-color:#c9850035}
 .priorite.p3{color:var(--texte-faible);background:rgb(var(--sur) / 0.027);border-color:var(--trait)}
@@ -475,7 +490,7 @@ li.tache:has(> .corps > .etapes:not([hidden])) > .case{margin-top:2px}
 /* ==========================================================================
    7. BOUTONS, ÉTIQUETTES, CHAMPS
    ========================================================================== */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:rgb(var(--sur) / 0.051);border:1px solid var(--trait);color:var(--texte);padding:8px 14px;border-radius:9px;font-size:13.5px;line-height:1.2;white-space:nowrap;transition:background .15s,border-color .15s,color .15s,transform .12s}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:rgb(var(--sur) / 0.051);border:1px solid var(--trait);color:var(--texte);padding:8px 14px;border-radius:var(--r4);font-size:var(--t4);line-height:1.2;white-space:nowrap;transition:background .15s,border-color .15s,color .15s,transform .12s}
 .btn:hover{background:rgb(var(--sur) / 0.086);border-color:var(--survol-bord)}
 .btn:active{transform:scale(.97)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
@@ -488,12 +503,12 @@ li.tache:has(> .corps > .etapes:not([hidden])) > .case{margin-top:2px}
 .btn.danger:hover{color:var(--i-rose);background:#d551811a;border-color:#d5518155}
 .btn.p.danger{background:#c9476f;border-color:#c9476f;color:#fff}
 .btn.p.danger:hover{background:var(--rose);border-color:var(--rose)}
-.btn.compact{padding:5px 10px;font-size:12.5px;border-radius:8px}
+.btn.compact{padding:5px 10px;font-size:var(--t3);border-radius:var(--r3)}
 .btn.actif{background:#3987e522;border-color:#3987e560;color:var(--i-bleu)}
-.icone-btn{width:30px;height:30px;border-radius:8px;border:0;background:transparent;color:var(--texte-faible);display:inline-grid;place-items:center;flex-shrink:0;transition:background .15s,color .15s,opacity .15s}
+.icone-btn{width:30px;height:30px;border-radius:var(--r3);border:0;background:transparent;color:var(--texte-faible);display:inline-grid;place-items:center;flex-shrink:0;transition:background .15s,color .15s,opacity .15s}
 .icone-btn:hover{background:rgb(var(--sur) / 0.071);color:var(--texte)}
 .icone-btn.danger:hover{color:var(--i-rose);background:#d551811a}
-.puce{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:2px 9px;border-radius:99px;border:1px solid var(--trait);background:rgb(var(--sur) / 0.031);color:var(--texte-doux);white-space:nowrap;line-height:1.5}
+.puce{display:inline-flex;align-items:center;gap:4px;font-size:var(--t2);padding:2px 9px;border-radius:99px;border:1px solid var(--trait);background:rgb(var(--sur) / 0.031);color:var(--texte-doux);white-space:nowrap;line-height:1.5}
 button.puce{cursor:pointer}
 .puce.alerte{border-color:#c985004d;background:#c9850022;color:var(--i-jaune)}
 button.puce.alerte:hover{filter:brightness(1.2)}
@@ -502,33 +517,33 @@ a.puce.proj:hover{filter:brightness(1.2)}
 .puces{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .barre-outils{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
 .barre-outils .filtre{flex:0 1 360px}
-.filtre{display:flex;align-items:center;gap:8px;background:var(--champ);border:1px solid var(--trait);border-radius:9px;padding:7px 10px;color:var(--texte-faible);min-width:220px;transition:border-color .18s,box-shadow .18s}
+.filtre{display:flex;align-items:center;gap:8px;background:var(--champ);border:1px solid var(--trait);border-radius:var(--r4);padding:7px 10px;color:var(--texte-faible);min-width:220px;transition:border-color .18s,box-shadow .18s}
 .filtre:focus-within{border-color:#4a80c8;box-shadow:0 0 0 3px #3987e526}
-.filtre input{border:0;background:transparent;outline:0;color:var(--texte);font-size:13.5px;width:100%;min-width:0}
+.filtre input{border:0;background:transparent;outline:0;color:var(--texte);font-size:var(--t4);width:100%;min-width:0}
 .champ{display:block;margin-bottom:13px;min-width:0}
-.champ > span{display:block;font-size:12.5px;color:var(--texte-doux);margin-bottom:6px}
+.champ > span{display:block;font-size:var(--t3);color:var(--texte-doux);margin-bottom:6px}
 .champ > .champ-date{display:flex;align-items:center;gap:4px;margin-bottom:0;font-size:inherit}   /* date facultative : champ + bouton × */
 .champ-date input{flex:1;min-width:0}
 .champ-date .icone-btn{color:var(--texte-doux)}
 .champ em{font-style:normal;color:var(--texte-faible)}
-.champ input,.champ select,.champ textarea,.saisie{width:100%;background:var(--champ);border:1px solid var(--trait);color:var(--texte);border-radius:9px;padding:9px 11px;outline:0;transition:border-color .15s,box-shadow .15s}
+.champ input,.champ select,.champ textarea,.saisie{width:100%;background:var(--champ);border:1px solid var(--trait);color:var(--texte);border-radius:var(--r4);padding:9px 11px;outline:0;transition:border-color .15s,box-shadow .15s}
 .champ input:focus,.champ select:focus,.champ textarea:focus,.saisie:focus{border-color:#5a80be;box-shadow:0 0 0 3px #3987e520}
 .champ textarea{min-height:100px;resize:vertical;line-height:1.5}
-.champ textarea.code{font-family:var(--mono);font-size:13px;min-height:220px}
+.champ textarea.code{font-family:var(--mono);font-size:var(--t3);min-height:220px}
 .form-grille{display:grid;grid-template-columns:1fr 1fr;column-gap:12px}
 .form-grille > *{grid-column:span 2}
 .form-grille > .champ.demi{grid-column:span 1}
-.segment{display:inline-flex;background:var(--champ);border:1px solid var(--trait);border-radius:10px;padding:3px;gap:3px;flex-wrap:wrap}
+.segment{display:inline-flex;background:var(--champ);border:1px solid var(--trait);border-radius:var(--r4);padding:3px;gap:4px;flex-wrap:wrap}
 .segment label{position:relative}
 .segment input{position:absolute;opacity:0;pointer-events:none}
-.segment span{display:block;padding:5px 13px;border-radius:7px;font-size:13px;color:var(--texte-doux);cursor:pointer;transition:background .15s,color .15s}
+.segment span{display:block;padding:5px 13px;border-radius:var(--r2);font-size:var(--t3);color:var(--texte-doux);cursor:pointer;transition:background .15s,color .15s}
 .segment input:checked + span{background:rgb(var(--sur) / 0.094);color:var(--texte)}
 .segment input:focus-visible + span{box-shadow:0 0 0 2px var(--i-bleu)}
 .onglets{display:flex;gap:4px;margin-bottom:6px}
-.onglets button{border:0;background:transparent;color:var(--texte-faible);padding:4px 10px;border-radius:7px;font-size:12.5px}
+.onglets button{border:0;background:transparent;color:var(--texte-faible);padding:4px 10px;border-radius:var(--r2);font-size:var(--t3)}
 .onglets button.actif{background:rgb(var(--sur) / 0.071);color:var(--texte)}
-.apercu{min-height:220px;border:1px solid var(--trait-doux);border-radius:9px;padding:12px 14px;background:var(--champ);font-size:14px}
-.erreur{color:var(--i-rose);font-size:12.5px;margin:-4px 0 12px}
+.apercu{min-height:220px;border:1px solid var(--trait-doux);border-radius:var(--r4);padding:12px 14px;background:var(--champ);font-size:var(--t4)}
+.erreur{color:var(--i-rose);font-size:var(--t3);margin:-4px 0 12px}
 
 /* ==========================================================================
    8. DÉPLIABLES, TUILES, CONTACTS, NOTES, FICHES
@@ -538,88 +553,97 @@ a.puce.proj:hover{filter:brightness(1.2)}
 .depliable-tete{display:flex;align-items:center;gap:12px;padding:12px 10px 12px 16px;cursor:pointer;transition:background .18s}
 .depliable-tete:hover{background:rgb(var(--sur) / 0.024)}
 .depliable-tete .titre{flex:1;min-width:0;display:flex}
-.nom-lien{border:0;background:transparent;padding:2px 0;margin:0;text-align:left;font-size:14.5px;font-weight:550;color:var(--texte);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:5px;transition:color .15s}
+.nom-lien{border:0;background:transparent;padding:2px 0;margin:0;text-align:left;font-size:var(--t5);font-weight:550;color:var(--texte);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:var(--r2);transition:color .15s}
 .nom-lien:hover{color:var(--i-bleu);text-decoration:underline;text-underline-offset:3px;text-decoration-color:#7ab0f070}
-.chevron{width:30px;height:30px;border-radius:8px;border:0;background:transparent;color:var(--texte-faible);display:grid;place-items:center;flex-shrink:0;transition:background .15s,color .15s}
+.chevron{width:30px;height:30px;border-radius:var(--r3);border:0;background:transparent;color:var(--texte-faible);display:grid;place-items:center;flex-shrink:0;transition:background .15s,color .15s}
 .chevron:hover{background:rgb(var(--sur) / 0.071);color:var(--texte)}
 .chevron svg{transition:transform .25s ease}
 .ouvert > .depliable-tete .chevron svg,.ouvert > .entete-carte .chevron svg,.ouvert > .groupe-titre .chevron svg{transform:rotate(180deg)}
 .depliable-corps{display:none;padding:14px 16px;border-top:1px solid var(--trait-doux)}
 .depliable.ouvert .depliable-corps{display:block}
 /* Carte classique dont le contenu se replie (ex. Mouvements) */
-.pliable > .entete-carte{cursor:pointer;margin:-16px -17px 0;padding:14px 12px 14px 17px;border-radius:var(--rayon);transition:background .18s}
+.pliable > .entete-carte{cursor:pointer;margin:-16px -16px 0;padding:14px 12px 14px 16px;border-radius:var(--rayon);transition:background .18s}
 .pliable > .entete-carte:hover{background:rgb(var(--sur) / 0.02)}
 .pliable-corps{display:none;padding-top:4px}
 .pliable.ouvert .pliable-corps{display:block}
 .pliable:not(.ouvert){padding-bottom:0}
 /* Bloc repliable dans une carte (archives des tâches) */
-.bloc-pliable > .groupe-titre{cursor:pointer;border-radius:8px;margin-left:-6px;margin-right:-6px;padding:2px 2px 2px 6px;transition:background .15s}
+.bloc-pliable > .groupe-titre{cursor:pointer;border-radius:var(--r3);margin-left:-6px;margin-right:-6px;padding:2px 2px 2px 6px;transition:background .15s}
 .bloc-pliable > .groupe-titre:hover{background:rgb(var(--sur) / 0.024)}
 .bloc-pliable > .groupe-titre .chevron{margin-left:auto;width:26px;height:26px}
 .bloc-pliable.ouvert > .pliable-corps{display:block}
 .bloc-pliable > .pliable-corps{padding-top:0}
 .lien-texte{color:var(--i-bleu);text-decoration:underline;text-underline-offset:2px}
 button.bouton-texte{border:0;background:transparent;padding:0;font:inherit;text-align:left;cursor:pointer;overflow-wrap:anywhere}
-.avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:13px;font-weight:650;flex-shrink:0;letter-spacing:.02em}
-.avatar.grand{width:52px;height:52px;font-size:17px}
-.adresse-contact{display:flex;gap:7px;align-items:flex-start;margin:10px 0 0;font-size:13px;color:var(--texte-doux);white-space:pre-line}
+.avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:var(--t3);font-weight:650;flex-shrink:0;letter-spacing:.02em}
+.avatar.grand{width:52px;height:52px;font-size:var(--t7)}
+.adresse-contact{display:flex;gap:6px;align-items:flex-start;margin:10px 0 0;font-size:var(--t3);color:var(--texte-doux);white-space:pre-line}
 .adresse-contact svg{flex-shrink:0;margin-top:2px}
 a.puce.lien-tel{color:var(--texte);text-decoration:none;max-width:100%;white-space:normal;overflow-wrap:anywhere}
 a.puce.lien-tel:hover{border-color:var(--i-bleu)}
-.nouvelles{margin:10px 0 2px;padding:10px 12px;border-radius:10px;background:rgb(var(--sur) / 0.027);border:1px solid var(--trait-doux);font-size:13.5px}
-.sous-titre{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--texte-faible);margin:16px 0 4px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.nouvelles{margin:10px 0 2px;padding:10px 12px;border-radius:var(--r4);background:rgb(var(--sur) / 0.027);border:1px solid var(--trait-doux);font-size:var(--t4)}
+.sous-titre{display:flex;align-items:center;gap:6px;font-size:var(--t1);color:var(--texte-faible);margin:16px 0 4px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
 .items{list-style:none;margin:0;padding:0}
-.items li{display:flex;align-items:center;gap:10px;padding:4px 0;font-size:13.5px;min-height:30px}
+.items li{display:flex;align-items:center;gap:10px;padding:4px 0;font-size:var(--t4);min-height:30px}
 .items li .t{flex:1;min-width:0}
 .items li.fait .t{text-decoration:line-through;color:var(--texte-faible)}
 @media (hover:hover){.items li .icone-btn{opacity:0}.items li:hover .icone-btn,.items li .icone-btn:focus-visible{opacity:1}}
 .ajout{display:flex;align-items:center;gap:10px;margin-top:2px;color:var(--texte-faible)}
-.ajout input{flex:1;min-width:0;background:transparent;border:0;border-bottom:1px dashed var(--trait);padding:6px 2px;font-size:13px;color:var(--texte);outline:0}
+.ajout input{flex:1;min-width:0;background:transparent;border:0;border-bottom:1px dashed var(--trait);padding:6px 2px;font-size:var(--t3);color:var(--texte);outline:0}
 .ajout input:focus{border-bottom:1px solid var(--i-bleu)}
 /* Notes : dossiers à gauche, titres dépliables à droite */
 .notes-cadre{display:grid;grid-template-columns:240px minmax(0,1fr);gap:16px;align-items:start}
 .dossiers{position:sticky;top:76px;padding:12px 10px;display:flex;flex-direction:column;gap:2px;max-height:calc(100vh - 100px);overflow:auto}
 .dossiers .etiq{padding:2px 8px 8px}
-.dossier-btn{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;text-align:left;padding:8px 9px;border-radius:9px;font-size:13.5px;color:var(--texte-doux);transition:background .15s,color .15s}
+.dossier-btn{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;text-align:left;padding:8px 9px;border-radius:var(--r4);font-size:var(--t4);color:var(--texte-doux);transition:background .15s,color .15s}
 .dossier-btn svg{color:var(--i-jaune);flex-shrink:0}
 .dossier-btn:first-of-type svg{color:var(--texte-faible)}
 .dossier-btn:hover{background:rgb(var(--sur) / 0.043);color:var(--texte)}
 .dossier-btn.actif{background:#c985001f;color:var(--texte);box-shadow:inset 0 0 0 1px #c9850045}
 .dossier-btn .nom-d{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dossier-btn .nb{font-family:var(--mono);font-size:11px;color:var(--texte-faible)}
+.dossier-btn .nb{font-variant-numeric:tabular-nums;font-size:var(--t1);color:var(--texte-faible)}
 .dossier-btn.archives{margin-top:8px}
 .dossier-btn.archives svg{color:var(--texte-faible)}
-.dossier-actif{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--texte-doux)}
+.dossier-actif{display:inline-flex;align-items:center;gap:6px;font-size:var(--t3);color:var(--texte-doux)}
 .dossier-actif svg{color:var(--i-jaune)}
 .dossiers-tete{display:flex;align-items:center}
 .dossiers-tete .fermer,.dossiers-docs .dossiers-tete{display:none}   /* en-tête du volet : téléphone et tablette seulement */
 .choix-dossier,.barre-dossier,.voile-dossiers{display:none}   /* téléphone et tablette seulement (voir plus bas) */
-.choix-dossier{align-items:center;gap:8px;min-width:0;background:var(--champ);border:1px solid var(--trait);border-radius:9px;padding:8px 10px;font-size:13.5px;text-align:left;transition:border-color .18s,box-shadow .18s}
+.choix-dossier{align-items:center;gap:8px;min-width:0;background:var(--champ);border:1px solid var(--trait);border-radius:var(--r4);padding:8px 10px;font-size:var(--t4);text-align:left;transition:border-color .18s,box-shadow .18s}
 .choix-dossier:focus-visible{outline:0;border-color:#4a80c8;box-shadow:0 0 0 3px #3987e526}
 .choix-dossier > svg{color:var(--texte-faible);flex-shrink:0}
 .choix-dossier > svg:first-child{color:var(--i-jaune)}
 .choix-dossier .nom-d{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.choix-dossier .nb{font-family:var(--mono);font-size:11px;color:var(--texte-faible)}
+.choix-dossier .nb{font-variant-numeric:tabular-nums;font-size:var(--t1);color:var(--texte-faible)}
 .mosaique.notes{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
-.carte-note .depliable-tete{gap:11px}
-.date-t{font-size:11.5px;color:var(--texte-faible);white-space:nowrap}
-.md-extrait{font-size:14px;max-height:260px;overflow:auto;padding-right:4px}
+.carte-note .depliable-tete{gap:10px}
+.date-t{font-size:var(--t2);color:var(--texte-faible);white-space:nowrap}
+.md-extrait{font-size:var(--t4);max-height:260px;overflow:auto;padding-right:4px}
+/* Contacts : anniversaires proches en tête, puis l'annuaire par lettre ; une ligne par fiche, sans cadre */
+.annuaire{display:flex;flex-direction:column;gap:16px}
+.groupe-contacts > .lettre{display:flex;align-items:center;gap:8px;margin:0 0 8px 4px;font-size:var(--t5);font-weight:650;color:var(--texte-doux)}
+.grille-contacts{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));column-gap:24px;align-items:start;padding:0 12px;overflow:hidden}
+.grille-contacts > .depliable{background:none;border:0;border-top:1px solid var(--trait-doux);border-radius:0;box-shadow:none;margin-top:-1px;overflow:visible}
+.grille-contacts .depliable-tete{padding:8px 2px}
+.grille-contacts .depliable-tete:hover{background:none}
+.grille-contacts .depliable-corps{padding:4px 2px 14px;border-top:0}
+.grille-contacts .avatar{width:32px;height:32px;font-size:var(--t2)}
 /* Fiches en grand (contact, note) */
 .modale.fiche{width:min(900px,100%);padding:22px 24px 20px}
-.fiche-tete{align-items:flex-start;gap:14px;margin-bottom:18px}
+.fiche-tete{align-items:flex-start;gap:12px;margin-bottom:18px}
 .fiche-titre{flex:1;min-width:0}
-.fiche-titre h3{font-size:21px;line-height:1.25;overflow-wrap:anywhere}
+.fiche-titre h3{font-size:var(--t8);line-height:1.25;overflow-wrap:anywhere}
 .fiche-titre .puces{margin-top:8px}
-.fiche-grille{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:8px 26px}
+.fiche-grille{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:8px 24px}
 .fiche-col > .sous-titre:first-child{margin-top:0}
 .fiche-col .champ textarea{min-height:130px}
 .fiche-pied{align-items:center;border-top:1px solid var(--trait-doux);padding-top:14px;margin-top:14px}
 .fiche-pied .aide{margin:0 auto 0 0}
 .liseuse-chemin{display:flex;align-items:center;gap:6px;margin:-6px 0 12px;overflow-wrap:anywhere}
 .liseuse-chemin svg{flex-shrink:0}
-.md.liseuse-md{max-height:min(66vh,720px);overflow:auto;overscroll-behavior:contain;padding:16px 18px;border-radius:12px;background:var(--champ);border:1px solid var(--trait-doux);max-width:none;overflow-wrap:anywhere}
-.md.fiche-md{max-height:min(62vh,640px);overflow:auto;padding:16px 18px;border-radius:12px;background:var(--champ);border:1px solid var(--trait-doux);max-width:none}
-.item-texte{flex:1;min-width:0;border-bottom:1px solid transparent;padding:3px 2px;font-size:13.5px;color:var(--texte);outline:0;cursor:text;overflow-wrap:anywhere;border-radius:3px 3px 0 0;transition:border-color .15s,background .15s}
+.md.liseuse-md{max-height:min(66vh,720px);overflow:auto;overscroll-behavior:contain;padding:16px 18px;border-radius:var(--r4);background:var(--champ);border:1px solid var(--trait-doux);max-width:none;overflow-wrap:anywhere}
+.md.fiche-md{max-height:min(62vh,640px);overflow:auto;padding:16px 18px;border-radius:var(--r4);background:var(--champ);border:1px solid var(--trait-doux);max-width:none}
+.item-texte{flex:1;min-width:0;border-bottom:1px solid transparent;padding:3px 2px;font-size:var(--t4);color:var(--texte);outline:0;cursor:text;overflow-wrap:anywhere;border-radius:var(--r1) var(--r1) 0 0;transition:border-color .15s,background .15s}
 .item-texte:focus{background:rgb(var(--sur) / 0.031)}
 .item-texte:hover{border-bottom-color:var(--trait)}
 .item-texte:focus{border-bottom-color:var(--i-bleu)}
@@ -628,10 +652,10 @@ a.puce.lien-tel:hover{border-color:var(--i-bleu)}
 /* Documents : échéances, fiche, tags communs */
 /* Comptes : cases « pris en compte dans les statistiques » en haut de Finances */
 .barre-comptes{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:-6px 0 16px}
-.barre-comptes .etiq{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--texte-faible);margin-right:2px}
-.puce-compte{display:inline-flex;align-items:center;gap:7px;padding:5px 12px 5px 7px;border-radius:99px;border:1px solid var(--trait);background:rgb(var(--sur) / 0.024);color:var(--texte-faible);font-size:13px;line-height:1.3;max-width:100%;overflow-wrap:anywhere;text-align:left;transition:background .15s,border-color .15s,color .15s}
+.barre-comptes .etiq{font-size:var(--t1);letter-spacing:.08em;text-transform:uppercase;color:var(--texte-faible);margin-right:2px}
+.puce-compte{display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 7px;border-radius:99px;border:1px solid var(--trait);background:rgb(var(--sur) / 0.024);color:var(--texte-faible);font-size:var(--t3);line-height:1.3;max-width:100%;overflow-wrap:anywhere;text-align:left;transition:background .15s,border-color .15s,color .15s}
 .puce-compte:hover{border-color:rgb(var(--sur) / 0.188);color:var(--texte-doux)}
-.puce-compte .boite{width:16px;height:16px;flex-shrink:0;border-radius:5px;border:1.5px solid rgb(var(--sur) / 0.251);display:grid;place-items:center}
+.puce-compte .boite{width:16px;height:16px;flex-shrink:0;border-radius:var(--r2);border:1.5px solid rgb(var(--sur) / 0.251);display:grid;place-items:center}
 .puce-compte.on{color:var(--texte);border-color:#4ec89b55;background:#4ec89b12}
 .puce-compte.on .boite{background:var(--i-vert);border-color:var(--i-vert);color:var(--coche)}
 /* Fenêtre « Comptes et budgets » / « Catégories » */
@@ -641,39 +665,39 @@ a.puce.lien-tel:hover{border-color:var(--i-bleu)}
 .budget-gestion{display:flex;gap:6px;flex:0 1 230px;min-width:0}
 .budget-gestion input{flex:1 1 90px;min-width:0}
 .budget-gestion select{flex:0 0 auto}
-.nb-gestion{font-size:11.5px;color:var(--texte-faible);white-space:nowrap;min-width:88px;text-align:right}
+.nb-gestion{font-size:var(--t2);color:var(--texte-faible);white-space:nowrap;min-width:88px;text-align:right}
 .nb-gestion .ex{display:block;max-width:150px;margin-left:auto;overflow:hidden;text-overflow:ellipsis;color:var(--texte-doux)}
 .case-stats{display:grid;place-items:center;width:26px;flex-shrink:0;cursor:pointer}
 .case-stats input,.ligne-sans input{width:18px;height:18px;accent-color:var(--i-vert);cursor:pointer}
 .ligne-gestion.supprimee{opacity:.55}
 .ligne-gestion.supprimee input[name="nom"]{text-decoration:line-through}
-.ligne-sans{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--texte-doux);margin:10px 0 0;cursor:pointer}
+.ligne-sans{display:flex;align-items:center;gap:10px;font-size:var(--t3);color:var(--texte-doux);margin:10px 0 0;cursor:pointer}
 /* Import d'un relevé (CSV) ou de contacts (vCard) : colonnes, puis liste à cocher qui défile */
-.colonnes-csv{margin:0 0 12px;border:1px solid var(--trait-doux);border-radius:10px;padding:8px 12px}
-.colonnes-csv summary{cursor:pointer;font-size:13px;color:var(--texte-doux)}
+.colonnes-csv{margin:0 0 12px;border:1px solid var(--trait-doux);border-radius:var(--r4);padding:8px 12px}
+.colonnes-csv summary{cursor:pointer;font-size:var(--t3);color:var(--texte-doux)}
 .grille-csv{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px 12px;margin:10px 0 6px}
 .grille-csv .champ{margin:0}
 .resume-import{margin:0 0 8px}
 .import-liste{max-height:min(52vh,520px);overflow:auto;overscroll-behavior:contain;margin:0 0 4px;padding-right:4px}
 .import-liste > li{gap:10px;padding:7px 2px}
-.import-liste .date-i{font-family:var(--mono);font-size:12px;color:var(--texte-doux);white-space:nowrap;min-width:50px}
+.import-liste .date-i{font-variant-numeric:tabular-nums;font-size:var(--t2);color:var(--texte-doux);white-space:nowrap;min-width:50px}
 .import-liste .corps{flex:1 1 160px;min-width:0}
 .import-liste .corps .t{white-space:normal;overflow-wrap:anywhere}
 .import-liste .corps .s{display:block}
-.import-liste select.saisie{flex:0 1 170px;width:auto;min-width:0;padding:5px 8px;font-size:12.5px}
-.import-liste .num{white-space:nowrap;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.import-liste select.saisie{flex:0 1 170px;width:auto;min-width:0;padding:5px 8px;font-size:var(--t3)}
+.import-liste .num{white-space:nowrap;font-variant-numeric:tabular-nums}
 .import-liste li.doublon > :not(input){opacity:.55}
 /* Couleur d'une catégorie : pastille cliquable, puis choix sous la ligne (9 unies, 9 rayées) */
-.couleur-cat{display:grid;place-items:center;width:30px;height:30px;flex-shrink:0;padding:0;border:1px solid transparent;border-radius:8px;background:none}
+.couleur-cat{display:grid;place-items:center;width:30px;height:30px;flex-shrink:0;padding:0;border:1px solid transparent;border-radius:var(--r3);background:none}
 .couleur-cat:hover,.couleur-cat[aria-expanded="true"]{border-color:var(--trait);background:rgb(var(--sur) / 0.05)}
 .couleur-cat:disabled{cursor:default}
 .pt-cat.grand{width:16px;height:16px;margin:0}
 .pt-cat.auto{background:none;border:1.5px dashed var(--texte-faible)}
 .ligne-gestion:has(> .choix-couleur){flex-wrap:wrap}
 .choix-couleur{flex-basis:100%;order:10;display:flex;flex-direction:column;gap:6px;padding:4px 0 2px 38px}
-.choix-couleur .rang{display:grid;grid-template-columns:repeat(9,minmax(0,30px));gap:5px}   /* 9 pastilles par rang, un peu plus petites sur téléphone */
-.choix-couleur .aide{margin:2px 0 0;font-size:12px}
-.pastille-choix{position:relative;display:grid;place-items:center;width:100%;aspect-ratio:1 / 1;padding:0;border:1px solid var(--trait);border-radius:8px;background:var(--champ)}
+.choix-couleur .rang{display:grid;grid-template-columns:repeat(9,minmax(0,30px));gap:4px}   /* 9 pastilles par rang, un peu plus petites sur téléphone */
+.choix-couleur .aide{margin:2px 0 0;font-size:var(--t2)}
+.pastille-choix{position:relative;display:grid;place-items:center;width:100%;aspect-ratio:1 / 1;padding:0;border:1px solid var(--trait);border-radius:var(--r3);background:var(--champ)}
 .pastille-choix:hover{border-color:var(--survol-bord)}
 .pastille-choix .pt-cat{width:18px;height:18px;margin:0}
 .pastille-choix[aria-pressed="true"]{outline:2px solid var(--texte);outline-offset:1px}
@@ -683,40 +707,40 @@ tr.hors-stats td{opacity:.5}
 .liste-mvts li.hors-stats > :not(.icone-btn){opacity:.5}
 .liste-mvts .s{overflow-wrap:anywhere}
 .plus-notes{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px}
-.titre-doc{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:5px}
-.titre-doc .titre{width:100%}
-.titre-doc .badge-echeance{font-size:11px;padding:1px 8px}
-.badge-echeance{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:2px 9px;border-radius:99px;border:1px solid var(--trait);background:rgb(var(--sur) / 0.031);color:var(--texte-doux);white-space:nowrap;line-height:1.5;flex-shrink:0}
+.titre-doc{flex:1;min-width:0;display:flex;align-items:center;gap:8px}   /* échéance à droite du titre : toutes les cartes repliées ont la même hauteur */
+.titre-doc .titre{flex:1;min-width:0}
+.titre-doc .badge-echeance{font-size:var(--t1);padding:1px 8px}
+.badge-echeance{display:inline-flex;align-items:center;gap:4px;font-size:var(--t2);padding:2px 9px;border-radius:99px;border:1px solid var(--trait);background:rgb(var(--sur) / 0.031);color:var(--texte-doux);white-space:nowrap;line-height:1.5;flex-shrink:0}
 .badge-echeance.preavis{color:var(--i-jaune);background:#c9850024;border-color:#c9850055}
 .badge-echeance.expire{color:var(--i-rose);background:#d5518124;border-color:#d5518160;font-weight:600}
-.liste > li.echeance{position:relative;padding-left:12px;border-radius:10px;background:linear-gradient(90deg,#c985001a,transparent 70%)}
-.liste > li.echeance::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--jaune)}
+.liste > li.echeance{position:relative;padding-left:12px;border-radius:var(--r4);background:linear-gradient(90deg,#c985001a,transparent 70%)}
+.liste > li.echeance::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:var(--r1);background:var(--jaune)}
 .liste > li.echeance.expire{background:linear-gradient(90deg,#d551811c,transparent 70%)}
 .liste > li.echeance.expire::before{background:var(--rose)}
 .liste > li.echeance + li.echeance{margin-top:4px;border-top:0}
-.liste .corps .t.nom-lien{font-size:14px;font-weight:500;text-align:left;display:block}
-.infos-doc{display:grid;grid-template-columns:92px minmax(0,1fr);gap:7px 12px;font-size:13.5px;margin:0 0 4px}
+.liste .corps .t.nom-lien{font-size:var(--t4);font-weight:500;text-align:left;display:block}
+.infos-doc{display:grid;grid-template-columns:92px minmax(0,1fr);gap:6px 12px;font-size:var(--t4);margin:0 0 4px}
 .infos-doc dt{color:var(--texte-faible)}
 .infos-doc dd{margin:0;min-width:0;overflow-wrap:anywhere}
 .texte-libre{white-space:pre-wrap}
 .ouvrir-doc{margin:-2px 0 16px}
 .puce.tag{color:var(--i-violet);border-color:#9085e944;background:#9085e914;transition:filter .15s}
 a.puce.tag:hover{filter:brightness(1.25)}
-.tags-dispo{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;max-height:88px;overflow:auto}
+.tags-dispo{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px;max-height:88px;overflow:auto}
 .tags-dispo .puce{cursor:pointer}
 .tags-dispo .puce.actif{color:var(--i-violet);border-color:#9085e970;background:#9085e926}
-.filtre-projet{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--texte-doux);border:1px solid #9085e955;background:#9085e914;border-radius:99px;padding:1px 2px 1px 10px}
+.filtre-projet{display:inline-flex;align-items:center;gap:6px;font-size:var(--t3);color:var(--texte-doux);border:1px solid #9085e955;background:#9085e914;border-radius:99px;padding:1px 2px 1px 10px}
 .filtre-projet .icone-btn{width:24px;height:24px}
 .dossiers-docs .etiq{padding:12px 8px 6px}
 .dossier-btn.etat-expire svg{color:var(--i-rose)} .dossier-btn.etat-preavis svg{color:var(--i-jaune)}
 .dossier-btn.etat-plus-tard svg{color:var(--i-vert)} .dossier-btn.etat-sans svg{color:var(--texte-faible)}
 .dossier-btn.etat-expire .nb{color:var(--i-rose)} .dossier-btn.etat-preavis .nb{color:var(--i-jaune)}
-.md{font-size:15px;line-height:1.65;max-width:78ch}
+.md{font-size:var(--t5);line-height:1.65;max-width:78ch}
 .md > :first-child{margin-top:0}
 .md h1,.md h2,.md h3,.md h4,.md h5,.md h6{line-height:1.3;font-weight:650;color:var(--texte)}   /* # à ###### : six tailles */
-.md h1{font-size:23px;font-weight:700;margin:24px 0 10px} .md h2{font-size:20px;font-weight:700;margin:22px 0 9px}
-.md h3{font-size:17.5px;margin:20px 0 8px} .md h4{font-size:15.5px;margin:16px 0 6px}
-.md h5{font-size:14.5px;margin:14px 0 6px} .md h6{font-size:13.5px;margin:14px 0 6px;color:var(--texte-doux)}
+.md h1{font-size:var(--t9);font-weight:700;margin:24px 0 10px} .md h2{font-size:var(--t8);font-weight:700;margin:22px 0 9px}
+.md h3{font-size:var(--t7);margin:20px 0 8px} .md h4{font-size:var(--t6);margin:16px 0 6px}
+.md h5{font-size:var(--t5);margin:14px 0 6px} .md h6{font-size:var(--t4);margin:14px 0 6px;color:var(--texte-doux)}
 .md p{margin:0 0 12px} .md ul,.md ol{margin:0 0 12px;padding-left:22px} .md li{margin:3px 0}
 .md a{color:var(--i-bleu);text-decoration:underline}
 /* Listes de cases à cocher (« - [ ] » / « - [x] ») et texte barré (« ~~ ») */
@@ -728,11 +752,11 @@ a.puce.tag:hover{filter:brightness(1.25)}
 /* Tableaux, citations et séparateurs Markdown */
 .md .table-md{overflow-x:auto;margin:0 0 14px;max-width:100%;padding:1px}   /* 1 px : la bordure extérieure n'est pas rognée */
 .md tbody tr:last-child td{border-bottom:1px solid var(--trait)}   /* la règle générale des tableaux l'enlève */
-.md table{width:auto;min-width:50%;border-collapse:collapse;font-size:14px}
+.md table{width:auto;min-width:50%;border-collapse:collapse;font-size:var(--t4)}
 .md th,.md td{border:1px solid var(--trait);padding:6px 11px;vertical-align:top;white-space:normal}
-.md th{background:rgb(var(--sur) / 0.039);color:var(--texte);font-size:13.5px;font-weight:650;text-transform:none;letter-spacing:normal;text-align:left}
+.md th{background:rgb(var(--sur) / 0.039);color:var(--texte);font-size:var(--t4);font-weight:650;text-transform:none;letter-spacing:normal;text-align:left}
 .md tbody tr:nth-child(even) td{background:rgb(var(--sur) / 0.016)}
-.md blockquote{margin:0 0 14px;padding:9px 14px;border-left:3px solid var(--i-bleu);background:rgb(var(--sur) / 0.024);border-radius:0 8px 8px 0;color:var(--texte-doux)}
+.md blockquote{margin:0 0 14px;padding:9px 14px;border-left:3px solid var(--i-bleu);background:rgb(var(--sur) / 0.024);border-radius:0 var(--r3) var(--r3) 0;color:var(--texte-doux)}
 .md blockquote p{margin:0 0 8px}.md blockquote p:last-child{margin:0}
 .md hr{border:0;border-top:1px solid var(--trait);margin:18px 0}
 /* Listes imbriquées, suites d'éléments, blocs de code */
@@ -740,92 +764,92 @@ a.puce.tag:hover{filter:brightness(1.25)}
 .md li.md-ecart{margin-top:10px}   /* élément précédé d'une ligne vide */
 .md li.tache-md{flex-wrap:wrap;row-gap:2px} .md li.tache-md > span{flex:1;min-width:0}
 .md li.tache-md > :not(input):not(span){flex-basis:calc(100% - 23px);margin-left:23px;min-width:0}
-.md pre{margin:0 0 12px;padding:10px 13px;background:rgb(var(--sur) / 0.031);border:1px solid var(--trait-doux);border-radius:8px;overflow-x:auto;max-width:100%;
-  font-family:var(--mono);font-size:13px;line-height:1.55;white-space:pre;tab-size:4}
+.md pre{margin:0 0 12px;padding:10px 13px;background:rgb(var(--sur) / 0.031);border:1px solid var(--trait-doux);border-radius:var(--r3);overflow-x:auto;max-width:100%;
+  font-family:var(--mono);font-size:var(--t3);line-height:1.55;white-space:pre;tab-size:4}
 .md pre code{background:none;padding:0;border-radius:0;font-size:inherit}
 .carte-projet{display:flex;flex-direction:column}
 .carte-projet .haut{display:flex;align-items:center;gap:12px}
 .carte-projet .haut .corps{flex:1;min-width:0}
-.carte-projet strong{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.carte-projet .resume{font-size:12.5px;color:var(--texte-faible);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
-.carte-projet .meta-p{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--texte-faible);margin-top:10px}
+.carte-projet strong{display:block;font-size:var(--t5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.carte-projet .resume{font-size:var(--t3);color:var(--texte-faible);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.carte-projet .meta-p{display:flex;gap:12px;flex-wrap:wrap;font-size:var(--t2);color:var(--texte-faible);margin-top:10px}
 .archive{opacity:.75}
-.etat-dossier{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:-4px 0 14px;color:var(--texte-doux)}
+.etat-dossier{display:flex;gap:8px;align-items:flex-start;font-size:var(--t3);margin:-4px 0 14px;color:var(--texte-doux)}
 .etat-dossier svg{flex-shrink:0;margin-top:2px}
 .etat-dossier.ok svg{color:var(--i-vert)} .etat-dossier.cours svg{color:var(--i-bleu)} .etat-dossier.erreur svg{color:var(--i-rouge)} .etat-dossier.hors svg{color:var(--i-jaune)}
 /* Synchronisation GitHub (page Données) */
-.etat-github{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:-4px 0 14px;color:var(--texte-doux)}
+.etat-github{display:flex;gap:8px;align-items:flex-start;font-size:var(--t3);margin:-4px 0 14px;color:var(--texte-doux)}
 .etat-github svg{flex-shrink:0;margin-top:2px}
 .etat-github.ok svg{color:var(--i-vert)} .etat-github.cours svg{color:var(--i-bleu)} .etat-github.erreur svg{color:var(--i-rouge)} .etat-github.hors svg{color:var(--i-jaune)}
 .etat-github.erreur span{color:var(--i-rouge)}
 /* Dossier Google Drive : explorateur en lecture seule (projets, page Documents, formulaires) */
 .drive-explo{min-width:0}
-.drive-fil{display:flex;flex-wrap:wrap;align-items:center;gap:5px 6px;margin:0 0 8px;min-width:0}
+.drive-fil{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin:0 0 8px;min-width:0}
 .drive-fil .puce{max-width:100%;overflow:hidden;text-overflow:ellipsis}
-.drive-sep{color:var(--texte-faible);font-size:12px}
+.drive-sep{color:var(--texte-faible);font-size:var(--t2)}
 .drive-outils{margin-left:auto;display:flex;gap:6px;align-items:center}
 .liste.drive-liste > li{padding:5px 2px;gap:8px}
-.drive-nom{display:flex;align-items:center;gap:9px;border:0;background:transparent;color:var(--texte);padding:4px 0;font:inherit;font-size:13.5px;text-align:left;min-width:0;flex:1;cursor:pointer;border-radius:6px}
+.drive-nom{display:flex;align-items:center;gap:8px;border:0;background:transparent;color:var(--texte);padding:4px 0;font:inherit;font-size:var(--t4);text-align:left;min-width:0;flex:1;cursor:pointer;border-radius:var(--r2)}
 .drive-nom > span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .drive-nom:hover > span{color:var(--i-bleu);text-decoration:underline;text-underline-offset:3px}
 .drive-nom.inactif{cursor:default;color:var(--texte-faible)} .drive-nom.inactif:hover > span{color:inherit;text-decoration:none}
 .drive-nom svg{flex-shrink:0}
 .drive-suivi{display:flex;align-items:center;gap:4px;flex-shrink:0}
 .drive-projet{margin-top:14px;padding-top:12px;border-top:1px solid var(--trait-doux);min-width:0}
-.drive-tete{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--texte-doux);margin:0 0 10px;min-width:0}
+.drive-tete{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--t3);color:var(--texte-doux);margin:0 0 10px;min-width:0}
 .drive-tete b{font-weight:600;color:var(--texte)}
-.drive-tete .drive-chemin{font-family:var(--mono);font-size:11.5px;color:var(--texte-faible);overflow-wrap:anywhere;min-width:0}
+.drive-tete .drive-chemin{font-family:var(--mono);font-size:var(--t2);color:var(--texte-faible);overflow-wrap:anywhere;min-width:0}
 .drive-tete .boutons{margin-left:auto}
 .drive-form{margin:-4px 0 13px}
-#drive-form-zone{margin-top:8px;padding:10px 12px;border:1px solid var(--trait);border-radius:10px;max-height:340px;overflow:auto;background:var(--champ)}
+#drive-form-zone{margin-top:8px;padding:10px 12px;border:1px solid var(--trait);border-radius:var(--r4);max-height:340px;overflow:auto;background:var(--champ)}
 .modale .drive-explo{max-height:min(52vh,460px);overflow:auto;margin:0 0 6px}
 
 /* ==========================================================================
    9. FINANCES — graphiques, calendriers, tableau
    ========================================================================== */
 .nav-mois{display:flex;align-items:center;gap:6px;margin:-6px 0 18px;flex-wrap:wrap}
-.nav-mois strong{font-size:16px;font-weight:600;min-width:160px;text-align:center}
+.nav-mois strong{font-size:var(--t6);font-weight:600;min-width:160px;text-align:center}
 .nav-mois .periode{display:inline-flex;align-items:center;gap:6px}
-.segment button{display:block;border:0;background:transparent;padding:5px 13px;border-radius:7px;font-size:13px;color:var(--texte-doux);transition:background .15s,color .15s}
+.segment button{display:block;border:0;background:transparent;padding:5px 13px;border-radius:var(--r2);font-size:var(--t3);color:var(--texte-doux);transition:background .15s,color .15s}
 .segment button:hover{color:var(--texte)}
 .segment button.on{background:rgb(var(--sur) / 0.094);color:var(--texte)}
 .vue-fin{margin-right:8px;flex-wrap:nowrap}
 .graph svg{display:block;width:100%;height:auto;overflow:visible}
-.graph text{fill:var(--texte-faible);font-family:var(--mono);font-size:10.5px}
+.graph text{fill:var(--texte-faible);font-variant-numeric:tabular-nums;font-size:var(--t1)}
 .graph .barre-mois{cursor:pointer}
 .graph .barre-mois .fond{fill:transparent;transition:fill .15s}
 .graph .barre-mois:hover .fond{fill:rgb(var(--sur) / 0.039)}
 .graph .barre-mois.sel .fond{fill:#3987e514}
-.legende-graph{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--texte-doux);margin-top:8px}
+.legende-graph{display:flex;gap:16px;flex-wrap:wrap;font-size:var(--t2);color:var(--texte-doux);margin-top:8px}
 .legende-graph i{display:inline-block;width:16px;height:2px;vertical-align:middle;margin-right:6px;background:var(--bleu)}
 .legende-graph i.tirets{background:repeating-linear-gradient(90deg,var(--vert) 0 5px,transparent 5px 9px)}
-.donut{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.donut{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 .anneau{position:relative;width:200px;height:200px;flex-shrink:0}
 .anneau svg{transform:rotate(-90deg);display:block}
 .anneau .arc{transition:opacity .18s ease,stroke-width .18s ease;cursor:pointer}
 .anim .anneau .arc{animation:arc 1s cubic-bezier(.22,.8,.3,1) .25s both}
 @keyframes arc{from{stroke-dasharray:0 516}}
 .anneau .centre{position:absolute;inset:0;display:grid;place-content:center;text-align:center;pointer-events:none;padding:0 36px}
-.anneau .centre b{font-size:19px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.anneau .centre span{font-size:11.5px;color:var(--texte-faible);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.anneau .centre b{font-size:var(--t7);font-variant-numeric:tabular-nums;white-space:nowrap}
+.anneau .centre span{font-size:var(--t2);color:var(--texte-faible);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .legende{list-style:none;margin:0;padding:0;flex:1;min-width:190px}
-.legende li{display:flex;align-items:center;gap:9px;padding:5px 7px;border-radius:8px;font-size:13px;transition:background .15s}
+.legende li{display:flex;align-items:center;gap:8px;padding:5px 7px;border-radius:var(--r3);font-size:var(--t3);transition:background .15s}
 .legende li:hover,.legende li.actif{background:rgb(var(--sur) / 0.039)}
 .legende .pt,.pt-cat{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--c)}
 /* Couleur « rayée » : même teinte que la couleur unie, en rayures (9e à 16e catégorie) */
 .legende .pt.ray,.pt-cat.ray{background:repeating-linear-gradient(135deg,var(--c) 0 2px,transparent 2px 4px);box-shadow:inset 0 0 0 1.5px var(--c)}
 .pt-cat{display:inline-block;margin-right:2px}
 /* « Par catégorie » de la page Finances : anneau + tableau des catégories, sur toute la largeur */
-.donut.large{align-items:flex-start;gap:28px}
+.donut.large{align-items:flex-start;gap:24px}
 .tableau-cat{flex:1 1 360px;min-width:0}
 .entete-cat .ct{display:none}
-.entete-cat,.ligne-cat{display:grid;grid-template-columns:minmax(120px,1.2fr) minmax(60px,2fr) 100px 56px 88px;align-items:center;gap:14px}
-.entete-cat{font-size:11px;color:var(--texte-faible);text-transform:uppercase;letter-spacing:.05em;padding:0 8px 7px;border-bottom:1px solid var(--trait-doux);margin-bottom:4px}
+.entete-cat,.ligne-cat{display:grid;grid-template-columns:minmax(120px,1.2fr) minmax(60px,2fr) 100px 56px 88px;align-items:center;gap:12px}
+.entete-cat{font-size:var(--t1);color:var(--texte-faible);text-transform:uppercase;letter-spacing:.05em;padding:0 8px 7px;border-bottom:1px solid var(--trait-doux);margin-bottom:4px}
 .entete-cat span:nth-child(n+3){text-align:right}
 .legende.cats li{padding:0}
-.ligne-cat{width:100%;background:none;border:0;color:inherit;font:inherit;text-align:left;padding:6px 8px;border-radius:8px;cursor:pointer}
+.ligne-cat{width:100%;background:none;border:0;color:inherit;font:inherit;text-align:left;padding:6px 8px;border-radius:var(--r3);cursor:pointer}
 .legende.cats li.choisie .ligne-cat{background:rgb(var(--sur) / 0.071);box-shadow:inset 0 0 0 1px var(--trait)}
-.ligne-cat .nom-c{display:flex;align-items:center;gap:9px;min-width:0;padding-left:22px}
+.ligne-cat .nom-c{display:flex;align-items:center;gap:8px;min-width:0;padding-left:22px}
 /* Pastille = bouton « masquer du graphique », posé sur le début de la ligne (deux boutons côte à côte, jamais l'un dans l'autre) */
 .legende.cats li{position:relative}
 .masque-cat{position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:1;width:26px;height:26px;display:grid;place-items:center;padding:0;background:none;border:0;border-radius:50%;cursor:pointer}
@@ -833,12 +857,12 @@ a.puce.tag:hover{filter:brightness(1.25)}
 .masque-cat .pt{margin:0}
 .legende.cats li.masquee .masque-cat .pt{background:none;box-shadow:inset 0 0 0 1.5px var(--c)}
 .legende.cats li.masquee .nom-l,.legende.cats li.masquee .eu,.legende.cats li.masquee .nb{color:var(--texte-faible)}
-.legende.cats li.masquee .pc{font-family:inherit;font-size:11.5px;color:var(--texte-faible)}
+.legende.cats li.masquee .pc{font-family:inherit;font-size:var(--t2);color:var(--texte-faible)}
 .ligne-cat .pc .ct{display:none}
-.ligne-cat .eu,.ligne-cat .pc,.ligne-cat .nb{min-width:0;text-align:right;font-family:var(--mono);font-size:12.5px}
+.ligne-cat .eu,.ligne-cat .pc,.ligne-cat .nb{min-width:0;text-align:right;font-variant-numeric:tabular-nums;font-size:var(--t3)}
 .ligne-cat .nb{color:var(--texte-doux)}
-.barre-cat{display:block;height:8px;border-radius:4px;background:rgb(var(--sur) / 0.031);overflow:hidden}
-.barre-cat i{display:block;height:100%;border-radius:4px;background:var(--c)}
+.barre-cat{display:block;height:8px;border-radius:var(--r1);background:rgb(var(--sur) / 0.031);overflow:hidden}
+.barre-cat i{display:block;height:100%;border-radius:var(--r1);background:var(--c)}
 .barre-cat i.ray{background:repeating-linear-gradient(135deg,var(--c) 0 3px,transparent 3px 6px);box-shadow:inset 0 0 0 1px var(--c)}
 .bloc-anneau .arc[data-action]{cursor:pointer}
 [data-depliable="mouvements"]{scroll-margin-top:84px}
@@ -848,17 +872,17 @@ th.triable.num .tri{flex-direction:row-reverse}
 th.triable .tri:hover,th.triable.actif .tri{color:var(--texte)}
 th.triable .fleche{display:inline-block;min-width:.8em;font-size:1.15em;line-height:1}
 .legende .nom-l{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.legende .pc{font-family:var(--mono);font-size:12px;color:var(--texte-faible);min-width:38px;text-align:right}
-.legende .eu{font-family:var(--mono);font-size:12.5px;min-width:78px;text-align:right;white-space:nowrap}
+.legende .pc{font-variant-numeric:tabular-nums;font-size:var(--t2);color:var(--texte-faible);min-width:38px;text-align:right}
+.legende .eu{font-variant-numeric:tabular-nums;font-size:var(--t3);min-width:78px;text-align:right;white-space:nowrap}
 .cal-tete{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.cal-titre{border:0;background:transparent;font-size:15px;font-weight:600;padding:3px 6px;margin-left:-6px;border-radius:7px;color:var(--texte)}
+.cal-titre{border:0;background:transparent;font-size:var(--t5);font-weight:600;padding:3px 6px;margin-left:-6px;border-radius:var(--r2);color:var(--texte)}
 .cal-titre:hover{background:rgb(var(--sur) / 0.051)}
 .cal-nav{display:flex;gap:4px}
-.cal-nav button{width:28px;height:28px;border-radius:8px;border:1px solid var(--trait-doux);background:transparent;color:var(--texte-doux);display:grid;place-items:center;transition:background .15s,color .15s}
+.cal-nav button{width:28px;height:28px;border-radius:var(--r3);border:1px solid var(--trait-doux);background:transparent;color:var(--texte-doux);display:grid;place-items:center;transition:background .15s,color .15s}
 .cal-nav button:hover{background:var(--carte-survol);color:var(--texte)}
-.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.cal .js{text-align:center;font-size:10.5px;color:var(--texte-faible);padding:4px 0 6px}
-.cal .jour{position:relative;aspect-ratio:1;display:grid;place-items:center;font-size:12.5px;border-radius:8px;border:0;background:transparent;padding:0;color:var(--texte-doux);font-variant-numeric:tabular-nums;transition:background .15s,color .15s}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal .js{text-align:center;font-size:var(--t1);color:var(--texte-faible);padding:4px 0 6px}
+.cal .jour{position:relative;aspect-ratio:1;max-height:52px;display:grid;place-items:center;font-size:var(--t3);border-radius:var(--r3);border:0;background:transparent;padding:0;color:var(--texte-doux);font-variant-numeric:tabular-nums;transition:background .15s,color .15s}
 .cal .jour:hover{background:rgb(var(--sur) / 0.063);color:var(--texte)}
 .cal .jour.auj{background:var(--auj);color:#fff;font-weight:650}
 .cal .pts{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);display:flex;gap:2px}
@@ -868,12 +892,13 @@ th.triable .fleche{display:inline-block;min-width:.8em;font-size:1.15em;line-hei
 .cal .pts i.doc.expire{background:var(--i-rose)}
 .cal .jour.a-echeance{box-shadow:inset 0 0 0 1.5px #e5b54a90}
 .cal .jour.auj.a-echeance{box-shadow:inset 0 0 0 2px #e5b54a}
-.cal.chaleur .jour{font-size:11.5px}
+.cal.chaleur .jour{font-size:var(--t2)}
 .cal.chaleur .jour.auj{background:transparent;box-shadow:inset 0 0 0 1.5px var(--i-bleu);color:var(--texte)}
 .cal.chaleur .jour.fort{color:#fff}
 :root[data-theme="clair"] .cal.chaleur .jour.fort{color:var(--texte)}   /* bleu translucide sur blanc : reste clair, texte foncé */
-.cal-leg{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:12px;font-size:11px;color:var(--texte-faible)}
-.cal-leg span{display:flex;align-items:center;gap:5px}
+.cal-leg{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:12px;font-size:var(--t1);color:var(--texte-faible)}
+.cal-leg span{display:flex;align-items:center;gap:4px}
+.cal-leg.types{display:grid;grid-template-columns:repeat(3,auto);justify-content:start;gap:4px 14px}   /* 5 repères en deux lignes alignées, jamais un seul tout seul */
 .cal-leg i{width:7px;height:7px;border-radius:50%}
 /* Page Calendrier : filtres, grand mois (titres dans les cases, pastilles sur téléphone), agenda, fiche d'un événement */
 .cal-filtres{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 16px}
@@ -881,46 +906,46 @@ th.triable .fleche{display:inline-block;min-width:.8em;font-size:1.15em;line-hei
 .cal-filtres .puce-compte.on{border-color:var(--trait);background:rgb(var(--sur) / 0.031)}
 .cal-filtres .puce-compte.on .boite{background:var(--c);border-color:var(--c);color:var(--coche)}
 .grand-mois{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
-.grand-mois .js{text-align:center;font-size:11px;color:var(--texte-faible);padding:2px 0 4px;text-transform:uppercase;letter-spacing:.04em}
-.grand-mois .jour-g{min-height:98px;min-width:0;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:2px;text-align:left;padding:5px 5px 6px;border-radius:9px;border:1px solid var(--trait-doux);background:rgb(var(--sur) / 0.016);color:var(--texte-doux);overflow:hidden;transition:background .15s,border-color .15s}
+.grand-mois .js{text-align:center;font-size:var(--t1);color:var(--texte-faible);padding:2px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+.grand-mois .jour-g{min-height:98px;min-width:0;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:2px;text-align:left;padding:5px 5px 6px;border-radius:var(--r4);border:1px solid var(--trait-doux);background:rgb(var(--sur) / 0.016);color:var(--texte-doux);overflow:hidden;transition:background .15s,border-color .15s}
 .grand-mois .jour-g:hover{background:rgb(var(--sur) / 0.047);border-color:var(--trait)}
-.grand-mois .num{font-size:12px;font-variant-numeric:tabular-nums;margin:0 0 2px 2px;align-self:flex-start;line-height:22px}
+.grand-mois .num{font-size:var(--t2);font-variant-numeric:tabular-nums;margin:0 0 2px 2px;align-self:flex-start;line-height:22px}
 .grand-mois .jour-g.auj .num{display:inline-grid;place-items:center;width:22px;height:22px;margin-left:0;border-radius:50%;background:var(--auj);color:#fff;font-weight:650}
-.grand-mois .lig{display:block;font-size:11px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:1px 5px;border-radius:5px;background:rgb(var(--sur) / 0.039);color:var(--texte);border-left:2px solid var(--c)}
-.grand-mois .plus{font-size:10.5px;color:var(--texte-faible);padding-left:5px}
+.grand-mois .lig{display:block;font-size:var(--t1);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:1px 5px;border-radius:var(--r2);background:rgb(var(--sur) / 0.039);color:var(--texte);border-left:2px solid var(--c)}
+.grand-mois .plus{font-size:var(--t1);color:var(--texte-faible);padding-left:5px}
 .grand-mois .pts{display:none}
 /* 2 semaines : deux rangées de 7 cases hautes (liste de 14 jours sur téléphone) */
 .deux-sem{display:flex;flex-direction:column;gap:10px}
 .deux-sem .sem{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
-.deux-sem .jour-s{min-height:clamp(220px, calc((100vh - 340px) / 2), 420px);min-width:0;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:3px;text-align:left;padding:6px 6px 7px;border-radius:9px;border:1px solid var(--trait-doux);background:rgb(var(--sur) / 0.016);color:var(--texte-doux);overflow:hidden;transition:background .15s,border-color .15s}
+.deux-sem .jour-s{min-height:clamp(220px, calc((100vh - 340px) / 2), 420px);min-width:0;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:4px;text-align:left;padding:6px 6px 7px;border-radius:var(--r4);border:1px solid var(--trait-doux);background:rgb(var(--sur) / 0.016);color:var(--texte-doux);overflow:hidden;transition:background .15s,border-color .15s}
 .deux-sem .jour-s:hover{background:rgb(var(--sur) / 0.047);border-color:var(--trait)}
 .deux-sem .jour-s.passe{opacity:.62}
-.deux-sem .num{font-size:12px;margin:0 0 3px 2px;line-height:22px;white-space:nowrap}
-.deux-sem .elts{display:flex;flex-direction:column;gap:5px;min-width:0}   /* cases hautes : les deux semaines remplissent l'écran */
+.deux-sem .num{font-size:var(--t2);margin:0 0 3px 2px;line-height:22px;white-space:nowrap}
+.deux-sem .elts{display:flex;flex-direction:column;gap:4px;min-width:0}   /* cases hautes : les deux semaines remplissent l'écran */
 .deux-sem .jour-s.auj{border-color:var(--bleu)}
 .deux-sem .jour-s.auj .num{color:var(--i-bleu);font-weight:650}
-.deux-sem .lig{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:11.5px;line-height:1.4;overflow:hidden;overflow-wrap:anywhere;padding:3px 6px;border-radius:5px;background:rgb(var(--sur) / 0.039);color:var(--texte);border-left:2px solid var(--c)}   /* titre sur 2 lignes au plus */
-.deux-sem .plus{font-size:10.5px;color:var(--texte-faible);padding-left:5px}
+.deux-sem .lig{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:var(--t2);line-height:1.4;overflow:hidden;overflow-wrap:anywhere;padding:3px 6px;border-radius:var(--r2);background:rgb(var(--sur) / 0.039);color:var(--texte);border-left:2px solid var(--c)}   /* titre sur 2 lignes au plus */
+.deux-sem .plus{font-size:var(--t1);color:var(--texte-faible);padding-left:5px}
 .deux-sem .rien{display:none}
 .agenda-jour + .agenda-jour{margin-top:16px}
-.agenda-jour h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--texte-faible);margin:0 0 4px;font-weight:600}
+.agenda-jour h3{font-size:var(--t2);text-transform:uppercase;letter-spacing:.05em;color:var(--texte-faible);margin:0 0 4px;font-weight:600}
 .agenda-jour h3.auj{color:var(--i-bleu)}
 .ligne-evt{align-items:center}
 .evt-barre{width:3px;align-self:stretch;min-height:28px;border-radius:2px;background:var(--c);flex-shrink:0}
-.evt-heure{font-family:var(--mono);font-size:12.5px;color:var(--texte-doux);width:52px;flex-shrink:0}
+.evt-heure{font-variant-numeric:tabular-nums;font-size:var(--t3);color:var(--texte-doux);width:52px;flex-shrink:0}
 .infos-evt{margin-bottom:6px}
-.lien-evt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--texte-doux)}
+.lien-evt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--t3);color:var(--texte-doux)}
 .note-evt{white-space:pre-wrap;margin-top:6px}
 @media (max-width:620px){
   .grand-mois{gap:2px}
-  .grand-mois .js{font-size:10px;letter-spacing:0}
-  .grand-mois .jour-g{min-height:50px;padding:4px 1px;align-items:center;border-radius:7px}
+  .grand-mois .js{font-size:var(--t1);letter-spacing:0}
+  .grand-mois .jour-g{min-height:50px;padding:4px 1px;align-items:center;border-radius:var(--r2)}
   .grand-mois .num{margin:0}
   .grand-mois .lig,.grand-mois .plus{display:none}
   .grand-mois .pts{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;max-width:24px}
   .grand-mois .pts i{width:5px;height:5px;border-radius:50%;background:var(--c)}
-  .deux-sem{gap:14px}
-  .deux-sem .sem{grid-template-columns:1fr;gap:3px}
+  .deux-sem{gap:12px}
+  .deux-sem .sem{grid-template-columns:1fr;gap:4px}
   .deux-sem .jour-s{min-height:0;flex-direction:row;align-items:flex-start;gap:8px;padding:6px 8px}
   .deux-sem .num{flex:0 0 62px;margin:0;line-height:20px}
   .deux-sem .elts{flex:1}
@@ -929,61 +954,63 @@ th.triable .fleche{display:inline-block;min-width:.8em;font-size:1.15em;line-hei
 .cal-leg .gamme{display:flex;gap:2px}
 .cal-leg .gamme i{width:12px;height:8px;border-radius:2px}
 .defile{position:relative;overflow-x:auto;margin:0 -6px}   /* position : garde le texte « sr » du tableau dans la zone qui défile */
-table{width:100%;border-collapse:collapse;font-size:13.5px}
-th{text-align:left;font-weight:600;color:var(--texte-faible);font-size:11px;padding:8px 10px;border-bottom:1px solid var(--trait);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:var(--t4)}
+th{text-align:left;font-weight:600;color:var(--texte-faible);font-size:var(--t1);padding:8px 10px;border-bottom:1px solid var(--trait);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
 td{padding:9px 10px;border-bottom:1px solid var(--trait-doux);vertical-align:middle}
 tbody tr:last-child td{border-bottom:0}
 tbody tr:hover{background:rgb(var(--sur) / 0.02)}
-td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
-td.date{white-space:nowrap;color:var(--texte-doux);font-family:var(--mono);font-size:12.5px}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.date{white-space:nowrap;color:var(--texte-doux);font-variant-numeric:tabular-nums;font-size:var(--t3)}
 td.act{text-align:right;white-space:nowrap;width:1%}
-.note-mvt{display:block;max-width:34ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--texte-doux);margin-top:2px}
+.note-mvt{display:block;max-width:34ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--t2);color:var(--texte-doux);margin-top:2px}
 @media (hover:hover){td.act .icone-btn{opacity:.4}tr:hover td.act .icone-btn{opacity:1}}
 .table-simple td{padding:8px 4px}
+/* Mouvements : le libellé ouvre la modification (sur téléphone, le crayon disparaît, voir plus bas) */
+.table-mvts .nom-lien{font-size:inherit;font-weight:inherit;white-space:normal;overflow:visible;text-align:left}
 
 /* ==========================================================================
    10. ÉTAT VIDE, FENÊTRES, MESSAGE, FOCUS, PALETTE, PIED
    ========================================================================== */
-.vide{border:1px dashed var(--trait);border-radius:12px;padding:22px 18px;text-align:center;color:var(--texte-doux);font-size:13.5px}
+.vide{border:1px dashed var(--trait);border-radius:var(--r4);padding:22px 18px;text-align:center;color:var(--texte-doux);font-size:var(--t4)}
 .vide p{margin:0 auto 12px;max-width:52ch}
 .vide .boutons{justify-content:center}
 .voile{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:20px;background:#101012cc;backdrop-filter:blur(3px)}
 .voile.on{display:flex}
-.modale{width:min(540px,100%);max-height:calc(100vh - 40px);overflow:auto;background:var(--carte-survol);border:1px solid var(--trait);border-radius:16px;padding:20px 22px 22px;box-shadow:0 30px 70px #000000a6;animation:ouvre .22s cubic-bezier(.2,.9,.3,1)}
+.modale{width:min(540px,100%);max-height:calc(100vh - 40px);overflow:auto;background:var(--carte-survol);border:1px solid var(--trait);border-radius:var(--r6);padding:20px 22px 22px;box-shadow:0 30px 70px #000000a6;animation:ouvre .22s cubic-bezier(.2,.9,.3,1)}
 .modale.large{width:min(760px,100%)}
 .modale:focus{outline:none}
 @keyframes ouvre{from{opacity:0;transform:translateY(12px) scale(.97)}}
 .modale-tete{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-.modale-tete h3{margin:0;font-size:18px;font-weight:600}
+.modale-tete h3{margin:0;font-size:var(--t7);font-weight:600}
 .modale-tete .fermer{margin-left:auto}
-.modale .texte{color:var(--texte-doux);font-size:13.5px;margin:0 0 16px}
+.modale .texte{color:var(--texte-doux);font-size:var(--t4);margin:0 0 16px}
 .actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px}
 .choix-migration{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
-.choix-migration button{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;padding:12px 14px;border-radius:11px;border:1px solid var(--trait);background:rgb(var(--sur) / 0.031);transition:border-color .15s,background .15s}
+.choix-migration button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:12px 14px;border-radius:var(--r4);border:1px solid var(--trait);background:rgb(var(--sur) / 0.031);transition:border-color .15s,background .15s}
 .choix-migration button:hover{border-color:#3987e566;background:#3987e512}
-.choix-migration strong{font-size:14px}
-.choix-migration span{font-size:12.5px;color:var(--texte-doux)}
-.toast{position:fixed;left:50%;bottom:26px;z-index:80;transform:translate(-50%,14px);opacity:0;padding:10px 16px;border-radius:10px;border:1px solid var(--trait);border-left:3px solid var(--i-vert);background:var(--carte-survol);font-size:13px;box-shadow:0 14px 34px #00000080;transition:transform .25s ease,opacity .25s ease;pointer-events:none;max-width:86vw;text-align:center}
+.choix-migration strong{font-size:var(--t4)}
+.choix-migration span{font-size:var(--t3);color:var(--texte-doux)}
+.toast{position:fixed;left:50%;bottom:26px;z-index:80;transform:translate(-50%,14px);opacity:0;padding:10px 16px;border-radius:var(--r4);border:1px solid var(--trait);border-left:3px solid var(--i-vert);background:var(--carte-survol);font-size:var(--t3);box-shadow:0 14px 34px #00000080;transition:transform .25s ease,opacity .25s ease;pointer-events:none;max-width:86vw;text-align:center}
 .toast.on{transform:translate(-50%,0);opacity:1}
-.focus-flottant{position:fixed;right:20px;bottom:20px;z-index:65;width:300px;border:1px solid #3987e560;background:var(--carte-survol);box-shadow:0 18px 45px #00000066;border-radius:14px;padding:12px 14px}
+.focus-flottant{position:fixed;right:20px;bottom:20px;z-index:65;width:300px;border:1px solid #3987e560;background:var(--carte-survol);box-shadow:0 18px 45px #00000066;border-radius:var(--rayon);padding:12px 14px}
 .focus-flottant .ligne{display:flex;align-items:center;gap:10px}
-.focus-flottant .nom-f{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.focus-flottant .minuteur{font-family:var(--mono);font-size:17px;color:var(--i-bleu);font-variant-numeric:tabular-nums}
+.focus-flottant .nom-f{flex:1;min-width:0;font-size:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.focus-flottant .minuteur{font-size:var(--t7);color:var(--i-bleu);font-variant-numeric:tabular-nums}
 .focus-flottant .boutons{margin-top:10px;justify-content:flex-end}
 .palette{position:fixed;inset:0;z-index:90;background:#101012b8;backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:10vh 20px 20px}
 .palette.on{display:flex}
-.palette-boite{width:min(620px,100%);background:var(--carte-survol);border:1px solid var(--trait);border-radius:16px;box-shadow:0 30px 80px #000000a6;overflow:hidden}
-.palette-boite input{width:100%;border:0;border-bottom:1px solid var(--trait);background:transparent;padding:16px 18px;font-size:16px;outline:0;color:var(--texte)}
+.palette-boite{width:min(620px,100%);background:var(--carte-survol);border:1px solid var(--trait);border-radius:var(--r6);box-shadow:0 30px 80px #000000a6;overflow:hidden}
+.palette-boite input{width:100%;border:0;border-bottom:1px solid var(--trait);background:transparent;padding:16px 18px;font-size:var(--t6);outline:0;color:var(--texte)}
 .palette-liste{max-height:50vh;overflow:auto;padding:7px}
-.commande{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;border:0;background:transparent;width:100%;text-align:left;color:var(--texte)}
+.commande{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r4);border:0;background:transparent;width:100%;text-align:left;color:var(--texte)}
 .commande.sel,.commande:hover{background:rgb(var(--sur) / 0.051)}
-.commande .ic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:rgb(var(--sur) / 0.031);flex-shrink:0}
+.commande .ic{width:32px;height:32px;border-radius:var(--r4);display:grid;place-items:center;background:rgb(var(--sur) / 0.031);flex-shrink:0}
 .commande .txt{flex:1;min-width:0}
-.commande strong{display:block;font-size:13.5px;font-weight:550}
-.commande .txt span{display:block;font-size:11.5px;color:var(--texte-faible)}
-.palette-pied{display:flex;gap:14px;padding:9px 14px;border-top:1px solid var(--trait-doux);font-size:11.5px;color:var(--texte-faible)}
-.pied{max-width:1560px;margin:0 auto;padding:14px 24px 26px;display:flex;align-items:center;gap:10px 20px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--texte-faible)}
-.pied .e{display:flex;align-items:center;gap:7px;border:0;background:transparent;padding:0;font:inherit;color:inherit}
+.commande strong{display:block;font-size:var(--t4);font-weight:550}
+.commande .txt span{display:block;font-size:var(--t2);color:var(--texte-faible)}
+.palette-pied{display:flex;gap:12px;padding:9px 14px;border-top:1px solid var(--trait-doux);font-size:var(--t2);color:var(--texte-faible)}
+.pied{max-width:1560px;margin:0 auto;padding:14px 24px 26px;display:flex;align-items:center;gap:10px 20px;flex-wrap:wrap;font-variant-numeric:tabular-nums;font-size:var(--t1);color:var(--texte-faible)}
+.pied .e{display:flex;align-items:center;gap:6px;border:0;background:transparent;padding:0;font:inherit;color:inherit;text-align:left}
 .pied button.e:hover,.pied a.e:hover{color:var(--texte-doux)}
 .pied .led{width:6px;height:6px;border-radius:50%;background:var(--i-vert);flex-shrink:0}
 .pied .led.j{background:var(--i-jaune)} .pied .led.b{background:var(--i-bleu)} .pied .led.r{background:var(--i-rouge)}
@@ -995,6 +1022,8 @@ td.act{text-align:right;white-space:nowrap;width:1%}
 /* Barre du haut : ☰, logo, recherche, capture, état (le menu est dans le volet, à toutes les largeurs) */
 @media (max-width:1200px){
   .c3{grid-column:span 6}.c4{grid-column:span 6}.c5,.c7,.c8{grid-column:span 12}
+  .fin-bas > *{grid-column:span 6}   /* Finances, rangée du bas : deux cartes côte à côte, la 3e (budgets) dessous */
+  .fin-bas > :only-child,.fin-bas > :nth-child(3){grid-column:span 12}
   .grille.accueil{grid-auto-flow:row dense}   /* « À suivre » remonte à côté du calendrier, les tâches du jour dessous */
   .chiffres{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
@@ -1009,7 +1038,7 @@ td.act{text-align:right;white-space:nowrap;width:1%}
   .notes-cadre > .dossiers .dossiers-tete{display:flex;position:sticky;top:0;z-index:1;gap:10px;padding:12px 0 10px 8px;margin-bottom:4px;background:var(--carte);border-bottom:1px solid var(--trait-doux)}
   .notes-cadre > .dossiers .dossiers-tete .etiq{padding:0}
   .notes-cadre > .dossiers .dossiers-tete .fermer{display:inline-grid;margin-left:auto}
-  .notes-cadre > .dossiers .dossier-btn{padding:10px;font-size:14px}
+  .notes-cadre > .dossiers .dossier-btn{padding:10px;font-size:var(--t4)}
   .notes-contenu .barre-outils{gap:8px}
   .notes-contenu .barre-outils .filtre{flex:1 1 110px;min-width:0}   /* recherche et dossier sur la même ligne */
   .choix-dossier{flex:1.5 1 150px}
@@ -1017,12 +1046,35 @@ td.act{text-align:right;white-space:nowrap;width:1%}
   .fiche-grille{grid-template-columns:1fr}
   .barre{padding:10px 16px}
   .recherche{width:220px}
-  .c3,.c4,.c6{grid-column:span 12}
-  .chiffres.trois{grid-template-columns:1fr 1fr 1fr}
+  .chiffres.trois{grid-template-columns:1fr 1fr 1fr}   /* tablette : les cartes c3 / c4 / c6 restent sur deux colonnes */
 }
 /* Téléphone : une seule ligne ☰, logo, loupe, capture, état.
    Appuyer sur la loupe déplie le champ de recherche sur toute la ligne ; il se replie ensuite tout seul. */
 @media (max-width:760px){
+  .c3,.c4,.c6,.fin-bas > *{grid-column:span 12}
+  /* Mouvements (Finances, projet) : une ligne par mouvement au lieu du tableau, qui laissait le montant hors de l'écran.
+     Libellé et montant en haut ; date, catégorie, projet, compte et boutons dessous ; tri par les étiquettes du haut */
+  .defile:has(> .table-mvts){margin:0;overflow:visible}
+  .table-mvts,.table-mvts tbody{display:block}
+  .table-mvts:not(.triable) thead{display:none}
+  .table-mvts thead{display:block;border-bottom:1px solid var(--trait);padding:0 2px 8px}
+  .table-mvts thead tr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px}
+  .table-mvts thead tr::before{content:'Trier :';font-size:var(--t1);color:var(--texte-faible)}
+  .table-mvts th{display:block;border:0;padding:0}
+  .table-mvts th:last-child{display:none}
+  .table-mvts tbody tr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:10px 2px;border-bottom:1px solid var(--trait-doux)}
+  .table-mvts tbody tr:last-child{border-bottom:0}
+  .table-mvts td{display:block;padding:0;border:0}
+  .table-mvts td:empty{display:none}
+  .table-mvts td.lib{order:1;flex:1 1 0;min-width:0;align-self:flex-start}
+  .table-mvts td.num{order:2;font-size:var(--t5);font-weight:600;align-self:flex-start}   /* montant en face de la 1re ligne du libellé */
+  .table-mvts tbody tr::after{content:'';order:3;flex-basis:100%;height:0}   /* fin de la 1re ligne : libellé et montant seuls */
+  .table-mvts td.date{order:4;font-size:var(--t2)}
+  .table-mvts td.cat{order:5} .table-mvts td.proj{order:6}
+  .table-mvts td.cpt{order:7;font-size:var(--t2)}
+  .table-mvts td.act{order:8;margin-left:auto;width:auto}
+  .table-mvts td.act .mod{display:none}
+  .table-mvts .note-mvt{max-width:100%}
   .barre{gap:8px}
   .recherche kbd,.ligne-volet kbd{display:none}   /* raccourcis clavier : inutiles sur écran tactile */
   .recherche{width:36px;height:36px;padding:0;gap:0;justify-content:center;cursor:pointer}
@@ -1033,7 +1085,7 @@ td.act{text-align:right;white-space:nowrap;width:1%}
   .donut.large{gap:16px;justify-content:center}
   .entete-cat,.ligne-cat{grid-template-columns:minmax(0,1fr) 80px 38px 24px;gap:6px}
   .ligne-cat{padding:6px 4px}
-  .ligne-cat .nom-c{gap:7px}
+  .ligne-cat .nom-c{gap:6px}
   .masque-cat{width:24px;height:24px}
   .ligne-cat .pc .lg{display:none}
   .ligne-cat .pc .ct{display:inline}
@@ -1042,15 +1094,24 @@ td.act{text-align:right;white-space:nowrap;width:1%}
   .entete-cat .ct{display:inline}
 }
 @media (max-width:620px){
+  :root{--t1:12px}   /* téléphone : aucun texte sous 12 px */
   .page{padding:20px 16px 26px}
   .entete-carte{flex-wrap:wrap}
   .entete-carte .droite:has(.filtre){flex:1 1 100%;margin-left:0}
   .filtre{min-width:0}
   .entete-carte .droite .filtre{flex:1}
   .nav-mois strong{min-width:0}
-  .bonjour h1{font-size:25px}
+  .bonjour h1{font-size:var(--t9)}
   .barre .marque-txt{display:none}
-  .chiffres,.chiffres.trois{grid-template-columns:1fr}
+  /* Chiffres clés : deux par ligne, plus compacts (au lieu d'une grande carte chacun) */
+  .chiffres,.chiffres.trois{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .chiffres.trois > :last-child{grid-column:span 2}
+  .chiffres .kpi{padding:12px}
+  .chiffres .kpi .haut{gap:8px;margin-bottom:8px}
+  .chiffres .kpi .haut .pastille{width:26px !important;height:26px !important}
+  .chiffres .kpi .haut > span:last-child{font-size:var(--t2);line-height:1.25}
+  .chiffres .kpi .valeur{font-size:var(--t8)}
+  .chiffres .kpi .note{white-space:normal;font-size:var(--t2)}
   .form-grille > .champ.demi{grid-column:span 2}
   .mosaique,.mosaique.notes{grid-template-columns:1fr}
   .modale.fiche{padding:18px 16px}
@@ -1064,6 +1125,20 @@ td.act{text-align:right;white-space:nowrap;width:1%}
   .tache .corps .t > .priorite{display:inline-block;margin-left:7px;vertical-align:1px}
   .tache .corps .t > .pastilles-tache{vertical-align:-1px}   /* espace normal avant : rien en début de ligne s'il passe dessous */
   .actions-ligne{gap:0}
+  /* Tâches : les boutons (Focus, Modifier, Supprimer) attendent derrière « ⋯ » ; le titre garde toute la largeur */
+  .actions-ligne .plus-actions{display:inline-grid;order:9}
+  li.tache:not(.actions-on) .actions-ligne > :not(.plus-actions){display:none}
+  li.tache.actions-on{flex-wrap:wrap}
+  li.tache.actions-on .actions-ligne{flex-basis:100%;justify-content:flex-end;gap:4px}
+  li.tache.actions-on .plus-actions{color:var(--texte);background:rgb(var(--sur) / 0.071)}
+  /* Choix dans un formulaire (priorité, type de capture…) : colonnes égales au lieu de lignes inégales */
+  .champ .segment{display:grid;grid-template-columns:repeat(auto-fit,minmax(68px,1fr))}
+  .champ .segment label{display:flex}
+  .champ .segment span{flex:1;display:flex;align-items:center;justify-content:center;padding:7px 4px;text-align:center}   /* cases de même hauteur, même si un libellé passe sur deux lignes */
+  .actions:has(#capture-valider){display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .actions:has(#capture-valider) > .btn{margin:0 !important}
+  #capture-inbox{grid-column:1 / -1;order:5}
+  #capture-ia{grid-column:1 / -1}
   /* Fenêtre des comptes : nom et corbeille sur la 1re ligne, budget et nombre de mouvements dessous */
   .liste.gestion > li{flex-wrap:wrap}
   .ligne-gestion input[name="nom"]{flex:1 1 60%}
@@ -1073,7 +1148,34 @@ td.act{text-align:right;white-space:nowrap;width:1%}
   .import-liste .corps{flex:1 1 0}   /* le libellé se replie, le montant reste à droite */
   .import-liste select.saisie{order:5;flex:1 1 100%;margin-left:28px}
   .choix-couleur{padding-left:0}
-  .actions-ligne .icone-btn{width:28px}
+}
+/* Écran tactile : boutons d'au moins 40 px, et zone d'appui agrandie (44 px et plus) autour des plus petits */
+@media (pointer:coarse){
+  .icone-btn,.chevron,.cal-nav button{width:40px;height:40px}
+  .icone-btn{position:relative}
+  .depliable-tete{padding-top:6px;padding-bottom:6px}
+  .depliable-tete .nom-lien{padding-top:9px;padding-bottom:9px}
+  .bloc-pliable > .groupe-titre .chevron{width:36px;height:36px}
+  .btn.compact{min-height:36px}
+  .puce-compte{padding-top:8px;padding-bottom:8px}
+  .ligne-cat{padding-top:9px;padding-bottom:9px}
+  .ajout input{padding-top:10px;padding-bottom:10px}
+  .liste .corps a.t{padding-top:6px;padding-bottom:6px;margin-top:-6px;margin-bottom:-6px}
+  .table-mvts .nom-lien,th.triable .tri{padding-top:8px;padding-bottom:8px;margin-top:-8px;margin-bottom:-8px}
+  .compte-etapes,a.puce,button.puce{position:relative}
+  .masque-cat::after,.filtre-projet .icone-btn::after{content:'';position:absolute;inset:-10px}
+  .compte-etapes::after,a.puce::after,button.puce::after{content:'';position:absolute;inset:-9px -2px}
+}
+/* Pas de clavier (téléphone, tablette) : pas de raccourci clavier dans le pied de page */
+@media (hover:none){.raccourci-k{display:none}}
+/* Grand écran : la file des tâches en deux colonnes (titres et boutons proches, au lieu d'une ligne de 1 400 px) */
+@media (min-width:1100px){
+  #liste-taches{columns:2;column-gap:40px}
+  #liste-taches .groupe-titre{break-after:avoid}
+  #liste-taches li,#liste-taches .groupe-titre{break-inside:avoid}
+  #liste-taches .liste > li{border-top:0;border-bottom:1px solid var(--trait-tache)}   /* trait sous chaque tâche : rien en haut d'une colonne */
+  #liste-taches .liste > li:last-child{border-bottom:0}
+  #liste-taches .plus-notes,#liste-taches .bloc-pliable,#liste-taches > .vide{column-span:all}
 }
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.01ms !important;animation-delay:0s !important;transition-duration:.01ms !important}
@@ -1741,6 +1843,7 @@ const ICONES = {
   telephone:'<path d="M5.2 4h3.1l1.7 4.1-2.1 1.4a11.5 11.5 0 0 0 6.6 6.6l1.4-2.1 4.1 1.7v3.1a1.6 1.6 0 0 1-1.7 1.6A16.5 16.5 0 0 1 3.6 5.7 1.6 1.6 0 0 1 5.2 4z"/>',
   agrandir:'<path d="M14 4h6v6M10 20H4v-6M20 4l-6.4 6.4M4 20l6.4-6.4"/>',
   menu:'<path d="M4 6.5h16M4 12h16M4 17.5h16"/>',
+  points:'<circle cx="5.5" cy="12" r=".9"/><circle cx="12" cy="12" r=".9"/><circle cx="18.5" cy="12" r=".9"/>',
   repeter:'<path d="M16.6 3.6l3.4 3.4-3.4 3.4"/><path d="M4 11.4v-.9A3.5 3.5 0 0 1 7.5 7H20"/><path d="M7.4 20.4 4 17l3.4-3.4"/><path d="M20 12.6v.9a3.5 3.5 0 0 1-3.5 3.5H4"/>',
   sync:'<path d="M19.6 10.2A8 8 0 0 0 5.4 7.2L3.8 9"/><path d="M3.8 4.6V9h4.4"/><path d="M4.4 13.8a8 8 0 0 0 14.2 3L20.2 15"/><path d="M20.2 19.4V15h-4.4"/>',
   base:'<ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/><path d="M4.5 5.5v13c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-13"/><path d="M4.5 12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8"/>'
@@ -2118,6 +2221,7 @@ function ligneTache(t, {date = true} = {}){
     <div class="corps"><div class="t"><span>${esc(t.nom)}</span>${(() => { const p = (t.fait ? '' : badgePrio(t)) + compteEtapes(t); return p ? ` <span class="pastilles-tache">${p}</span>` : ''; })()}</div>
       ${meta.length || t.projet || t.tags.length ? `<div class="s">${meta.join(' · ')}${t.projet ? tagProjet(t.projet) : ''}${pucesTags(t.tags)}</div>` : ''}${listeEtapes(t)}</div>
     <div class="actions-ligne">
+      <button class="icone-btn plus-actions" data-action="tache-actions" aria-expanded="false" title="Actions" aria-label="Actions : ${esc(t.nom)}">${ico('points', 17, 'currentColor', 2.4)}</button>
       ${t.fait ? '' : `<button class="icone-btn" data-action="focus" data-id="${esc(t.id)}" title="${enFocus ? 'Focus en cours' : 'Focus de 25 min'}" aria-label="Focus"${enFocus ? ' style="color:var(--i-bleu);opacity:1"' : ''}>${ico('horloge', 15)}</button>`}
       <button class="icone-btn" data-action="tache-modifier" data-id="${esc(t.id)}" title="Modifier" aria-label="Modifier">${ico('crayon', 15)}</button>
       <button class="icone-btn danger" data-action="tache-supprimer" data-id="${esc(t.id)}" title="Supprimer" aria-label="Supprimer">${ico('corbeille', 15)}</button>
@@ -2228,18 +2332,18 @@ function finFenetreMois(ym){
   const cour = moisCourant();
   return ym > cour ? ym : ym <= decaleMois(cour, -6) ? decaleMois(ym, 5) : cour;
 }
-function graphSixMois(ym){
+function graphSixMois(ym, W = 560, H = 210){
   const fin = finFenetreMois(ym), mois = [-5, -4, -3, -2, -1, 0].map(k => decaleMois(fin, k)), vals = mois.map(m => totalMois(m)), bm = budgetMensuel();
-  const W = 560, H = 210, G = 50, D = 16, T = 22, B = 24;
+  const G = 50, D = 16, T = 22, B = 24;
   const e = echelle(Math.max(...vals, bm) * 1.12), y = v => H - B - v / e.max * (H - B - T), pas = (W - G - D) / 6, lb = Math.min(46, pas * .55);
-  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Dépenses des six derniers mois">` + grilleY(e, G, W, D, y);
+  let s = `<svg viewBox="0 0 ${W} ${H}" data-graph="6" data-ym="${ym}" data-l="${W}" data-h="${H}" role="img" aria-label="Dépenses des six derniers mois">` + grilleY(e, G, W, D, y);
   vals.forEach((v, i) => {
     const x0 = G + i * pas + (pas - lb) / 2, yy = y(v), h = Math.max(0, H - B - yy), sel = mois[i] === ym;
     const coul = bm && v > bm ? 'var(--rose)' : sel ? 'var(--bleu)' : 'var(--barre-neutre)';
     s += `<g class="barre-mois${sel ? ' sel' : ''}" data-action="fin-mois" data-m="${mois[i]}"><rect class="fond" x="${(G + i * pas + 3).toFixed(1)}" y="${T - 14}" width="${(pas - 6).toFixed(1)}" height="${H - T + 14}" rx="8"/>` +
          (h > .5 ? `<path d="${barreArrondie(x0, yy, lb, h)}" style="fill:${coul}"/>` : `<rect x="${x0.toFixed(1)}" y="${(H - B - 3).toFixed(1)}" width="${lb.toFixed(1)}" height="3" rx="1.5" style="fill:${sel ? 'var(--bleu)' : '#4a4a52'}"/>`) +
          `<title>${nomMois(mois[i])} : ${eur(v)}${sel ? ' (affiché)' : ' — clic pour afficher ce mois'}</title></g>`;
-    if(v > 0) s += `<text x="${(x0 + lb / 2).toFixed(1)}" y="${(yy - 6).toFixed(1)}" text-anchor="middle" style="fill:${sel ? 'var(--texte)' : 'var(--texte-doux)'}">${eurCourt(v)}</text>`;
+    if(v > 0 && pas >= 38) s += `<text x="${(x0 + lb / 2).toFixed(1)}" y="${(yy - 6).toFixed(1)}" text-anchor="middle" style="fill:${sel ? 'var(--texte)' : 'var(--texte-doux)'}">${eurCourt(v)}</text>`;
     s += `<text x="${(x0 + lb / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" style="${sel ? 'fill:var(--texte);font-weight:700' : ''}">${nomMois(mois[i], true)}</text>`;
   });
   if(bm) s += `<line x1="${G}" x2="${W - D}" y1="${y(bm).toFixed(1)}" y2="${y(bm).toFixed(1)}" style="stroke:var(--vert)" stroke-width="1.5" stroke-dasharray="5 4"/>`;
@@ -2247,24 +2351,36 @@ function graphSixMois(ym){
 }
 
 /* Vue par année : une colonne par mois (clic = afficher ce mois) */
-function graphDouzeMois(an, parMois, bm){
+function graphDouzeMois(an, parMois, bm, W = 560, H = 210){
   const cour = moisCourant(), mois = parMois.map((_, i) => an + '-' + pad(i + 1));
-  const W = 560, H = 210, G = 50, D = 16, T = 22, B = 24;
+  const G = 50, D = 16, T = 22, B = 24;
   const e = echelle(Math.max(...parMois, bm) * 1.12), y = v => H - B - v / e.max * (H - B - T), pas = (W - G - D) / 12, lb = Math.min(28, pas * .6);
-  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Dépenses mois par mois en ${an}">` + grilleY(e, G, W, D, y);
+  let s = `<svg viewBox="0 0 ${W} ${H}" data-graph="12" data-an="${an}" data-vals="${parMois.map(v => Math.round(v * 100) / 100).join(',')}" data-bm="${bm}" data-l="${W}" data-h="${H}" role="img" aria-label="Dépenses mois par mois en ${an}">` + grilleY(e, G, W, D, y);
   parMois.forEach((v, i) => {
     const m = mois[i], x0 = G + i * pas + (pas - lb) / 2, yy = y(v), h = Math.max(0, H - B - yy), enCours = m === cour;
     const coul = bm && v > bm ? 'var(--rose)' : 'var(--bleu)';
     s += `<g class="barre-mois" data-action="fin-mois" data-m="${m}"><rect class="fond" x="${(G + i * pas + 2).toFixed(1)}" y="${T - 14}" width="${(pas - 4).toFixed(1)}" height="${H - T + 14}" rx="7"/>` +
          (h > .5 ? `<path d="${barreArrondie(x0, yy, lb, h)}" style="fill:${coul}"/>` : `<rect x="${x0.toFixed(1)}" y="${(H - B - 3).toFixed(1)}" width="${lb.toFixed(1)}" height="3" rx="1.5" style="fill:var(--barre-neutre)"/>`) +
          `<title>${nomMois(m)} : ${eur(v)}${enCours ? ' (mois en cours)' : ''} — clic pour afficher ce mois</title></g>`;
-    if(v > 0) s += `<text x="${(x0 + lb / 2).toFixed(1)}" y="${(yy - 6).toFixed(1)}" text-anchor="middle" style="font-size:9.5px">${eurCourt(v)}</text>`;
-    s += `<text x="${(x0 + lb / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" style="${enCours ? 'fill:var(--texte);font-weight:700' : ''}">${nomMois(m, true)}</text>`;
+    if(v > 0 && pas >= 44) s += `<text x="${(x0 + lb / 2).toFixed(1)}" y="${(yy - 6).toFixed(1)}" text-anchor="middle">${eurCourt(v)}</text>`;   /* colonnes étroites (téléphone) : le montant reste dans l'infobulle */
+    s += `<text x="${(x0 + lb / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" style="${enCours ? 'fill:var(--texte);font-weight:700' : ''}">${pas >= 36 ? nomMois(m, true) : nomMois(m, true).charAt(0).toUpperCase()}</text>`;
   });
   if(bm) s += `<line x1="${G}" x2="${W - D}" y1="${y(bm).toFixed(1)}" y2="${y(bm).toFixed(1)}" style="stroke:var(--vert)" stroke-width="1.5" stroke-dasharray="5 4"/>`;
   return s + '</svg>';
 }
 
+/* Graphiques redessinés à la largeur réelle de leur carte, textes à leur vraie taille (plus de graphique géant sur tablette,
+   ni de chiffres minuscules sur téléphone) ; à côté d'une autre carte, le graphique prend sa hauteur (pas de vide sous lui) */
+function ajusterGraphes(){
+  $$('#vue svg[data-graph]').forEach(g => {
+    const c = g.parentElement, cs = getComputedStyle(c), l = Math.round(c.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+    if(l < 200) return;
+    const haut = c.getBoundingClientRect().top, voisins = [...c.parentElement.children].filter(x => x !== c && Math.abs(x.getBoundingClientRect().top - haut) < 2);
+    const h = voisins.length ? Math.max(210, Math.min(340, Math.round(Math.max(...voisins.map(x => x.offsetHeight)) - (c.offsetHeight - g.getBoundingClientRect().height)))) : 210;
+    if(Math.abs(l - Number(g.dataset.l)) < 4 && Math.abs(h - Number(g.dataset.h)) < 4) return;
+    g.outerHTML = g.dataset.graph === '6' ? graphSixMois(g.dataset.ym, l, h) : graphDouzeMois(g.dataset.an, g.dataset.vals.split(',').map(Number), Number(g.dataset.bm), l, h);
+  });
+}
 /* Calendrier des dépenses : intensité du bleu = montant du jour */
 function calendrierChaleur(ym){
   const [a, m] = ym.split('-').map(Number), n = joursDansMois(ym), dec = (new Date(a, m - 1, 1).getDay() + 6) % 7, auj = aujourdhui();
@@ -2300,7 +2416,7 @@ function calendrierAccueil(){
   return `<div class="cal-tete"><button class="cal-titre" data-action="cal-auj" title="Revenir au mois en cours">${nomMois(ym)}</button>
       <span class="cal-nav"><button data-action="cal-prec" aria-label="Mois précédent">${ico('chevronG', 15)}</button><button data-action="cal-suiv" aria-label="Mois suivant">${ico('chevronD', 15)}</button></span></div>
     <div class="cal">${['L','M','M','J','V','S','D'].map(x => `<span class="js">${x}</span>`).join('')}${cases}</div>
-    <div class="cal-leg"><span><i style="background:var(--i-violet)"></i>événement</span><span><i style="background:var(--i-bleu)"></i>tâche</span><span><i style="background:var(--i-rose)"></i>anniversaire</span><span><i style="background:var(--i-vert)"></i>dépense</span><span><i class="doc"></i>échéance de document</span></div>`;
+    <div class="cal-leg types"><span><i style="background:var(--i-violet)"></i>événement</span><span><i style="background:var(--i-bleu)"></i>tâche</span><span><i style="background:var(--i-rose)"></i>anniversaire</span><span><i style="background:var(--i-vert)"></i>dépense</span><span><i class="doc"></i>échéance</span></div>`;
 }
 
 /* --- CALENDRIER : dates d'un événement, heure dans un autre fuseau, contenu des jours --- */
@@ -2417,15 +2533,15 @@ function tableMouvements(liste, avecProjet = true, tri = null){
     const actif = tri.col === col, sens = actif ? (tri.sens > 0 ? 'ascending' : 'descending') : 'none';
     return `<th class="triable${actif ? ' actif' : ''}${cls ? ' ' + cls : ''}" aria-sort="${sens}"><button type="button" class="tri" data-action="fin-tri" data-col="${col}" title="Trier par ${lib.toLowerCase()}">${lib}<span class="fleche" aria-hidden="true">${actif ? (tri.sens > 0 ? '↑' : '↓') : ''}</span></button></th>`;
   };
-  return `<div class="defile"><table><thead><tr>${th('date', 'Date')}${th('libelle', 'Libellé')}${th('categorie', 'Catégorie')}${avecProjet ? th('projet', 'Projet') : ''}${th('compte', 'Compte')}${th('montant', 'Montant', 'num')}<th><span class="sr">Actions</span></th></tr></thead><tbody>
+  return `<div class="defile"><table class="table-mvts${tri ? ' triable' : ''}"><thead><tr>${th('date', 'Date')}${th('libelle', 'Libellé')}${th('categorie', 'Catégorie')}${avecProjet ? th('projet', 'Projet') : ''}${th('compte', 'Compte')}${th('montant', 'Montant', 'num')}<th><span class="sr">Actions</span></th></tr></thead><tbody>
     ${liste.map(m => `<tr${dansStats(m) ? '' : ' class="hors-stats" title="Compte décoché : pas pris en compte dans les statistiques"'}>
       <td class="date">${dateCourte(m.date)}</td>
-      <td>${esc(m.libelle || '—')}${m.note ? `<span class="note-mvt" title="${esc(m.note)}">${esc(m.note)}</span>` : ''}</td>
-      <td>${m.type === 'revenu' ? '<span class="puce">entrée</span>' : m.categorie ? `<span class="puce">${esc(m.categorie)}</span>` : `<button class="puce alerte" data-action="categoriser">à catégoriser</button>`}</td>
-      ${avecProjet ? `<td>${tagProjet(m.projet)}</td>` : ''}
-      <td class="doux">${esc(m.compte || '')}</td>
+      <td class="lib"><button type="button" class="nom-lien" data-action="mvt-modifier" data-id="${esc(m.id)}" title="Modifier">${esc(m.libelle || '—')}</button>${m.note ? `<span class="note-mvt" title="${esc(m.note)}">${esc(m.note)}</span>` : ''}</td>
+      <td class="cat">${m.type === 'revenu' ? '<span class="puce">entrée</span>' : m.categorie ? `<span class="puce">${esc(m.categorie)}</span>` : `<button class="puce alerte" data-action="categoriser">à catégoriser</button>`}</td>
+      ${avecProjet ? `<td class="proj">${tagProjet(m.projet)}</td>` : ''}
+      <td class="cpt doux">${esc(m.compte || '')}</td>
       <td class="num${m.type === 'revenu' ? ' vert' : ''}">${m.type === 'revenu' ? '+' : '−'}${eur(m.montant)}</td>
-      <td class="act"><button class="icone-btn" data-action="mvt-modifier" data-id="${esc(m.id)}" title="Modifier" aria-label="Modifier">${ico('crayon', 15)}</button><button class="icone-btn" data-action="mvt-repeter" data-id="${esc(m.id)}" title="Répéter : la même, datée d’aujourd’hui" aria-label="Répéter">${ico('repeter', 15)}</button><button class="icone-btn danger" data-action="mvt-supprimer" data-id="${esc(m.id)}" title="Supprimer" aria-label="Supprimer">${ico('corbeille', 15)}</button></td>
+      <td class="act"><button class="icone-btn mod" data-action="mvt-modifier" data-id="${esc(m.id)}" title="Modifier" aria-label="Modifier">${ico('crayon', 15)}</button><button class="icone-btn" data-action="mvt-repeter" data-id="${esc(m.id)}" title="Répéter : la même, datée d’aujourd’hui" aria-label="Répéter">${ico('repeter', 15)}</button><button class="icone-btn danger" data-action="mvt-supprimer" data-id="${esc(m.id)}" title="Supprimer" aria-label="Supprimer">${ico('corbeille', 15)}</button></td>
     </tr>`).join('')}</tbody></table></div>`;
 }
 
@@ -2533,7 +2649,7 @@ function carteTachesDuJour(){
     (reste > 0 ? `<div style="margin-top:8px">${lienSous('et ' + pluriel(reste, 'autre tâche', 'autres tâches'), '#/taches')}</div>` : '');
 }
 function ligneRappel(x){
-  return `<li${x.cls ? ` class="${x.cls}"` : ''}>${pastille(x.icone, x.couleur, 28, 15)}<span style="flex:1;min-width:0;font-size:13.5px;color:var(--texte-doux)">${x.html}</span>
+  return `<li${x.cls ? ` class="${x.cls}"` : ''}>${pastille(x.icone, x.couleur, 28, 15)}<span style="flex:1;min-width:0;font-size:var(--t4);color:var(--texte-doux)">${x.html}</span>
     ${x.href ? `<a class="btn compact" href="${x.href}">${x.label}</a>` : btnAction(x.action, x.label, 'btn compact')}</li>`;
 }
 function carteRappels(){
@@ -2546,8 +2662,8 @@ function carteRappels(){
 function carteFinancesAccueil(){
   const ym = moisCourant(), t = totalMois(ym), evo = evolution(ym);
   const tete = enteteCarte('portefeuille', 'vert', 'Finances', lienSous('Détail', '#/finances'));
-  const delta = evo === null ? '' : `<span class="${evo > 0 ? 'rose' : 'vert'}" style="font-size:12.5px;display:inline-flex;align-items:center;gap:4px">${ico(evo > 0 ? 'haut' : 'bas', 13)}${signe(evo)} % vs ${nomMois(decaleMois(ym, -1)).split(' ')[0].toLowerCase()} à la même date</span>`;
-  return tete + `<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:-2px 0 14px"><span class="gros">${eur(t)}</span><span class="doux" style="font-size:12.5px">dépensés ce mois-ci</span>${delta}</div>` + noteComptes() +
+  const delta = evo === null ? '' : `<span class="${evo > 0 ? 'rose' : 'vert'}" style="font-size:var(--t3);display:inline-flex;align-items:center;gap:4px">${ico(evo > 0 ? 'haut' : 'bas', 13)}${signe(evo)} % vs ${nomMois(decaleMois(ym, -1)).split(' ')[0].toLowerCase()} à la même date</span>`;
+  return tete + `<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:-2px 0 14px"><span class="gros">${eur(t)}</span><span class="doux" style="font-size:var(--t3)">dépensés ce mois-ci</span>${delta}</div>` + noteComptes() +
     (t ? donut(repartition(depenses(duMois(ym))), t, 'ce mois') : vide('Aucune dépense ce mois-ci.', btnAction('mvt-nouveau', 'Ajouter une dépense')));
 }
 function carteProjetsAccueil(){
@@ -2631,7 +2747,7 @@ function carteProjet(p){
   const pct = progressionProjet(p.id), c = couleurDe(p.id), dep = totalProjet(p.id);
   const nbT = DB.taches.filter(t => t.projet === p.id).length, nbN = DB.notes.filter(n => n.projet === p.id).length, nbD = DB.documents.filter(x => x.projet === p.id).length;   /* archives comprises */
   return `<a class="carte cliquable carte-projet${p.archive ? ' archive' : ''}" href="${href('projet', p.id)}">
-    <div class="haut">${vignetteProjet(p)}<div class="corps"><strong>${esc(p.nom)}</strong><div class="resume">${esc(p.resume || 'Sans description')}</div></div><span class="pct mono doux" style="font-size:12px">${pct} %</span></div>
+    <div class="haut">${vignetteProjet(p)}<div class="corps"><strong>${esc(p.nom)}</strong><div class="resume">${esc(p.resume || 'Sans description')}</div></div><span class="pct mono doux" style="font-size:var(--t2)">${pct} %</span></div>
     ${barre(pct, '', PLEIN[c])}
     ${p.budget ? `<div class="ligne-budget"><span>${eur(dep)} sur ${eur(p.budget)}</span><span class="mono">${Math.round(dep / p.budget * 100)} %</span></div>${barreBudget(dep, p.budget, 'fine')}` : ''}
     <div class="meta-p"><span>${pluriel(nbT, 'tâche')}</span><span>${pluriel(nbN, 'note')}</span>${nbD ? `<span>${pluriel(nbD, 'document')}</span>` : ''}<span>${eur(dep)} dépensés</span></div></a>`;
@@ -2659,24 +2775,26 @@ function pageProjet(id){
     <div class="chiffres trois">
       ${kpi({icone:'portefeuille', couleur:'vert', libelle:'Dépensé', valeur:eur(dep), note:nb.note, cls:nb.cls, prog:barreBudget(dep, p.budget)})}
       ${kpi({icone:'coche', couleur:'bleu', libelle:'Progression', valeur:pct + '<small> %</small>', note:taches.length ? `${taches.filter(t => t.fait).length} / ${pluriel(taches.length, 'tâche')} terminée${taches.filter(t => t.fait).length > 1 ? 's' : ''}` : 'aucune tâche rattachée', prog:taches.length ? barre(pct, '', PLEIN[couleurDe(id)]) : ''})}
-      ${kpi({icone:'horloge', couleur:'violet', libelle:'Dernière activité', valeur:`<span style="font-size:22px">${esc(ilya(p.modif))}</span>`, note:`${pluriel(toutesNotes.length, 'note')} · ${pluriel(DB.documents.filter(x => x.projet === id).length, 'document')} · ${pluriel(mvts.length, 'mouvement')} · ${pluriel(tousContacts.length, 'contact')}`})}
+      ${kpi({icone:'horloge', couleur:'violet', libelle:'Dernière activité', valeur:`<span style="font-size:var(--t8)">${esc(ilya(p.modif))}</span>`, note:`${pluriel(toutesNotes.length, 'note')} · ${pluriel(DB.documents.filter(x => x.projet === id).length, 'document')} · ${pluriel(mvts.length, 'mouvement')} · ${pluriel(tousContacts.length, 'contact')}`})}
     </div>
     <div class="grille">
-      <section class="carte c7 etire">${enteteCarte('coche', 'bleu', 'Tâches du projet', btnAction('tache-nouvelle', ico('plus', 13) + 'Tâche', 'btn f compact', dp))}
+      <div class="c7 pile">
+      <section class="carte">${enteteCarte('coche', 'bleu', 'Tâches du projet', btnAction('tache-nouvelle', ico('plus', 13) + 'Tâche', 'btn f compact', dp))}
         ${visibles.length ? `<ul class="liste">${visibles.map(t => ligneTache(t)).join('')}</ul>` : `<p class="aide" style="margin:0">${nbTA ? 'Aucune tâche en cours.' : 'Aucune tâche rattachée.'}</p>`}
         ${ligneArchives(nbTA, 'tâche terminée', 'tâches terminées', '#/archives?type=taches&projet=' + ici)}</section>
+      <section class="carte">${enteteCarte('euro', 'vert', 'Dépenses du projet', btnAction('mvt-nouveau', ico('plus', 13) + 'Dépense', 'btn f compact', dp))}
+        ${mvts.length ? tableMouvements(mvts, false) : '<p class="aide" style="margin:0">Aucune dépense rattachée.</p>'}</section>
+      ${evts.length ? `<section class="carte">${enteteCarte('calendrier', 'violet', 'Événements à venir', btnAction('evt-nouveau', ico('plus', 13) + 'Événement', 'btn f compact', dp))}<ul class="liste">${evts.slice(0, 8).map(ligneAgenda).join('')}</ul></section>` : ''}
+      </div>
       <div class="c5 pile">
         <section class="carte">${carteDocuments(p)}</section>
         <section class="carte">${enteteCarte('doc', 'orange', 'Notes du projet', btnAction('note-nouvelle', ico('plus', 13) + 'Note', 'btn f compact', dp))}
           ${notes.length ? `<ul class="liste">${notes.map(n => `<li><span class="corps"><a class="t" href="${href('note', n.id)}">${esc(n.titre)}</a><span class="s">${esc(ilya(n.modif))}${n.contenu ? ' · ' + esc(extrait(n.contenu, 70)) : ''}</span></span></li>`).join('')}</ul>` : '<p class="aide" style="margin:0">Aucune note rattachée.</p>'}
           ${ligneArchives(nbNA, 'note', 'notes', '#/archives?type=notes&projet=' + ici)}</section>
+      ${tousContacts.length ? `<section class="carte">${enteteCarte('personnes', 'rose', 'Personnes liées')}${contacts.length ? `<div class="puces">${contacts.map(c => `<a class="puce" href="${href('contact', c.id)}">${esc(c.nom)}</a>`).join('')}</div>` : ''}
+        ${ligneArchives(nbCA, 'fiche', 'fiches', '#/archives?type=contacts&projet=' + ici)}</section>` : ''}
       </div>
-    </div>
-    <section class="carte">${enteteCarte('euro', 'vert', 'Dépenses du projet', btnAction('mvt-nouveau', ico('plus', 13) + 'Dépense', 'btn f compact', dp))}
-      ${mvts.length ? tableMouvements(mvts, false) : '<p class="aide" style="margin:0">Aucune dépense rattachée.</p>'}</section>
-    ${evts.length ? `<section class="carte">${enteteCarte('calendrier', 'violet', 'Événements à venir', btnAction('evt-nouveau', ico('plus', 13) + 'Événement', 'btn f compact', dp))}<ul class="liste">${evts.slice(0, 8).map(ligneAgenda).join('')}</ul></section>` : ''}
-    ${tousContacts.length ? `<section class="carte">${enteteCarte('personnes', 'rose', 'Personnes liées')}${contacts.length ? `<div class="puces">${contacts.map(c => `<a class="puce" href="${href('contact', c.id)}">${esc(c.nom)}</a>`).join('')}</div>` : ''}
-      ${ligneArchives(nbCA, 'fiche', 'fiches', '#/archives?type=contacts&projet=' + ici)}</section>` : ''}`;
+    </div>`;
 }
 
 /* --- DOCUMENTS : briques communes (module Documents, projet, recherche) ---
@@ -2765,8 +2883,10 @@ function navFin(ym){
   return `<div class="nav-mois"><div class="segment vue-fin" role="group" aria-label="Affichage des finances">${bouton('mois', 'Mois')}${bouton('an', 'Année')}</div>
     <button class="icone-btn" data-action="fin-prec" aria-label="${an ? 'Année précédente' : 'Mois précédent'}">${ico('chevronG', 16)}</button><strong>${an ? ym.slice(0, 4) : nomMois(ym)}</strong><button class="icone-btn" data-action="fin-suiv" aria-label="${an ? 'Année suivante' : 'Mois suivant'}">${ico('chevronD', 16)}</button>${retourCour}</div>`;
 }
+/* Budgets des projets : la carte n'apparaît que si un projet a un budget (sinon une phrase dans une grande carte vide) */
+const projetsAvecBudget = () => projetsActifs().filter(p => p.budget);
 function carteBudgetsProjets(){
-  const projetsBudget = projetsActifs().filter(p => p.budget);
+  const projetsBudget = projetsAvecBudget();
   return enteteCarte('dossier', 'jaune', 'Budgets projets') + (projetsBudget.length ? `<ul class="liste">${projetsBudget.map(p => { const d = totalProjet(p.id);
       return `<li><span class="corps"><a class="t" href="${href('projet', p.id)}">${esc(p.nom)}</a>${barreBudget(d, p.budget, 'fine')}<span class="s mono">${eur(d)} / ${eur(p.budget)}</span></span></li>`; }).join('')}</ul>`
     : '<p class="aide" style="margin:0">Aucun projet avec budget. Le budget se définit dans la fiche du projet.</p>');
@@ -2822,10 +2942,10 @@ function pageFinances(){
     </div>
     ${carteCategories(depenses(duMois(ym)), t, nomMois(ym, true), 'Aucune dépense ce mois-ci.', ym)}
     ${carteMouvements(ym, nomMois(ym).toLowerCase())}
-    <div class="grille">
-      <section class="carte c4 etire">${enteteCarte('calendrier', 'violet', 'Calendrier du mois')}${calendrierChaleur(ym)}</section>
-      <section class="carte c5 etire graph">${enteteCarte('graphique', 'bleu', '6 derniers mois')}${graphSixMois(ym)}<p class="aide" style="margin:8px 0 0">Mois affiché : <b style="color:var(--texte)">${nomMois(ym).toLowerCase()}</b>. Clique sur une autre colonne pour l’afficher.${bm ? ' Tirets : budget mensuel.' : ''}</p></section>
-      <section class="carte c3 etire">${carteBudgetsProjets()}</section>
+    <div class="grille fin-bas${projetsAvecBudget().length ? ' avec-budgets' : ''}">
+      <section class="carte c4">${enteteCarte('calendrier', 'violet', 'Calendrier du mois')}${calendrierChaleur(ym)}</section>
+      <section class="carte ${projetsAvecBudget().length ? 'c5' : 'c8'} graph">${enteteCarte('graphique', 'bleu', '6 derniers mois')}${graphSixMois(ym)}<p class="aide" style="margin:8px 0 0">Mois affiché : <b style="color:var(--texte)">${nomMois(ym).toLowerCase()}</b>. Clique sur une autre colonne pour l’afficher.${bm ? ' Tirets : budget mensuel.' : ''}</p></section>
+      ${projetsAvecBudget().length ? `<section class="carte c3 etire">${carteBudgetsProjets()}</section>` : ''}
     </div>`;
 }
 /* --- FINANCES, vue par année (l'année du mois affiché) --- */
@@ -2857,9 +2977,9 @@ function pageFinancesAnnee(){
     </div>
     ${carteCategories(dep, ta, an, 'Aucune dépense cette année.', an)}
     ${carteMouvements(an, an)}
-    <div class="grille">
-      <section class="carte c8 etire graph">${enteteCarte('graphique', 'bleu', 'Mois par mois')}${graphDouzeMois(an, parMois, bm)}<p class="aide" style="margin:8px 0 0">Clique sur une colonne pour voir le détail du mois.${bm ? ' Tirets : budget mensuel.' : ''}</p></section>
-      <section class="carte c4 etire">${carteBudgetsProjets()}</section>
+    <div class="grille fin-bas">
+      <section class="carte ${projetsAvecBudget().length ? 'c8' : 'c12'} graph">${enteteCarte('graphique', 'bleu', 'Mois par mois')}${graphDouzeMois(an, parMois, bm)}<p class="aide" style="margin:8px 0 0">Clique sur une colonne pour voir le détail du mois.${bm ? ' Tirets : budget mensuel.' : ''}</p></section>
+      ${projetsAvecBudget().length ? `<section class="carte c4 etire">${carteBudgetsProjets()}</section>` : ''}
     </div>`;
 }
 function listeFinances(){
@@ -3063,8 +3183,16 @@ function pageContacts(){
 function listeContacts(){
   if(!DB.contacts.length) return vide('Aucune fiche. Ce module sert de mémoire : anniversaires, nouvelles, messages en attente.', btnAction('contact-nouveau', 'Créer une fiche', 'btn p'));
   const q = FILTRES.contacts, cherche = !!q.trim(), actifs = contactsAffiches();
-  return actifs.length ? `<div class="mosaique">${actifs.map(c => carteContact(c, cherche)).join('')}</div>`
-    : vide(cherche ? `Aucune fiche active ne correspond à « ${esc(q)} ».` : 'Toutes les fiches sont archivées (menu → Archives).');
+  if(!actifs.length) return vide(cherche ? `Aucune fiche active ne correspond à « ${esc(q)} ».` : 'Toutes les fiches sont archivées (menu → Archives).');
+  const proche = c => { const j = joursAvantAnniv(c.anniversaire); return j !== null && j <= 30; };
+  const groupes = [], lettres = new Map();
+  if(actifs.some(proche)) groupes.push(['Anniversaires dans les 30 jours', actifs.filter(proche)]);
+  actifs.filter(c => !proche(c)).sort((a, b) => a.nom.localeCompare(b.nom, 'fr')).forEach(c => {
+    const l = /^[a-z]/.test(norm(c.nom)) ? norm(c.nom).charAt(0).toUpperCase() : '#';
+    if(!lettres.has(l)) lettres.set(l, []); lettres.get(l).push(c); });
+  [...lettres].sort(([a], [b]) => (a === '#') - (b === '#')).forEach(([lettre, l]) => groupes.push([lettre, l]));   /* « # » (nom sans lettre au début) en dernier */
+  return `<div class="annuaire">${groupes.map(([t, l]) => `<section class="groupe-contacts"><h2 class="lettre">${esc(t)}<span class="compte">${l.length}</span></h2>
+    <div class="carte grille-contacts">${l.map(c => carteContact(c, cherche)).join('')}</div></section>`).join('')}</div>`;
 }
 /* Fiches actives affichées (filtre et projet de la page Contacts) */
 function contactsAffiches(){
@@ -3350,7 +3478,7 @@ function pageDonnees(){
   const dispo = 'showDirectoryPicker' in window, s = lireSecours(), anciennes = anciennesVersions();
   return titre('Données', ghActif() ? 'Tes informations sont dans ce navigateur et dans ton dépôt GitHub privé, synchronisées entre tes appareils.' : 'Tes informations restent sur cet appareil. Rien n’est envoyé nulle part.') + `
     ${s ? `<div class="bandeau jaune">${pastille('archive', 'jaune')}<div class="txt"><strong>Copie de secours du ${esc(dateMoyenne(s.date))} à ${esc(heure(new Date(s.date)))}</strong><span>Gardée ${esc(s.raison || '')} : ${esc(resume(s.data))}.</span></div>${btnAction('secours-restaurer', 'Restaurer cette copie', 'btn p')}</div>` : ''}
-    <div class="grille">
+    <div class="colonnes-cartes">
       <section class="carte c6 etire">${enteteCarte('telecharger', 'bleu', 'Sauvegarde manuelle')}
         <p class="aide">Un fichier JSON daté qui contient tout, et un CSV des finances (lisible dans Excel).</p>
         <div class="boutons">${btnAction('exporter', ico('telecharger', 14) + 'Exporter en JSON', 'btn p')}${btnAction('exporter-csv', 'Exporter les finances en CSV')}${btnAction('importer', ico('importer', 14) + 'Importer un JSON')}</div></section>
@@ -3385,12 +3513,14 @@ function pageDonnees(){
       <section class="carte c6 etire">${enteteCarte('alerte', 'rose', 'Repartir de zéro')}
         <p class="aide">Efface tout le contenu de Life Panel dans ce navigateur, corbeille comprise. Une copie de secours est gardée juste avant.</p>
         <div class="boutons">${btnAction('effacer', ico('corbeille', 14) + 'Tout effacer', 'btn danger')}</div></section>
+    </div>
+    <div class="grille">
       ${anciennes.length ? `<section class="carte c12">${enteteCarte('archive', 'gris', 'Données des versions précédentes')}
         <p class="aide">Toujours présentes dans ce navigateur, jamais effacées. Tu peux les reprendre à tout moment (tes données actuelles passent en copie de secours).</p>
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.35 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.36 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -3447,7 +3577,7 @@ function rendre(){
     if(r.nom !== 'archives'){ ongletArchives = 'tout'; FILTRES.archives = ''; } }   /* Archives rouvertes depuis le volet : tous les types */   /* en revenant sur une page : de nouveau les plus récents d'abord, toutes catégories */
   const vue = $('#vue');
   vue.classList.remove('anim');
-  try { vue.innerHTML = ROUTES[r.nom](r.id); }
+  try { vue.innerHTML = ROUTES[r.nom](r.id); ajusterGraphes(); }
   catch(err){ console.error(err); vue.innerHTML = pageErreur(err); }
   const actif = PARENT[r.nom] || r.nom;
   $$('#volet a[data-route]').forEach(a => { const on = a.dataset.route === actif; a.classList.toggle('actif', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
@@ -4321,6 +4451,7 @@ const ACTIONS = {
   'date-effacer': el => { const i = el.closest('.champ-date') && $('input', el.closest('.champ-date')); if(!i || !i.value) return;
     i.value = ''; i.dispatchEvent(new Event('input', {bubbles:true})); i.dispatchEvent(new Event('change', {bubbles:true})); },   /* « change » : la fiche contact enregistre aussitôt */
   /* Tâches et Focus */
+  'tache-actions': el => { const li = el.closest('li'), on = li.classList.toggle('actions-on'); el.setAttribute('aria-expanded', String(on)); },
   'etapes-basculer': el => { const id = el.dataset.id, k = 'etapes-' + id, ouvert = !etatDepliage[k]; etatDepliage[k] = ouvert;
     $$('li[data-tache]').filter(li => li.dataset.tache === id).forEach(li => { const z = $('.etapes', li), b = $('.compte-etapes', li); if(z) z.hidden = !ouvert;
       if(b){ b.setAttribute('aria-expanded', ouvert); b.title = ouvert ? 'Replier les étapes' : 'Voir les étapes'; } }); },
@@ -7017,7 +7148,7 @@ function majPied(){
   let g = '';
   if(actif){ const eg = etatGitHub(); g = `<button class="e" data-action="gh-etat"><span class="led${{ok:'', cours:' b', erreur:' r', hors:' j'}[eg]}"></span>${esc(TEXTES_GITHUB[eg]().replace(/ Clique pour.*$/, ''))}</button>`; }
   p.innerHTML = `<span class="e"><span class="led"></span>${derniereSauvegarde ? 'Navigateur : enregistré à ' + heure(derniereSauvegarde) : 'Données dans ce navigateur'}</span>${g}${d}
-    <span class="e droite"><span class="led"></span>${actif ? 'Synchro GitHub · dépôt privé' : 'Local · aucune connexion externe'} · <kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span>`;
+    <span class="e droite"><span class="led"></span>${actif ? 'Synchro GitHub · dépôt privé' : 'Local · aucune connexion externe'}<span class="raccourci-k"> · <kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span></span>`;
 }
 /* Appli installée (Android) : raccourcis de l'icône (appui long) et « Partager → LIFE PANEL ».
    Le lanceur ouvre « ./?action=inbox » (page Inbox), « ./?action=depense » (nouvelle dépense) ou « ./?titre=…&texte=…&lien=… » (partage) ;
@@ -7125,6 +7256,8 @@ async function demarrer(){
   /* Vérification toutes les 30 s tant que la page est affichée (sauf si une synchro vient d'avoir lieu) */
   setInterval(() => { if(ghActif() && document.visibilityState === 'visible' && !gh.enCours && Date.now() - gh.controle > 25000) ghSynchroniser('periodique'); }, 30000);
   window.addEventListener('hashchange', () => { fermerModale({historique:false}); fermerVolet({historique:false}); fermerDossiers({historique:false}); fermerPalette(); rendre(); });
+  let tGraphes = null;   /* fenêtre redimensionnée ou téléphone tourné : graphiques redessinés à la nouvelle largeur */
+  window.addEventListener('resize', () => { clearTimeout(tGraphes); tGraphes = setTimeout(ajusterGraphes, 150); });
   /* Une erreur imprévue n'est plus silencieuse : un message l'annonce */
   const signaler = m => { console.error(m); toast('Un problème est survenu : ' + (m && m.message || m) + '. Recharge la page (F5) si quelque chose ne répond plus.'); };
   window.addEventListener('error', e => signaler(e.error || e.message));
