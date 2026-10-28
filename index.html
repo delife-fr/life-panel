@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-Cob/ZlZmIJ9suGvUVFq91YiYrC/x00HUiqH/EwrWXSE='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-JJWvDfgD4GwwR1Fbn6Rbls60tgi5V8SZhrbh8+7jVhg='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -183,8 +183,7 @@
   sur écran tactile. Échelle commune : 10 tailles de texte (--t1 à --t10), 6 arrondis, espacements 2 à 24 px.
   v3.37 : événements avec des tags, comme les tâches, notes, documents et contacts (champ « Tags » du formulaire, suggestions,
   puces dans la fiche, recherche « #tag ») ; plus de catégorie d'événement ni de couleur par catégorie (tous les événements en
-  violet). Les anciennes catégories deviennent des tags : Pro → #pro, Vol → #vol, Santé → #santé, Famille → #famille
-  (Perso, catégorie par défaut, ne donne rien). Données VERSION 20.
+  violet). L'ancienne catégorie des événements est oubliée, sans devenir un tag. Données VERSION 20.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -1318,9 +1317,8 @@ function formeCompte(c){
 /* Événements du calendrier (VERSION 18). heure vide = journée entière ; fuseau vide = « l'heure où je suis »
    (sinon un fuseau IANA, ex. Europe/Athens) ; recurrence.freq '' = une seule fois, sinon 'semaine' | 'mois' | 'an',
    avec un « jusqu'au » facultatif et les dates retirées de la série (exceptions). rappel : minutes avant, ou null. */
-/* VERSION 20 : plus de catégorie d'événement, des tags comme partout ailleurs. Une ancienne catégorie devient un tag à la lecture
-   (« Perso », catégorie par défaut, ne donne rien) ; le champ « categorie » disparaît alors du fichier. */
-const CATEGORIE_EN_TAG = {pro:'pro', vol:'vol', sante:'santé', famille:'famille'};
+/* VERSION 20 : plus de catégorie d'événement, des tags comme partout ailleurs. L'ancienne catégorie est simplement oubliée
+   (le champ « categorie » disparaît du fichier à la lecture) : les tags se mettent à la main. */
 const RAPPELS_EVT = [15, 60, 1440];
 const heureValide = v => /^([01]\d|2[0-3]):[0-5]\d$/.test(txt(v)) ? txt(v) : '';
 const fuseauValide = tz => { if(!tz || typeof tz !== 'string') return false; try { new Intl.DateTimeFormat('fr-FR', {timeZone:tz}); return true; } catch(e){ return false; } };
@@ -1357,7 +1355,7 @@ const FORMES = {
       fuseau:fuseauValide(e.fuseau) ? e.fuseau : '',
       recurrence:{freq, jusqua:freq ? dateISO(r.jusqua) : '', exceptions:freq && Array.isArray(r.exceptions) ? unique(r.exceptions.map(dateISO).filter(Boolean)).sort() : []},
       lieu:txt(e.lieu).trim(), lien:e.lien ? normaliserLien(e.lien) : '', contacts:Array.isArray(e.contacts) ? unique(e.contacts.filter(v => typeof v === 'string' && v)) : [],
-      projet:e.projet || null, tags:nettoyerTags([...(Array.isArray(e.tags) ? e.tags : nettoyerTags(e.tags)), ...(Object.prototype.hasOwnProperty.call(CATEGORIE_EN_TAG, e.categorie) ? [CATEGORIE_EN_TAG[e.categorie]] : [])]), note:txt(e.note),
+      projet:e.projet || null, tags:nettoyerTags(e.tags), note:txt(e.note),
       rappel:RAPPELS_EVT.includes(Number(e.rappel)) ? Number(e.rappel) : null, cree, modif:txt(e.modif) || cree}; }
 };
 /* Crée un élément complet dans la liste voulue (en tête pour l'Inbox) et le renvoie */
