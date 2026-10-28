@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-bYCzAB2IDCWz6RewRwDocjTX4SCZoPRGnLboRqDS/Ng='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-Cob/ZlZmIJ9suGvUVFq91YiYrC/x00HUiqH/EwrWXSE='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.36
+  LIFE PANEL — v3.37
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -181,6 +181,10 @@
   Contacts : anniversaires des 30 jours en tête, puis annuaire A, B, C… une ligne par fiche. Tâches sur grand écran : deux colonnes.
   Documents : échéance à droite du titre. Chiffres en police normale (alignés) au lieu de la chasse fixe ; pied de page sans Ctrl + K
   sur écran tactile. Échelle commune : 10 tailles de texte (--t1 à --t10), 6 arrondis, espacements 2 à 24 px.
+  v3.37 : événements avec des tags, comme les tâches, notes, documents et contacts (champ « Tags » du formulaire, suggestions,
+  puces dans la fiche, recherche « #tag ») ; plus de catégorie d'événement ni de couleur par catégorie (tous les événements en
+  violet). Les anciennes catégories deviennent des tags : Pro → #pro, Vol → #vol, Santé → #santé, Famille → #famille
+  (Perso, catégorie par défaut, ne donne rien). Données VERSION 20.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -1228,7 +1232,7 @@ td.act{text-align:right;white-space:nowrap;width:1%}
 /* ==========================================================================
    A. DONNÉES — un seul modèle, une seule clé
    ========================================================================== */
-const VERSION = 19;  /* 8 : archives et corbeille · 9 : module Documents, tags communs · 10 : liste des comptes (statistiques, budgets) · 11 : couleur de chaque catégorie · 12 : téléphone et adresse des contacts · 13 : autre téléphone des contacts · 14 : e-mail des contacts · 15 : dossier Drive des projets, versions remplacées par la synchro (corbeille) · 16 : date de modification des mouvements et de l'Inbox (fusion de la synchro) · 17 : note des mouvements · 18 : événements du calendrier · 19 : étapes des tâches */
+const VERSION = 20;  /* 8 : archives et corbeille · 9 : module Documents, tags communs · 10 : liste des comptes (statistiques, budgets) · 11 : couleur de chaque catégorie · 12 : téléphone et adresse des contacts · 13 : autre téléphone des contacts · 14 : e-mail des contacts · 15 : dossier Drive des projets, versions remplacées par la synchro (corbeille) · 16 : date de modification des mouvements et de l'Inbox (fusion de la synchro) · 17 : note des mouvements · 18 : événements du calendrier · 19 : étapes des tâches · 20 : tags des événements (catégories d'événements retirées) */
 const CLE = 'lifepanel';                   /* copie légère dans localStorage (voir « Stockage dans le navigateur ») */
 const CLE_SECOURS = 'lifepanel.secours';   /* ancienne place de la copie de secours (v3.3 à v3.8), reprise dans IndexedDB */
 const MIROIR_MAX = 2e6;                    /* au-delà de 2 millions de caractères, pas de copie dans localStorage */
@@ -1314,7 +1318,9 @@ function formeCompte(c){
 /* Événements du calendrier (VERSION 18). heure vide = journée entière ; fuseau vide = « l'heure où je suis »
    (sinon un fuseau IANA, ex. Europe/Athens) ; recurrence.freq '' = une seule fois, sinon 'semaine' | 'mois' | 'an',
    avec un « jusqu'au » facultatif et les dates retirées de la série (exceptions). rappel : minutes avant, ou null. */
-const CATEGORIES_EVT = {perso:['Perso', 'bleu'], pro:['Pro', 'violet'], vol:['Vol', 'orange'], sante:['Santé', 'rose'], famille:['Famille', 'vert']};
+/* VERSION 20 : plus de catégorie d'événement, des tags comme partout ailleurs. Une ancienne catégorie devient un tag à la lecture
+   (« Perso », catégorie par défaut, ne donne rien) ; le champ « categorie » disparaît alors du fichier. */
+const CATEGORIE_EN_TAG = {pro:'pro', vol:'vol', sante:'santé', famille:'famille'};
 const RAPPELS_EVT = [15, 60, 1440];
 const heureValide = v => /^([01]\d|2[0-3]):[0-5]\d$/.test(txt(v)) ? txt(v) : '';
 const fuseauValide = tz => { if(!tz || typeof tz !== 'string') return false; try { new Intl.DateTimeFormat('fr-FR', {timeZone:tz}); return true; } catch(e){ return false; } };
@@ -1351,7 +1357,7 @@ const FORMES = {
       fuseau:fuseauValide(e.fuseau) ? e.fuseau : '',
       recurrence:{freq, jusqua:freq ? dateISO(r.jusqua) : '', exceptions:freq && Array.isArray(r.exceptions) ? unique(r.exceptions.map(dateISO).filter(Boolean)).sort() : []},
       lieu:txt(e.lieu).trim(), lien:e.lien ? normaliserLien(e.lien) : '', contacts:Array.isArray(e.contacts) ? unique(e.contacts.filter(v => typeof v === 'string' && v)) : [],
-      projet:e.projet || null, categorie:Object.prototype.hasOwnProperty.call(CATEGORIES_EVT, e.categorie) ? e.categorie : 'perso', note:txt(e.note),
+      projet:e.projet || null, tags:nettoyerTags([...(Array.isArray(e.tags) ? e.tags : nettoyerTags(e.tags)), ...(Object.prototype.hasOwnProperty.call(CATEGORIE_EN_TAG, e.categorie) ? [CATEGORIE_EN_TAG[e.categorie]] : [])]), note:txt(e.note),
       rappel:RAPPELS_EVT.includes(Number(e.rappel)) ? Number(e.rappel) : null, cree, modif:txt(e.modif) || cree}; }
 };
 /* Crée un élément complet dans la liste voulue (en tête pour l'Inbox) et le renvoie */
@@ -2045,7 +2051,7 @@ function tagsDe(l){
 }
 const aLeTag = (x, t) => { const c = norm(t); return x.tags.some(y => norm(y) === c); };
 /* Listes qui portent des tags (tâches, notes, documents, contacts) */
-const LISTES_TAGS = ['taches', 'notes', 'documents', 'contacts'];
+const LISTES_TAGS = ['taches', 'notes', 'documents', 'contacts', 'evenements'];
 
 /* --- Ce que l'accueil doit signaler (une seule liste, plus de doublons) --- */
 function rappels(){
@@ -2498,7 +2504,7 @@ function contenuJours(debut, fin, f = filtresCal){
   jours.forEach(l => l.sort((a, b) => a.tri.localeCompare(b.tri)));
   return jours;
 }
-const couleurItem = x => 'var(--i-' + (x.type === 'evt' ? CATEGORIES_EVT[x.ev.categorie][1] : {tache:'bleu', anniv:'rose', doc:'jaune', dep:'vert'}[x.type]) + ')';
+const couleurItem = x => 'var(--i-' + {evt:'violet', tache:'bleu', anniv:'rose', doc:'jaune', dep:'vert'}[x.type] + ')';   /* une couleur par type (tous les événements en violet) */
 const texteItem = x => x.type === 'evt' ? (x.ev.heure ? heureIci(x.ev, x.j) + ' ' : '') + x.ev.titre : x.type === 'tache' ? (x.t.heure ? x.t.heure + ' ' : '') + x.t.nom
   : x.type === 'anniv' ? 'Anniv. ' + x.c.nom : x.type === 'doc' ? 'Échéance : ' + x.x.titre : '−' + eur(x.montant);
 /* Détail d'un événement sous son titre : heure d'origine si autre fuseau, fin, lieu, projet, personnes, répétition */
@@ -3380,17 +3386,17 @@ function formEvenement(e0 = {}, {apres = null, puis = null, retour = null} = {})
   formulaire({titre:ex ? 'Modifier l’événement' : 'Nouvel événement', icone:'calendrier', couleur:'violet', ok:ex ? 'Enregistrer' : 'Créer l’événement', puis, retour, champs:[
     {n:'titre', l:'Titre', v:e0.titre, aide:'ex. Dentiste, Examen EASA, Dîner chez Papa'},
     {n:'date', l:'Date', t:'date', v:e0.date || aujourdhui(), demi:true},
-    {n:'categorie', l:'Catégorie', t:'select', o:Object.entries(CATEGORIES_EVT).map(([v, [t]]) => ({v, t})), v:e0.categorie || 'perso', demi:true},
+    {n:'rappel', l:'Rappel', t:'select', o:[{v:'', t:'Aucun'}, ...RAPPELS_EVT.map(v => ({v, t:NOMS_RAPPEL[v]}))], v:e0.rappel ?? '', demi:true, aide:'notification'},
     {n:'heure', l:'Début', t:'heure', v:e0.heure, demi:true, aide:'vide = journée entière'},
     {n:'fin', l:'Fin', t:'heure', v:e0.fin, demi:true, aide:'facultatif'},
-    {n:'fuseau', l:'Heure de', t:'select', o:fuseaux, v:e0.fuseau || '', demi:true, nouveau:'Autre fuseau (ex. Asia/Dubai)'},
-    {n:'rappel', l:'Rappel', t:'select', o:[{v:'', t:'Aucun'}, ...RAPPELS_EVT.map(v => ({v, t:NOMS_RAPPEL[v]}))], v:e0.rappel ?? '', demi:true, aide:'notification'},
+    {n:'fuseau', l:'Heure de', t:'select', o:fuseaux, v:e0.fuseau || '', nouveau:'Autre fuseau (ex. Asia/Dubai)'},
     {n:'freq', l:'Répétition', t:'select', o:FREQS_EVT, v:r0.freq || '', demi:true},
     {n:'jusqua', l:'Jusqu’au', t:'date', effacable:true, v:r0.jusqua || '', demi:true, aide:'facultatif, si répété'},
     {n:'lieu', l:'Lieu', v:e0.lieu, aide:'adresse ou nom du lieu : bouton « Itinéraire » dans la fiche'},
     {n:'lien', l:'Lien', v:e0.lien, aide:'facultatif : visio (Teams, Meet, Zoom…) ou page web'},
     {n:'contacts', l:'Personnes', t:'personnes', v:e0.contacts || [], aide:'fiches contacts'},
     {n:'projet', l:'Projet', t:'select', o:optionsProjets(e0.projet), v:e0.projet || ''},
+    {n:'tags', l:'Tags', t:'tags', v:e0.tags || [], aide:'facultatif, séparés par des virgules'},
     {n:'note', l:'Note', t:'zone', v:e0.note, aide:'facultatif'}
   ], onOk:v => {
     if(!v.titre) return 'Donne un titre à l’événement.';
@@ -3407,7 +3413,7 @@ function formEvenement(e0 = {}, {apres = null, puis = null, retour = null} = {})
     const contacts = String(($('#ch-contacts') || {}).value || '').split(',').filter(id => contact(id));
     const d = {titre:v.titre, date:v.date, heure:v.heure, fin:v.heure ? v.fin : '', fuseau:v.heure ? fuseau : '',
       recurrence:{freq:v.freq, jusqua:v.freq ? v.jusqua : '', exceptions:v.freq && ex ? ex.recurrence.exceptions : []},
-      lieu:v.lieu, lien, contacts, projet:v.projet || null, categorie:v.categorie, note:v.note, rappel:v.rappel ? Number(v.rappel) : null, modif:maintenant()};
+      lieu:v.lieu, lien, contacts, projet:v.projet || null, tags:nettoyerTags(v.tags), note:v.note, rappel:v.rappel ? Number(v.rappel) : null, modif:maintenant()};
     if(ex){ const avant = ex.projet; Object.assign(ex, FORMES.evenements({...ex, ...d})); toucherProjet(avant); toucherProjet(ex.projet); toast('Événement modifié'); }
     else { ajouter('evenements', {...d, cree:d.modif}); toucherProjet(d.projet); toast('Événement créé : ' + dateMoyenne(d.date)); }
     if(apres) apres();
@@ -3423,13 +3429,13 @@ function formEvenement(e0 = {}, {apres = null, puis = null, retour = null} = {})
 function ficheEvenement(id, jour = ''){
   const ev = unEvenement(id); if(!ev){ toast('Cet événement n’existe plus.'); return; }
   const j = jour && occurrences(ev, jour, jour).length ? jour : prochaineOccurrence(ev) || ev.date;
-  const [nomCat, coul] = CATEGORIES_EVT[ev.categorie], d = `data-id="${esc(ev.id)}"`, repete = !!ev.recurrence.freq;
+  const d = `data-id="${esc(ev.id)}"`, repete = !!ev.recurrence.freq;
   const personnes = ev.contacts.map(contact).filter(Boolean);
   const ligne = (icone, contenu) => `<li>${pastille(icone, 'gris', 28, 14)}<span class="corps">${contenu}</span></li>`;
   const visio = /teams\.|meet\.google|zoom\.|whereby|webex|jitsi/i.test(ev.lien);
   const ouvrirLien = !ev.lien ? '' : estDrive(ev.lien) ? boutonDrive(cheminDe(ev.lien), 'btn compact', ico('externe', 13) + 'Ouvrir le lien')
     : `<a class="btn compact" href="${esc(ev.lien)}" target="_blank" rel="noopener noreferrer">${ico('externe', 13)}${visio ? 'Rejoindre la visio' : 'Ouvrir le lien'}</a>`;
-  const sous = `<span class="puce" style="color:var(--i-${coul})">${esc(nomCat)}</span>${repete ? `<span class="puce">${ico('sync', 12)}${esc(FREQS_EVT.find(f => f.v === ev.recurrence.freq).t.toLowerCase())}</span>` : ''}${tagProjet(ev.projet)}`;
+  const sous = `${repete ? `<span class="puce">${ico('sync', 12)}${esc(FREQS_EVT.find(f => f.v === ev.recurrence.freq).t.toLowerCase())}</span>` : ''}${tagProjet(ev.projet)}${pucesTags(ev.tags)}`;
   const infos = `<ul class="liste infos-evt">` +
     ligne('calendrier', `<span class="t">${esc(dateLongue(j))} · ${esc(heureEvenement(ev, j))}</span>${repete ? `<span class="s">${esc(texteRepetition(ev))}</span>` : ''}`) +
     (ev.lieu ? ligne('lieu', `<span class="t">${esc(ev.lieu)}</span><span class="s"><a class="btn compact" href="https://www.google.com/maps/dir/?api=1&amp;destination=${encodeURIComponent(ev.lieu)}" target="_blank" rel="noopener noreferrer">${ico('externe', 13)}Itinéraire</a></span>`) : '') +
@@ -3439,7 +3445,7 @@ function ficheEvenement(id, jour = ''){
     '</ul>' + (ev.note ? `<p class="texte note-evt">${esc(ev.note)}</p>` : '');
   const suppr = repete ? btnAction('evt-supprimer-date', ico('corbeille', 13) + 'Cette date seulement', 'btn danger', d + ` data-j="${j}"`) + btnAction('evt-supprimer', ico('corbeille', 13) + 'Toute la série', 'btn danger', d)
     : btnAction('evt-supprimer', ico('corbeille', 13) + 'Supprimer', 'btn danger', d);
-  ouvrirModale(teteFiche(pastille('calendrier', coul, 40, 20), esc(ev.titre), sous) + infos +
+  ouvrirModale(teteFiche(pastille('calendrier', 'violet', 40, 20), esc(ev.titre), sous) + infos +
     `<div class="actions fiche-pied">${btnAction('evt-modifier', ico('crayon', 13) + (repete ? 'Modifier la série' : 'Modifier'), 'btn', d)}${suppr}<button class="btn p" data-action="fermer">Fermer</button></div>`, {taille:'fiche', saisie:false});
   ficheOuverte = {type:'evenement', id:ev.id, jour:j};
 }
@@ -3520,7 +3526,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.36 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.37 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -5025,8 +5031,8 @@ function indexRecherche(){
     h:href('contact', c.id), sous:[c.anniversaire ? 'anniversaire le ' + dateCourte(c.anniversaire) : '', nomDe(c.projet)].filter(Boolean).join(' · '), date:c.modif, archive:c.archive, tags:c.tags,
     projet:nomDe(c.projet), jour:c.derniereConversation || jourDe(c.modif)}));
   DB.evenements.forEach(e => { const j = prochaineOccurrence(e) || e.date, noms = e.contacts.map(contact).filter(Boolean).map(c => c.nom);
-    ajout('calendrier', {titre:e.titre, textes:[e.lieu, nomDe(e.projet), noms.join(' '), CATEGORIES_EVT[e.categorie][0], texteRepetition(e)], long:e.note, h:href('evenement', e.id),
-      sous:[labelJour(j) + (e.heure ? ' · ' + heureIci(e, j) : ''), e.lieu, nomDe(e.projet)].filter(Boolean).join(' · '), date:e.modif, projet:nomDe(e.projet), jour:j}); });
+    ajout('calendrier', {titre:e.titre, textes:[e.lieu, nomDe(e.projet), noms.join(' '), texteRepetition(e)], long:e.note, h:href('evenement', e.id),
+      sous:[labelJour(j) + (e.heure ? ' · ' + heureIci(e, j) : ''), e.lieu, nomDe(e.projet)].filter(Boolean).join(' · '), date:e.modif, tags:e.tags, projet:nomDe(e.projet), jour:j}); });
   inboxOuverte().forEach(x => ajout('inbox', {titre:x.text, h:'#/inbox', sous:'capturé ' + ilya(x.created), date:x.created, jour:jourDe(x.created)}));
   l.forEach(e => { e.n = norm(e.titre); e.tn = e.tags.map(norm); e.r = norm(e.textes.join(' ') + ' ' + e.tags.join(' ') + ' ' + e.long); e.pn = norm(e.projet); });
   cacheIndex = {cle, db:DB, l};
@@ -7020,7 +7026,7 @@ function propositionCapture(j, texte){
 function ouvrirProposition(x, texte, apres){
   const long = texte.includes('\n') || texte.length > 70 ? texte : '';
   if(x.type === 'tache') formTache({nom:x.titre, date:x.date || aujourdhui(), heure:x.heure, priorite:x.priorite, projet:x.projet, tags:x.tags, etapes:x.etapes.map(t => ({t, ok:false}))}, apres);
-  else if(x.type === 'evenement') formEvenement({titre:x.titre, date:x.date || aujourdhui(), heure:x.heure, fin:x.fin, lieu:x.lieu, lien:x.lien, projet:x.projet, note:x.note || long}, {apres});
+  else if(x.type === 'evenement') formEvenement({titre:x.titre, date:x.date || aujourdhui(), heure:x.heure, fin:x.fin, lieu:x.lieu, lien:x.lien, projet:x.projet, tags:x.tags, note:x.note || long}, {apres});
   else if(x.type === 'depense') formMouvement({type:'depense', montant:x.montant ?? '', libelle:x.titre, categorie:x.categorie, date:x.date || aujourdhui(), projet:x.projet, note:x.note}, apres);
   else if(x.type === 'contact') formContact({nom:x.titre, telephone:x.telephone, email:x.email, nouvelles:x.note || long}, apres);
   else if(x.type === 'document') formDocument({titre:x.titre, url:x.lien, projet:x.projet, tags:x.tags, note:x.note}, {apres});
