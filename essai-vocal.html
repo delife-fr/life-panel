@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  ESSAI VOCAL — page d'essai, à part de LIFE PANEL : rien n'y mène depuis l'appli, rien n'est écrit dans tes données.
+  But : savoir si Whisper (reconnaissance vocale d'OpenAI) tourne assez vite DANS le téléphone pour des notes vocales
+  transcrites presque en direct, et avec quelle justesse en français. Le son ne quitte pas l'appareil.
+
+  Sécurité : la page est à la même adresse que LIFE PANEL, donc à portée de ta clé GitHub. D'où :
+  · le code de Whisper (transformers.js 4.3.1 et onnxruntime-web, sur cdn.jsdelivr.net) n'est exécuté qu'après
+    vérification de son empreinte SHA-384 : un fichier modifié est refusé ;
+  · connexions limitées au code (cdn.jsdelivr.net) et au modèle (huggingface.co) : pas d'api.github.com, la clé ne
+    peut partir nulle part ;
+  · blob: : le code vérifié est lancé depuis sa copie en mémoire ; 'wasm-unsafe-eval' : WebAssembly ;
+    'unsafe-eval' : onnxruntime fabrique quelques petites fonctions (new Function) pour parler à WebGPU.
+  Après toute modification d'un script : recalculer son empreinte dans la CSP (outil csp.js des tests).
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-Ulmi+wm0Qr1kBFpfj1AVQXJz/YgUr3al3oWBCGoUZKg=' blob: 'unsafe-eval' 'wasm-unsafe-eval'; worker-src blob:; connect-src https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.hf.co blob:; media-src blob:; img-src data:; style-src 'unsafe-inline'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Essai vocal · LIFE PANEL</title>
+<meta name="theme-color" content="#1b1b1d">
+<meta name="robots" content="noindex">
+<script>try{if(localStorage.getItem('lifepanel.theme')==='clair'){document.documentElement.dataset.theme='clair';document.querySelector('meta[name="theme-color"]').content='#f3f3f5';}}catch(e){}</script>
+<style>
+:root{
+  color-scheme:dark;
+  --fond:#1b1b1d; --carte:#232326; --champ:#19191c; --trait:#34343a; --trait-doux:#2b2b30;
+  --texte:#f1f1f2; --texte-doux:#a9a9b1; --texte-faible:#92929c;
+  --jaune:#c98500; --i-jaune:#e5b54a; --i-vert:#4ec89b; --i-bleu:#7ab0f0; --i-rouge:#ff6b6b; --rouge:#e66767;
+  --sur:255 255 255; --btn-p:#d7d7da; --btn-p-texte:#1d1d20;
+  --ombre:0 1px 2px #00000040, 0 8px 24px #00000030;
+  --police:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+:root[data-theme="clair"]{
+  color-scheme:light;
+  --fond:#f3f3f5; --carte:#ffffff; --champ:#ffffff; --trait:#d6d6dc; --trait-doux:#e4e4e9;
+  --texte:#1a1a1e; --texte-doux:#4d4d56; --texte-faible:#666670;
+  --i-jaune:#7a5100; --i-vert:#0a6b49; --i-bleu:#1d5dab; --i-rouge:#c62828;
+  --sur:0 0 0; --btn-p:#27272d; --btn-p-texte:#ffffff;
+  --ombre:0 1px 2px #0000000f, 0 6px 18px #00000014;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--fond);color:var(--texte);font-family:var(--police);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,select{font:inherit;color:inherit}
+main{max-width:640px;margin:0 auto;padding:16px 16px 48px;display:grid;gap:16px}
+h1{font-size:21px;margin:8px 0 0}
+h2{font-size:15px;margin:0 0 10px;color:var(--texte-doux);font-weight:600}
+p{margin:0}
+.doux{color:var(--texte-doux);font-size:13px}
+.carte{background:var(--carte);border:1px solid var(--trait-doux);border-radius:14px;padding:16px;box-shadow:var(--ombre);min-width:0}
+.ligne{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.champ{display:grid;gap:4px;flex:1 1 200px;font-size:13px;color:var(--texte-doux)}
+select{width:100%;background:var(--champ);border:1px solid var(--trait);border-radius:10px;padding:9px 11px;color:var(--texte)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;background:rgb(var(--sur) / 5%);border:1px solid var(--trait);border-radius:10px;padding:8px 14px;font-size:14px;cursor:pointer}
+.btn.p{background:var(--btn-p);border-color:var(--btn-p);color:var(--btn-p-texte);font-weight:600}
+.btn:disabled{opacity:.45;cursor:default}
+.barre{height:6px;border-radius:3px;background:rgb(var(--sur) / 8%);overflow:hidden;margin-top:10px}
+.barre > i{display:block;height:100%;width:0;background:var(--i-jaune);transition:width .2s}
+.etat{margin-top:8px;font-size:13px;color:var(--texte-doux);overflow-wrap:anywhere}
+.etat.ok{color:var(--i-vert)} .etat.ko{color:var(--i-rouge)}
+.micro{display:grid;justify-items:center;gap:10px;padding:8px 0}
+#bouton-micro{width:96px;height:96px;border-radius:50%;border:0;background:var(--jaune);color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:var(--ombre);transition:background .2s,transform .1s}
+#bouton-micro:active{transform:scale(.96)}
+#bouton-micro.enreg{background:var(--rouge)}
+#bouton-micro svg{width:40px;height:40px}
+#chrono{font-size:24px;font-variant-numeric:tabular-nums}
+.niveau{width:180px;height:6px;border-radius:3px;background:rgb(var(--sur) / 8%);overflow:hidden}
+.niveau > i{display:block;height:100%;width:0;background:var(--i-vert)}
+.direct{min-height:64px;margin-top:12px;padding:10px 12px;border:1px dashed var(--trait);border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere}
+.direct .attente{color:var(--texte-faible)}
+.essai{display:grid;gap:10px}
+.essai + .essai{border-top:1px solid var(--trait-doux);padding-top:14px;margin-top:4px}
+.essai audio{width:100%}
+.texte{white-space:pre-wrap;overflow-wrap:anywhere;padding:10px 12px;background:rgb(var(--sur) / 4%);border-radius:10px}
+.texte:empty::before{content:'(rien)';color:var(--texte-faible)}
+dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:13px}
+dt{color:var(--texte-doux)} dd{margin:0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Essai vocal · Whisper</h1>
+    <p class="doux">Page d’essai, à part de LIFE PANEL : rien n’est enregistré dans tes données. Whisper tourne dans ce téléphone : le son ne part nulle part. Le modèle est téléchargé une seule fois, puis gardé par le navigateur.</p>
+  </header>
+
+  <section class="carte" aria-labelledby="t-modele">
+    <h2 id="t-modele">1. Modèle</h2>
+    <div class="ligne">
+      <label class="champ">Taille
+        <select id="modele">
+          <option value="onnx-community/whisper-tiny">Tiny · ≈ 50 Mo</option>
+          <option value="onnx-community/whisper-base" selected>Base · ≈ 100 Mo</option>
+          <option value="onnx-community/whisper-small">Small · ≈ 280 Mo</option>
+        </select>
+      </label>
+      <label class="champ">Calcul
+        <select id="calcul">
+          <option value="auto" selected>Auto (carte graphique si possible)</option>
+          <option value="webgpu">Carte graphique (WebGPU)</option>
+          <option value="wasm">Processeur (WebAssembly)</option>
+        </select>
+      </label>
+    </div>
+    <p class="doux" style="margin-top:8px">Tiny : rapide mais approximatif · Base : bon compromis, pour commencer · Small : le plus juste, plus lent.</p>
+    <div class="ligne" style="margin-top:12px"><button class="btn p" id="charger">Charger le modèle</button><span class="doux" id="gpu"></span></div>
+    <div class="barre" hidden id="barre"><i></i></div>
+    <p class="etat" id="etat-modele">Pas encore chargé. Tu peux déjà parler : le texte arrivera une fois le modèle prêt.</p>
+  </section>
+
+  <section class="carte" aria-labelledby="t-parler">
+    <h2 id="t-parler">2. Parler</h2>
+    <div class="micro">
+      <button id="bouton-micro" aria-label="Commencer l’enregistrement">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+      <span id="chrono">0:00</span>
+      <span class="niveau" aria-hidden="true"><i id="niveau"></i></span>
+      <span class="doux" id="etat-micro">Appuie pour parler, appuie encore pour arrêter.</span>
+    </div>
+    <div class="direct" id="direct" aria-live="polite"></div>
+  </section>
+
+  <section class="carte" aria-labelledby="t-essais">
+    <h2 id="t-essais">3. Résultats</h2>
+    <div id="essais"><p class="doux">Les enregistrements de cette visite s’afficheront ici (rien n’est gardé en quittant la page).</p></div>
+  </section>
+</main>
+<script>
+'use strict';
+/* Code de Whisper : versions exactes et empreintes SHA-384 (calculées sur les paquets npm, que jsDelivr sert à l'identique) */
+const CDN = 'https://cdn.jsdelivr.net/npm/';
+const CODE = {
+  lib:{nom:'transformers.js', url:CDN + '@huggingface/transformers@4.3.1/dist/transformers.min.js', sha:'sha384-AFNtlNOt2vbygtlRCUX2TDgkE+EyonjbCLxAfqezYwJJDVlozUhg+yKs4cPwyjHR'},
+  mjs:{nom:'onnxruntime (js)', url:CDN + 'onnxruntime-web@1.31.0-dev.20260914-8d85527a0/dist/ort-wasm-simd-threaded.asyncify.mjs', sha:'sha384-ik7L7J2uXfXmGuWHh3yOUDPpUslz/dJjcvZgdX5hcItLjxlkEpUF7mpCcATr3Dg8'},
+  wasm:{nom:'onnxruntime (wasm)', url:CDN + 'onnxruntime-web@1.31.0-dev.20260914-8d85527a0/dist/ort-wasm-simd-threaded.asyncify.wasm', sha:'sha384-JuzrCV6BUmTUbsgNhgU94qo0vZ4l3w0VqgQAKPm0La2hXL9kmv8P9pGenfsWJY9c'}
+};
+/* Découpage du direct : Whisper lit le son par morceaux, coupés dans un silence entre MIN et MAX secondes
+   (chaque morceau coûte au moins une lecture de 30 s au modèle : ni trop courts, ni au-delà de 30 s) */
+const TRAME_S = 0.1, MIN_S = 5, MAX_S = 25, SILENCE_S = 0.5, MAX_ENREG_S = 15 * 60;
+
+/* ---------- Whisper, dans un fil à part (la page reste fluide pendant le calcul) ---------- */
+function travailleur(){
+  let tjs = null, whisper = null;
+  const dire = m => postMessage(m);
+  const b64 = o => { const u = new Uint8Array(o); let s = ''; for(let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); };
+  const enUrl = o => URL.createObjectURL(new Blob([o], {type:'text/javascript'}));
+  /* Télécharge un fichier de code et ne le rend que s'il est exactement celui attendu */
+  async function verifie(f){
+    const r = await fetch(f.url);
+    if(!r.ok) throw new Error(f.nom + ' : réponse ' + r.status + ' du serveur.');
+    const o = await r.arrayBuffer();
+    if('sha384-' + b64(await crypto.subtle.digest('SHA-384', o)) !== f.sha) throw new Error(f.nom + ' : le fichier reçu n’est pas celui attendu (empreinte différente). Refusé, rien n’a été exécuté.');
+    return o;
+  }
+  async function chargerCode(code){
+    if(tjs) return;
+    dire({type:'etape', texte:'Téléchargement et vérification du code de Whisper (≈ 28 Mo, gardé ensuite par le navigateur)…'});
+    const [lib, mjs, wasm] = await Promise.all([verifie(code.lib), verifie(code.mjs), verifie(code.wasm)]);
+    tjs = await import(enUrl(lib));
+    tjs.env.allowLocalModels = false;
+    tjs.env.useWasmCache = false;   /* le moteur WebAssembly est la copie vérifiée ci-dessus, jamais un nouveau téléchargement */
+    tjs.env.backends.onnx.wasm.wasmBinary = wasm;
+    tjs.env.backends.onnx.wasm.wasmPaths = {mjs:enUrl(mjs), wasm:code.wasm.url};
+  }
+  async function charger(m){
+    const t0 = performance.now();
+    await chargerCode(m.code);
+    let calcul = m.calcul, f16 = false;
+    if(calcul !== 'wasm'){
+      let carte = null; try { carte = navigator.gpu ? await navigator.gpu.requestAdapter() : null; } catch(e){}
+      if(carte) f16 = carte.features.has('shader-f16');
+      else if(calcul === 'webgpu') throw new Error('WebGPU n’est pas disponible sur cet appareil : choisis « Processeur ».');
+      calcul = carte ? 'webgpu' : 'wasm';
+    }
+    /* WebGPU : encodeur précis, décodeur compressé (4 bits) ; Small en demi-précision pour rester sous 300 Mo. Processeur : 8 bits. */
+    const dtype = calcul === 'wasm' ? 'q8' : {encoder_model:/small/.test(m.modele) && f16 ? 'fp16' : 'fp32', decoder_model_merged:'q4'};
+    dire({type:'etape', texte:'Modèle : téléchargement (la première fois) ou lecture de la copie gardée…'});
+    let vu = 0;
+    try {
+      whisper = await tjs.pipeline('automatic-speech-recognition', m.modele, {device:calcul, dtype, progress_callback:p => {
+        if(p.status === 'progress_total' && performance.now() - vu > 150){ vu = performance.now(); dire({type:'progression', charge:p.loaded, total:p.total}); }
+      }});
+    } catch(e){
+      if(e instanceof TypeError && /fetch/i.test(e.message)) throw new Error('impossible de télécharger le modèle depuis huggingface.co (réseau coupé ou trop faible ?). Réessaie.');
+      throw e;
+    }
+    dire({type:'etape', texte:'Préparation du modèle…'});
+    const t1 = performance.now();
+    await whisper(new Float32Array(16000), {language:'french', task:'transcribe'});   /* 1re lecture « à blanc » : prépare les calculs, les vraies seront plus rapides */
+    dire({type:'pret', calcul, dtype:typeof dtype === 'string' ? dtype : dtype.encoder_model + '/' + dtype.decoder_model_merged, ms:t1 - t0, chauffe:performance.now() - t1});
+  }
+  onmessage = async ({data:m}) => {
+    try {
+      if(m.type === 'charger') await charger(m);
+      else if(m.type === 'transcrire'){
+        const t0 = performance.now();
+        const r = await whisper(m.audio, {language:'french', task:'transcribe', chunk_length_s:30, stride_length_s:5});
+        dire({type:'texte', id:m.id, texte:String(r.text || '').trim(), ms:performance.now() - t0});
+      }
+    } catch(e){ dire({type:'erreur', id:m.id, quoi:m.type, texte:String(e && e.message || e)}); }
+  };
+}
+
+/* ---------- Page ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
+const duree = s => { s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const sec = ms => (ms / 1000).toLocaleString('fr-FR', {maximumFractionDigits:1}) + ' s';
+const mo = o => (o / 1048576).toLocaleString('fr-FR', {maximumFractionDigits:o < 1048576 ? 2 : 0}) + ' Mo';
+const fois = x => x.toLocaleString('fr-FR', {maximumFractionDigits:2}) + ' ×';
+function etatModele(texte, classe = ''){ const e = $('#etat-modele'); e.textContent = texte; e.className = 'etat ' + classe; }
+
+/* Fil de Whisper. gen change à chaque nouveau modèle : ce qui était en route pour l'ancien est renvoyé au nouveau. */
+const MODELE_CHANGE = 'modèle changé';
+const W = {fil:null, gen:0, pret:false, infos:null, attente:new Map(), suivant:1, chaine:Promise.resolve()};
+const descModele = () => W.infos ? `${W.infos.nom} · ${W.infos.calcul === 'webgpu' ? 'carte graphique' : 'processeur'} (${W.infos.dtype})` : '';
+function finChargement(){ $('#barre').hidden = true; $('#charger').disabled = false; }
+function chargerModele(){
+  if(W.fil) W.fil.terminate();
+  W.gen++; W.pret = false; W.infos = null; W.chaine = Promise.resolve();
+  W.attente.forEach(r => r.ko(new Error(MODELE_CHANGE))); W.attente.clear();
+  $('#charger').disabled = true; afficherDirect();
+  const nom = $('#modele').value;
+  W.fil = new Worker(URL.createObjectURL(new Blob(['(' + travailleur + ')()'], {type:'text/javascript'})), {type:'module'});
+  W.fil.onmessage = ({data:m}) => {
+    if(m.type === 'etape') etatModele(m.texte);
+    else if(m.type === 'progression'){ $('#barre').hidden = false; $('#barre i').style.width = (m.total ? 100 * m.charge / m.total : 0) + '%'; etatModele('Téléchargement du modèle : ' + mo(m.charge) + ' sur ' + mo(m.total)); }
+    else if(m.type === 'pret'){
+      W.pret = true; W.infos = {...m, nom:nom.replace('onnx-community/', ''), le:performance.now()}; finChargement();
+      etatModele(`Prêt · ${descModele()} · chargé en ${sec(m.ms)}, préparé en ${sec(m.chauffe)}`, 'ok');
+      ESSAIS.forEach(majEssai); pomper();
+    }
+    else if(m.type === 'texte' || m.type === 'erreur' && m.quoi === 'transcrire'){
+      const r = W.attente.get(m.id); W.attente.delete(m.id);
+      if(r) m.type === 'texte' ? r.ok(m) : r.ko(new Error(m.texte));
+    }
+    else if(m.type === 'erreur'){ finChargement(); etatModele('Échec : ' + m.texte, 'ko'); }
+  };
+  W.fil.onerror = e => { finChargement(); etatModele('Le fil de calcul s’est arrêté : ' + (e.message || 'erreur inconnue') + '. Essaie « Processeur » ou un modèle plus petit.', 'ko'); };
+  W.fil.postMessage({type:'charger', code:CODE, modele:nom, calcul:$('#calcul').value});
+}
+/* Une transcription à la fois, dans l'ordre d'arrivée */
+function transcrire(audio){
+  const gen = W.gen;
+  const p = W.chaine.then(() => new Promise((ok, ko) => {
+    if(gen !== W.gen || !W.pret) return ko(new Error(MODELE_CHANGE));
+    const id = W.suivant++; W.attente.set(id, {ok, ko});
+    W.fil.postMessage({type:'transcrire', id, audio}, [audio.buffer]);
+  }));
+  W.chaine = p.catch(() => {});
+  return p;
+}
+
+/* ---------- Son : un seul micro, deux usages ----------
+   MediaRecorder garde le son compressé (à réécouter, comme un vocal) ; une AudioWorklet reçoit le son brut, trame par
+   trame (0,1 s), pour le niveau, le repérage des silences et Whisper (qui lit du 16 kHz mono). */
+const CAPTEUR = `registerProcessor('capteur', class extends AudioWorkletProcessor {
+  constructor(){ super(); this.n = Math.round(sampleRate * ${TRAME_S}); this.b = new Float32Array(this.n); this.i = 0; }
+  process(entrees){
+    const c = entrees[0] && entrees[0][0]; if(!c) return true;
+    for(let k = 0; k < c.length; k++){ this.b[this.i++] = c[k]; if(this.i === this.n){ this.port.postMessage(this.b, [this.b.buffer]); this.b = new Float32Array(this.n); this.i = 0; } }
+    return true;
+  }
+});`;
+const ESSAIS = [];
+let E = null;   /* enregistrement en cours */
+
+async function versSeize(pcm, taux){
+  if(taux === 16000) return pcm;
+  const n = Math.max(1, Math.round(pcm.length * 16000 / taux)), ctx = new OfflineAudioContext(1, n, 16000);
+  const b = ctx.createBuffer(1, pcm.length, taux); b.copyToChannel(pcm, 0);
+  const s = ctx.createBufferSource(); s.buffer = b; s.connect(ctx.destination); s.start();
+  return new Float32Array((await ctx.startRendering()).getChannelData(0));
+}
+function assembler(trames, a, b){
+  let n = 0; for(let i = a; i < b; i++) n += trames[i].length;
+  const o = new Float32Array(n); let p = 0;
+  for(let i = a; i < b; i++){ o.set(trames[i], p); p += trames[i].length; }
+  return o;
+}
+async function brancher(flux, taux){
+  const ctx = taux ? new AudioContext({sampleRate:taux}) : new AudioContext();
+  try {
+    await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([CAPTEUR], {type:'text/javascript'})));
+    const capteur = new AudioWorkletNode(ctx, 'capteur', {numberOfOutputs:0});
+    ctx.createMediaStreamSource(flux).connect(capteur);
+    await ctx.resume();
+    return {ctx, capteur};
+  } catch(e){ ctx.close(); throw e; }
+}
+
+let demarrage = false;   /* micro demandé, pas encore ouvert : un 2e appui ne lance pas un 2e enregistrement */
+async function demarrer(){
+  if(demarrage) return;
+  demarrage = true;
+  try { await ouvrirMicro(); }
+  catch(e){ $('#etat-micro').textContent = 'Micro refusé ou indisponible (' + (e.name || e.message) + '). Autorise le micro pour ce site dans Chrome.'; }
+  finally { demarrage = false; }
+}
+async function ouvrirMicro(){
+  const flux = await navigator.mediaDevices.getUserMedia({audio:{channelCount:1, echoCancellation:true, noiseSuppression:true, autoGainControl:true}});
+  let s;
+  /* 16 kHz demandé tout de suite (Whisper n'en lit pas plus) ; sinon le taux du micro, converti à chaque morceau */
+  try { s = await brancher(flux, 16000); }
+  catch(e){ try { s = await brancher(flux); } catch(e2){ flux.getTracks().forEach(t => t.stop()); throw e2; } }
+  const type = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+  const rec = new MediaRecorder(flux, type ? {mimeType:type, audioBitsPerSecond:32000} : {});
+  const x = E = {flux, ...s, taux:s.ctx.sampleRate, rec, audio:[], trames:[], rms:[], debut:0, plancher:0.01, t0:performance.now(), morceaux:[], num:ESSAIS.length + 1};
+  ESSAIS.push(x);
+  rec.ondataavailable = e => { if(e.data.size) x.audio.push(e.data); };
+  rec.start(1000);
+  x.capteur.port.onmessage = ({data}) => recevoir(x, data);
+  try { x.verrou = await navigator.wakeLock.request('screen'); } catch(e){}   /* écran allumé pendant l'enregistrement */
+  x.minuterie = setInterval(() => { const t = (performance.now() - x.t0) / 1000; $('#chrono').textContent = duree(t); if(t >= MAX_ENREG_S) arreter(); }, 250);
+  $('#bouton-micro').classList.add('enreg'); $('#bouton-micro').setAttribute('aria-label', 'Arrêter l’enregistrement');
+  $('#etat-micro').textContent = 'J’écoute… (son lu à ' + Math.round(x.taux / 1000) + ' kHz)';
+  afficherDirect();
+}
+
+/* Une trame de 0,1 s : niveau, silence, et coupe d'un morceau quand il le faut */
+function recevoir(x, trame){
+  if(x.fini) return;
+  let s = 0; for(let k = 0; k < trame.length; k++) s += trame[k] * trame[k];
+  const rms = Math.sqrt(s / trame.length);
+  x.trames.push(trame); x.rms.push(rms);
+  x.plancher = rms < x.plancher ? rms : x.plancher + (rms - x.plancher) * 0.005;   /* bruit de fond : suit vite ce qui baisse, lentement ce qui monte */
+  $('#niveau').style.width = Math.min(100, rms * 600) + '%';
+  const n = x.trames.length, long = (n - x.debut) * TRAME_S, k = Math.round(SILENCE_S / TRAME_S), seuil = seuilParole(x);
+  if(long >= MIN_S && x.rms.slice(n - k).every(r => r < seuil)) couper(x, n);
+  else if(long >= MAX_S){
+    /* Personne ne s'arrête de parler : coupe après la trame la plus calme des 5 dernières secondes */
+    let m = n - 1; for(let i = Math.max(x.debut + 1, n - 50); i < n; i++) if(x.rms[i] < x.rms[m]) m = i;
+    couper(x, m + 1);
+  }
+}
+const seuilParole = x => Math.max(0.008, x.plancher * 3);
+
+function couper(x, fin){
+  const a = x.debut; x.debut = fin;
+  /* Morceau presque sans parole : ignoré (sur du silence, Whisper invente des phrases, « Sous-titres réalisés par… ») */
+  const seuil = seuilParole(x); let parle = 0; for(let i = a; i < fin; i++) if(x.rms[i] >= seuil) parle++;
+  if(parle < 3) return;
+  x.morceaux.push({a, b:fin, texte:null, coupe:performance.now()});
+  afficherDirect(); pomper();
+}
+
+/* Envoie à Whisper tous les morceaux pas encore partis (ils passent un par un, dans l'ordre) */
+function pomper(){
+  if(!W.pret) return;
+  ESSAIS.forEach(x => x.morceaux.forEach(m => { if(m.texte === null && !m.parti) lire(x, m); }));
+}
+async function lire(x, m){
+  m.parti = true;
+  try {
+    const r = await transcrire(await versSeize(assembler(x.trames, m.a, m.b), x.taux));
+    m.texte = r.texte; m.ms = r.ms; m.retard = performance.now() - Math.max(m.coupe, W.infos ? W.infos.le : 0);
+  } catch(e){
+    if(e.message === MODELE_CHANGE){ m.parti = false; return; }   /* repartira vers le nouveau modèle */
+    m.texte = '[erreur : ' + e.message + ']';
+  }
+  if(x === ESSAIS[ESSAIS.length - 1]) afficherDirect();
+  finirSiPret(x);
+}
+
+function afficherDirect(){
+  const x = ESSAIS[ESSAIS.length - 1]; if(!x) return;
+  const fait = x.morceaux.filter(m => m.texte !== null).map(m => esc(m.texte)).join(' ');
+  const reste = x.morceaux.filter(m => m.texte === null).length;
+  $('#direct').innerHTML = fait + (reste ? ` <span class="attente">… ${reste} morceau${reste > 1 ? 'x' : ''} ${W.pret ? 'en cours' : 'en attente du modèle'}</span>` : '')
+    || (x.fini ? '<span class="attente">Rien d’entendu.</span>' : '<span class="attente">Le texte apparaît à chaque pause…</span>');
+}
+
+async function arreter(){
+  const x = E; if(!x || x.fini) return;
+  x.fini = true; E = null; x.duree = x.trames.length * TRAME_S;
+  clearInterval(x.minuterie);
+  couper(x, x.trames.length);
+  const fin = new Promise(ok => { x.rec.onstop = ok; });
+  x.rec.stop(); await fin;
+  x.flux.getTracks().forEach(t => t.stop());
+  x.capteur.port.onmessage = null; x.ctx.close().catch(() => {});
+  try { if(x.verrou) await x.verrou.release(); } catch(e){}
+  x.blob = new Blob(x.audio, {type:x.rec.mimeType || 'audio/webm'});
+  $('#bouton-micro').classList.remove('enreg'); $('#bouton-micro').setAttribute('aria-label', 'Commencer l’enregistrement');
+  $('#niveau').style.width = '0';
+  $('#etat-micro').textContent = 'Arrêté. Appuie pour un nouvel essai.';
+  ajouterEssai(x); afficherDirect(); finirSiPret(x);
+}
+/* Le direct est fini quand tous les morceaux sont transcrits (après l'arrêt) */
+function finirSiPret(x){
+  if(!x.fini || !x.el || x.rendu || x.morceaux.some(m => m.texte === null)) return;
+  x.rendu = true; x.texteDirect = x.morceaux.map(m => m.texte).join(' ').trim(); x.modele = descModele();
+  majEssai(x);
+}
+
+/* ---------- Résultats ---------- */
+function ajouterEssai(x){
+  const l = $('#essais'); if(!l.querySelector('.essai')) l.innerHTML = '';
+  x.el = document.createElement('div'); x.el.className = 'essai';
+  x.url = URL.createObjectURL(x.blob);
+  l.prepend(x.el); majEssai(x);
+}
+function majEssai(x){
+  if(!x.el) return;
+  const lus = x.morceaux.filter(m => m.ms), calc = lus.reduce((s, m) => s + m.ms, 0), ret = lus.length ? lus.reduce((s, m) => s + m.retard, 0) / lus.length : 0;
+  const parle = lus.reduce((s, m) => s + (m.b - m.a) * TRAME_S, 0);
+  x.mesures = [
+    ['Durée', duree(x.duree)],
+    ['Vocal', mo(x.blob.size) + ' · ' + (x.blob.type.split(';')[0] || '?')],
+    ['Direct', !x.rendu ? (W.pret ? 'en cours…' : 'en attente du modèle') : !x.morceaux.length ? 'aucune parole entendue'
+      : `${x.modele} · ${x.morceaux.length} morceau${x.morceaux.length > 1 ? 'x' : ''} · calcul ${sec(calc)} pour ${duree(parle)} de son (${fois(calc / 1000 / Math.max(parle, 0.1))} le temps réel) · texte ${sec(ret)} après chaque pause en moyenne`],
+    ['D’un coup', x.coup ? `${x.coup.modele} · ${sec(x.coup.ms)} pour ${duree(x.duree)} (${fois(x.coup.ms / 1000 / Math.max(x.duree, 0.1))} le temps réel)` : '—']
+  ];
+  x.el.innerHTML = `<strong>Essai ${x.num}</strong>
+    <audio controls preload="metadata" src="${x.url}"></audio>
+    <div><div class="doux">Texte en direct (morceau par morceau)</div><div class="texte">${x.rendu ? esc(x.texteDirect) : ''}</div></div>
+    ${x.coup ? `<div><div class="doux">Texte d’un coup (tout le son en une fois)</div><div class="texte">${esc(x.coup.texte)}</div></div>` : ''}
+    <dl>${x.mesures.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+    <div class="ligne">
+      <button class="btn" data-coup ${x.rendu && W.pret && !x.coupEnCours && x.trames.length ? '' : 'disabled'}>${x.coupEnCours ? 'Transcription…' : x.coup ? 'Retranscrire d’un coup' : 'Tout retranscrire d’un coup'}</button>
+      <button class="btn" data-copier ${x.rendu ? '' : 'disabled'}>Copier le rapport</button>
+    </div>`;
+  /* Un vocal enregistré par Chrome (WebM) ne dit pas sa durée : on saute à la fin puis on revient, et le lecteur la connaît */
+  const a = x.el.querySelector('audio');
+  a.onloadedmetadata = () => { if(a.duration === Infinity){ a.ontimeupdate = () => { a.ontimeupdate = null; a.currentTime = 0; }; a.currentTime = 1e9; } };
+  x.el.querySelector('[data-coup]').onclick = () => toutDUnCoup(x);
+  x.el.querySelector('[data-copier]').onclick = e => copierRapport(x, e.currentTarget);
+}
+async function toutDUnCoup(x){
+  if(!W.pret || x.coupEnCours) return;
+  x.coupEnCours = true; majEssai(x);
+  try {
+    const r = await transcrire(await versSeize(assembler(x.trames, 0, x.trames.length), x.taux));
+    x.coup = {texte:r.texte, ms:r.ms, modele:descModele()};
+  } catch(e){ x.coup = {texte:'[erreur : ' + e.message + ']', ms:0, modele:descModele()}; }
+  x.coupEnCours = false; majEssai(x);
+}
+async function copierRapport(x, b){
+  const t = ['Essai vocal LIFE PANEL — essai ' + x.num, 'Appareil : ' + navigator.userAgent, ...x.mesures.map(([k, v]) => k + ' : ' + v),
+    '', 'Texte en direct :', x.texteDirect || '', ...(x.coup ? ['', 'Texte d’un coup :', x.coup.texte] : [])].join('\n');
+  try { await navigator.clipboard.writeText(t); b.textContent = 'Copié ✓'; }
+  catch(e){ b.textContent = 'Copie impossible'; }
+  setTimeout(() => { b.textContent = 'Copier le rapport'; }, 2000);
+}
+
+/* ---------- Démarrage ---------- */
+$('#charger').onclick = chargerModele;
+$('#bouton-micro').onclick = () => E ? arreter() : demarrer();
+$('#gpu').textContent = 'gpu' in navigator ? 'WebGPU : présent dans ce navigateur' : 'WebGPU : absent (calcul sur le processeur)';
+document.addEventListener('visibilitychange', async () => {   /* le verrou d'écran tombe quand on quitte la page : repris au retour */
+  if(E && document.visibilityState === 'visible') try { E.verrou = await navigator.wakeLock.request('screen'); } catch(e){}
+});
+</script>
+</body>
+</html>
