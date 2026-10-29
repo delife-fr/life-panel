@@ -15,9 +15,11 @@
     peut partir nulle part ;
   · blob: : le code vérifié est lancé depuis sa copie en mémoire ; 'wasm-unsafe-eval' : WebAssembly ;
     'unsafe-eval' : onnxruntime fabrique quelques petites fonctions (new Function) pour parler à WebGPU.
+  Plusieurs cœurs : Whisper ne les utilise que dans une page « isolée » (en-têtes COOP / COEP), que GitHub Pages ne sait pas
+  déclarer. Le service worker essai-vocal-sw.js le fait pour cette seule page (LIFE PANEL garde le sien) : worker-src 'self'.
   Après toute modification d'un script : recalculer son empreinte dans la CSP (outil csp.js des tests).
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-Ulmi+wm0Qr1kBFpfj1AVQXJz/YgUr3al3oWBCGoUZKg=' blob: 'unsafe-eval' 'wasm-unsafe-eval'; worker-src blob:; connect-src https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.hf.co blob:; media-src blob:; img-src data:; style-src 'unsafe-inline'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-4DDCX8U6sf/lUB56PhQrr6eDMVFotn7xCBvYby8iPOo=' blob: 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.hf.co blob:; media-src blob:; img-src data:; style-src 'unsafe-inline'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Essai vocal · LIFE PANEL</title>
 <meta name="theme-color" content="#1b1b1d">
 <meta name="robots" content="noindex">
@@ -98,9 +100,8 @@ dt{color:var(--texte-doux)} dd{margin:0;font-variant-numeric:tabular-nums;overfl
       </label>
       <label class="champ">Calcul
         <select id="calcul">
-          <option value="auto" selected>Auto (carte graphique si possible)</option>
-          <option value="webgpu">Carte graphique (WebGPU)</option>
-          <option value="wasm">Processeur (WebAssembly)</option>
+          <option value="wasm" selected>Processeur (conseillé)</option>
+          <option value="webgpu">Carte graphique (WebGPU, expérimental)</option>
         </select>
       </label>
     </div>
@@ -168,12 +169,14 @@ function travailleur(){
   async function charger(m){
     const t0 = performance.now();
     await chargerCode(m.code);
-    let calcul = m.calcul, f16 = false;
-    if(calcul !== 'wasm'){
+    const calcul = m.calcul;
+    let f16 = false, gpu = '';
+    if(calcul === 'webgpu'){
       let carte = null; try { carte = navigator.gpu ? await navigator.gpu.requestAdapter() : null; } catch(e){}
-      if(carte) f16 = carte.features.has('shader-f16');
-      else if(calcul === 'webgpu') throw new Error('WebGPU n’est pas disponible sur cet appareil : choisis « Processeur ».');
-      calcul = carte ? 'webgpu' : 'wasm';
+      if(!carte) throw new Error('WebGPU n’est pas disponible sur cet appareil : choisis « Processeur ».');
+      f16 = carte.features.has('shader-f16');
+      const i = carte.info || {};   /* pour le rapport : quelle carte graphique, ou une imitation par le processeur */
+      gpu = [i.vendor, i.architecture, i.description].filter(Boolean).join(' ') + (i.isFallbackAdapter ? ' (imitée par le processeur)' : '') + (f16 ? ' · fp16' : '');
     }
     /* WebGPU : encodeur précis, décodeur compressé (4 bits) ; Small en demi-précision pour rester sous 300 Mo. Processeur : 8 bits. */
     const dtype = calcul === 'wasm' ? 'q8' : {encoder_model:/small/.test(m.modele) && f16 ? 'fp16' : 'fp32', decoder_model_merged:'q4'};
@@ -190,7 +193,8 @@ function travailleur(){
     dire({type:'etape', texte:'Préparation du modèle…'});
     const t1 = performance.now();
     await whisper(new Float32Array(16000), {language:'french', task:'transcribe'});   /* 1re lecture « à blanc » : prépare les calculs, les vraies seront plus rapides */
-    dire({type:'pret', calcul, dtype:typeof dtype === 'string' ? dtype : dtype.encoder_model + '/' + dtype.decoder_model_merged, ms:t1 - t0, chauffe:performance.now() - t1});
+    dire({type:'pret', calcul, dtype:typeof dtype === 'string' ? dtype : dtype.encoder_model + '/' + dtype.decoder_model_merged, ms:t1 - t0, chauffe:performance.now() - t1,
+      gpu, coeurs:tjs.env.backends.onnx.wasm.numThreads || 1});   /* cœurs : choisis par onnxruntime au chargement (1 hors page isolée) */
   }
   onmessage = async ({data:m}) => {
     try {
@@ -216,7 +220,9 @@ function etatModele(texte, classe = ''){ const e = $('#etat-modele'); e.textCont
 /* Fil de Whisper. gen change à chaque nouveau modèle : ce qui était en route pour l'ancien est renvoyé au nouveau. */
 const MODELE_CHANGE = 'modèle changé';
 const W = {fil:null, gen:0, pret:false, infos:null, attente:new Map(), suivant:1, chaine:Promise.resolve()};
-const descModele = () => W.infos ? `${W.infos.nom} · ${W.infos.calcul === 'webgpu' ? 'carte graphique' : 'processeur'} (${W.infos.dtype})` : '';
+const pluriel = (n, mot) => n + ' ' + mot + (n > 1 ? 's' : '');
+const descModele = () => W.infos ? `${W.infos.nom} · ${W.infos.calcul === 'webgpu' ? 'carte graphique' : 'processeur, ' + pluriel(W.infos.coeurs, 'cœur')} (${W.infos.dtype})` : '';
+const descChargement = i => `chargé en ${sec(i.ms)}, préparé en ${sec(i.chauffe)}` + (i.gpu ? ' · ' + i.gpu : '');
 function finChargement(){ $('#barre').hidden = true; $('#charger').disabled = false; }
 function chargerModele(){
   if(W.fil) W.fil.terminate();
@@ -230,7 +236,7 @@ function chargerModele(){
     else if(m.type === 'progression'){ $('#barre').hidden = false; $('#barre i').style.width = (m.total ? 100 * m.charge / m.total : 0) + '%'; etatModele('Téléchargement du modèle : ' + mo(m.charge) + ' sur ' + mo(m.total)); }
     else if(m.type === 'pret'){
       W.pret = true; W.infos = {...m, nom:nom.replace('onnx-community/', ''), le:performance.now()}; finChargement();
-      etatModele(`Prêt · ${descModele()} · chargé en ${sec(m.ms)}, préparé en ${sec(m.chauffe)}`, 'ok');
+      etatModele(`Prêt · ${descModele()} · ${descChargement(m)}`, 'ok');
       ESSAIS.forEach(majEssai); pomper();
     }
     else if(m.type === 'texte' || m.type === 'erreur' && m.quoi === 'transcrire'){
@@ -392,7 +398,7 @@ async function arreter(){
 /* Le direct est fini quand tous les morceaux sont transcrits (après l'arrêt) */
 function finirSiPret(x){
   if(!x.fini || !x.el || x.rendu || x.morceaux.some(m => m.texte === null)) return;
-  x.rendu = true; x.texteDirect = x.morceaux.map(m => m.texte).join(' ').trim(); x.modele = descModele();
+  x.rendu = true; x.texteDirect = x.morceaux.map(m => m.texte).join(' ').trim(); x.modele = descModele(); x.infos = W.infos;
   majEssai(x);
 }
 
@@ -439,7 +445,7 @@ async function toutDUnCoup(x){
   x.coupEnCours = false; majEssai(x);
 }
 async function copierRapport(x, b){
-  const t = ['Essai vocal LIFE PANEL — essai ' + x.num, 'Appareil : ' + navigator.userAgent, ...x.mesures.map(([k, v]) => k + ' : ' + v),
+  const t = ['Essai vocal LIFE PANEL — essai ' + x.num, 'Appareil : ' + APPAREIL.texte, ...(x.infos ? ['Modèle : ' + descChargement(x.infos)] : []), ...x.mesures.map(([k, v]) => k + ' : ' + v),
     '', 'Texte en direct :', x.texteDirect || '', ...(x.coup ? ['', 'Texte d’un coup :', x.coup.texte] : [])].join('\n');
   try { await navigator.clipboard.writeText(t); b.textContent = 'Copié ✓'; }
   catch(e){ b.textContent = 'Copie impossible'; }
@@ -447,9 +453,31 @@ async function copierRapport(x, b){
 }
 
 /* ---------- Démarrage ---------- */
+/* Plusieurs cœurs pour Whisper : il faut une page « isolée ». Au premier passage, le service worker de cette page
+   s'installe, puis la page se recharge une fois pour en recevoir les en-têtes (une seule fois : jamais en boucle). */
+async function isoler(){
+  if(window.crossOriginIsolated || !('serviceWorker' in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.register('essai-vocal-sw.js', {scope:'essai-vocal.html'});
+    const w = reg.installing || reg.waiting;
+    if(!reg.active && w) await new Promise(ok => w.addEventListener('statechange', () => { if(w.state === 'activated') ok(); }));
+    if(sessionStorage.getItem('essai-vocal.recharge')) return;   /* déjà rechargée, toujours pas isolée : un seul cœur */
+    sessionStorage.setItem('essai-vocal.recharge', '1'); location.reload();
+  } catch(e){}
+}
+/* Appareil, pour le rapport (Chrome ne donne le modèle du téléphone et la version d'Android que sur demande) */
+const APPAREIL = {texte:navigator.userAgent};
+(async () => {
+  const c = navigator.hardwareConcurrency || '?', chrome = (navigator.userAgent.match(/Chrome\/(\d+)/) || [])[1] || '?';
+  try {
+    const h = await navigator.userAgentData.getHighEntropyValues(['model', 'platformVersion']);
+    APPAREIL.texte = `${h.model || 'modèle inconnu'} · ${h.platform || '?'} ${String(h.platformVersion || '').split('.')[0]} · Chrome ${chrome} · ${c} cœurs`;
+  } catch(e){ APPAREIL.texte += ' · ' + c + ' cœurs'; }
+})();
 $('#charger').onclick = chargerModele;
 $('#bouton-micro').onclick = () => E ? arreter() : demarrer();
-$('#gpu').textContent = 'gpu' in navigator ? 'WebGPU : présent dans ce navigateur' : 'WebGPU : absent (calcul sur le processeur)';
+$('#gpu').textContent = `${navigator.hardwareConcurrency || '?'} cœurs · ` + (window.crossOriginIsolated ? 'Whisper pourra en utiliser plusieurs' : 'Whisper n’en utilisera qu’un');
+isoler();
 document.addEventListener('visibilitychange', async () => {   /* le verrou d'écran tombe quand on quitte la page : repris au retour */
   if(E && document.visibilityState === 'visible') try { E.verrou = await navigator.wakeLock.request('screen'); } catch(e){}
 });
