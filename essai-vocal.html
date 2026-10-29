@@ -19,7 +19,7 @@
   déclarer. Le service worker essai-vocal-sw.js le fait pour cette seule page (LIFE PANEL garde le sien) : worker-src 'self'.
   Après toute modification d'un script : recalculer son empreinte dans la CSP (outil csp.js des tests).
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-f9CNJvXi01ag+NYF7zTCWjUmEyXSB+lzxIw+Kal0m7U=' blob: 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.hf.co blob:; media-src blob:; img-src data:; style-src 'unsafe-inline'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-on+6TjO7uFbJOAMVNJCKz3aqrGFXqyqE6RZI/Kgd4fg=' blob: 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.hf.co blob:; media-src blob:; img-src data:; style-src 'unsafe-inline'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Essai vocal · LIFE PANEL</title>
 <meta name="theme-color" content="#1b1b1d">
 <meta name="robots" content="noindex">
@@ -228,7 +228,6 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '
 const duree = s => { s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 const sec = ms => (ms / 1000).toLocaleString('fr-FR', {maximumFractionDigits:1}) + ' s';
 const mo = o => (o / 1048576).toLocaleString('fr-FR', {maximumFractionDigits:o < 1048576 ? 2 : 0}) + ' Mo';
-const go = o => (o / 1073741824).toLocaleString('fr-FR', {maximumFractionDigits:1}) + ' Go';
 const fois = x => x.toLocaleString('fr-FR', {maximumFractionDigits:2}) + ' ×';
 function etatModele(texte, classe = ''){ const e = $('#etat-modele'); e.textContent = texte; e.className = 'etat ' + classe; }
 
@@ -508,7 +507,7 @@ async function majStockage(){
   let texte = l.length ? 'Modèles gardés dans ce téléphone : ' + l.join(', ') + '.' : 'Aucun modèle gardé pour l’instant.';
   try {
     const e = await navigator.storage.estimate(), p = await navigator.storage.persisted();
-    texte += ` Place prise par ce site dans Chrome (LIFE PANEL compris) : ${mo(e.usage || 0)}` + (e.quota ? ` sur ${go(e.quota)} au plus accordés par Chrome` : '') + ', ' + (p ? 'protégée : Chrome ne l’effacera pas de lui-même.' : 'non protégée : Chrome pourrait l’effacer si le téléphone manque de place.');
+    texte += ` Place prise par ce site dans Chrome (LIFE PANEL compris) : ${mo(e.usage || 0)}, ` + (p ? 'protégée : Chrome ne l’effacera pas de lui-même.' : 'non protégée : Chrome pourrait l’effacer si le téléphone manque de place.');
   } catch(e){}
   $('#stockage').textContent = texte; $('#vider').hidden = !l.length;
 }
