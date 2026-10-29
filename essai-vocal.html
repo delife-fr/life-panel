@@ -19,7 +19,7 @@
   déclarer. Le service worker essai-vocal-sw.js le fait pour cette seule page (LIFE PANEL garde le sien) : worker-src 'self'.
   Après toute modification d'un script : recalculer son empreinte dans la CSP (outil csp.js des tests).
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-4DDCX8U6sf/lUB56PhQrr6eDMVFotn7xCBvYby8iPOo=' blob: 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.hf.co blob:; media-src blob:; img-src data:; style-src 'unsafe-inline'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-on+6TjO7uFbJOAMVNJCKz3aqrGFXqyqE6RZI/Kgd4fg=' blob: 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src https://cdn.jsdelivr.net https://huggingface.co https://*.huggingface.co https://*.hf.co blob:; media-src blob:; img-src data:; style-src 'unsafe-inline'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Essai vocal · LIFE PANEL</title>
 <meta name="theme-color" content="#1b1b1d">
 <meta name="robots" content="noindex">
@@ -43,6 +43,7 @@
   --ombre:0 1px 2px #0000000f, 0 6px 18px #00000014;
 }
 *{box-sizing:border-box}
+[hidden]{display:none !important}
 html,body{margin:0;padding:0}
 body{background:var(--fond);color:var(--texte);font-family:var(--police);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
 button,select{font:inherit;color:inherit}
@@ -109,6 +110,7 @@ dt{color:var(--texte-doux)} dd{margin:0;font-variant-numeric:tabular-nums;overfl
     <div class="ligne" style="margin-top:12px"><button class="btn p" id="charger">Charger le modèle</button><span class="doux" id="gpu"></span></div>
     <div class="barre" hidden id="barre"><i></i></div>
     <p class="etat" id="etat-modele">Pas encore chargé. Tu peux déjà parler : le texte arrivera une fois le modèle prêt.</p>
+    <div class="ligne" style="margin-top:12px;justify-content:space-between"><p class="doux" id="stockage" style="flex:1 1 220px"></p><button class="btn" id="vider" hidden>Effacer Whisper du téléphone</button></div>
   </section>
 
   <section class="carte" aria-labelledby="t-parler">
@@ -148,17 +150,22 @@ function travailleur(){
   const dire = m => postMessage(m);
   const b64 = o => { const u = new Uint8Array(o); let s = ''; for(let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); };
   const enUrl = o => URL.createObjectURL(new Blob([o], {type:'text/javascript'}));
-  /* Télécharge un fichier de code et ne le rend que s'il est exactement celui attendu */
+  /* Rend un fichier de code seulement s'il est exactement celui attendu : la copie gardée dans le téléphone (Cache Storage
+     « essai-vocal-code »), sinon le téléchargement, gardé ensuite. L'empreinte est vérifiée à chaque fois, copie comprise. */
   async function verifie(f){
+    const empreinte = async o => 'sha384-' + b64(await crypto.subtle.digest('SHA-384', o));
+    let cache = null;
+    try { cache = await caches.open('essai-vocal-code'); const c = await cache.match(f.url); if(c){ const o = await c.arrayBuffer(); if(await empreinte(o) === f.sha) return o; } } catch(e){}
     const r = await fetch(f.url);
     if(!r.ok) throw new Error(f.nom + ' : réponse ' + r.status + ' du serveur.');
     const o = await r.arrayBuffer();
-    if('sha384-' + b64(await crypto.subtle.digest('SHA-384', o)) !== f.sha) throw new Error(f.nom + ' : le fichier reçu n’est pas celui attendu (empreinte différente). Refusé, rien n’a été exécuté.');
+    if(await empreinte(o) !== f.sha) throw new Error(f.nom + ' : le fichier reçu n’est pas celui attendu (empreinte différente). Refusé, rien n’a été exécuté.');
+    if(cache) try { await cache.put(f.url, new Response(o)); } catch(e){}
     return o;
   }
   async function chargerCode(code){
     if(tjs) return;
-    dire({type:'etape', texte:'Téléchargement et vérification du code de Whisper (≈ 28 Mo, gardé ensuite par le navigateur)…'});
+    dire({type:'etape', texte:'Vérification du code de Whisper (≈ 28 Mo, téléchargés la première fois seulement)…'});
     const [lib, mjs, wasm] = await Promise.all([verifie(code.lib), verifie(code.mjs), verifie(code.wasm)]);
     tjs = await import(enUrl(lib));
     tjs.env.allowLocalModels = false;
@@ -180,11 +187,18 @@ function travailleur(){
     }
     /* WebGPU : encodeur précis, décodeur compressé (4 bits) ; Small en demi-précision pour rester sous 300 Mo. Processeur : 8 bits. */
     const dtype = calcul === 'wasm' ? 'q8' : {encoder_model:/small/.test(m.modele) && f16 ? 'fp16' : 'fp32', decoder_model_merged:'q4'};
-    dire({type:'etape', texte:'Modèle : téléchargement (la première fois) ou lecture de la copie gardée…'});
+    /* Déjà gardé dans le téléphone ? transformers.js annonce une progression même quand il relit sa copie : on dit laquelle */
+    const suffixe = {fp32:'', fp16:'_fp16', q8:'_quantized', q4:'_q4'}, d = typeof dtype === 'string' ? {encoder_model:dtype, decoder_model_merged:dtype} : dtype;
+    let garde = false;
+    try {
+      const gardes = (await (await caches.open('transformers-cache')).keys()).map(r => r.url);
+      garde = Object.entries(d).every(([f, t]) => gardes.some(u => u.endsWith(`/${m.modele}/resolve/main/onnx/${f}${suffixe[t]}.onnx`)));
+    } catch(e){}
+    dire({type:'etape', texte:garde ? 'Lecture du modèle gardé dans le téléphone…' : 'Premier téléchargement du modèle…'});
     let vu = 0;
     try {
       whisper = await tjs.pipeline('automatic-speech-recognition', m.modele, {device:calcul, dtype, progress_callback:p => {
-        if(p.status === 'progress_total' && performance.now() - vu > 150){ vu = performance.now(); dire({type:'progression', charge:p.loaded, total:p.total}); }
+        if(p.status === 'progress_total' && performance.now() - vu > 150){ vu = performance.now(); dire({type:'progression', charge:p.loaded, total:p.total, garde}); }
       }});
     } catch(e){
       if(e instanceof TypeError && /fetch/i.test(e.message)) throw new Error('impossible de télécharger le modèle depuis huggingface.co (réseau coupé ou trop faible ?). Réessaie.');
@@ -233,11 +247,11 @@ function chargerModele(){
   W.fil = new Worker(URL.createObjectURL(new Blob(['(' + travailleur + ')()'], {type:'text/javascript'})), {type:'module'});
   W.fil.onmessage = ({data:m}) => {
     if(m.type === 'etape') etatModele(m.texte);
-    else if(m.type === 'progression'){ $('#barre').hidden = false; $('#barre i').style.width = (m.total ? 100 * m.charge / m.total : 0) + '%'; etatModele('Téléchargement du modèle : ' + mo(m.charge) + ' sur ' + mo(m.total)); }
+    else if(m.type === 'progression'){ $('#barre').hidden = false; $('#barre i').style.width = (m.total ? 100 * m.charge / m.total : 0) + '%'; etatModele((m.garde ? 'Lecture du modèle gardé dans le téléphone (pas de téléchargement) : ' : 'Premier téléchargement du modèle : ') + mo(m.charge) + ' sur ' + mo(m.total)); }
     else if(m.type === 'pret'){
       W.pret = true; W.infos = {...m, nom:nom.replace('onnx-community/', ''), le:performance.now()}; finChargement();
       etatModele(`Prêt · ${descModele()} · ${descChargement(m)}`, 'ok');
-      ESSAIS.forEach(majEssai); pomper();
+      ESSAIS.forEach(majEssai); pomper(); majStockage();
     }
     else if(m.type === 'texte' || m.type === 'erreur' && m.quoi === 'transcrire'){
       const r = W.attente.get(m.id); W.attente.delete(m.id);
@@ -477,6 +491,33 @@ const APPAREIL = {texte:navigator.userAgent};
 $('#charger').onclick = chargerModele;
 $('#bouton-micro').onclick = () => E ? arreter() : demarrer();
 $('#gpu').textContent = `${navigator.hardwareConcurrency || '?'} cœurs · ` + (window.crossOriginIsolated ? 'Whisper pourra en utiliser plusieurs' : 'Whisper n’en utilisera qu’un');
+/* Ce que Chrome garde pour ce site : modèles (Cache Storage « transformers-cache ») et données de LIFE PANEL (IndexedDB) */
+async function majStockage(){
+  const l = [];
+  try {
+    const c = await caches.open('transformers-cache'), t = {};
+    for(const r of await c.keys()){
+      const m = r.url.match(/huggingface\.co\/[^/]+\/whisper-([^/]+)\/resolve\/[^/]+\/(.+)$/); if(!m) continue;
+      const rep = await c.match(r);
+      t[m[1]] = (t[m[1]] || 0) + (Number(rep && rep.headers.get('content-length')) || 0);
+    }
+    Object.entries(t).forEach(([n, o]) => l.push(n[0].toUpperCase() + n.slice(1) + (o ? ' (' + mo(o) + ')' : '')));
+    if(l.length && await caches.has('essai-vocal-code')) l.push('code de Whisper (28 Mo)');
+  } catch(e){}
+  let texte = l.length ? 'Modèles gardés dans ce téléphone : ' + l.join(', ') + '.' : 'Aucun modèle gardé pour l’instant.';
+  try {
+    const e = await navigator.storage.estimate(), p = await navigator.storage.persisted();
+    texte += ` Place prise par ce site dans Chrome (LIFE PANEL compris) : ${mo(e.usage || 0)}, ` + (p ? 'protégée : Chrome ne l’effacera pas de lui-même.' : 'non protégée : Chrome pourrait l’effacer si le téléphone manque de place.');
+  } catch(e){}
+  $('#stockage').textContent = texte; $('#vider').hidden = !l.length;
+}
+$('#vider').onclick = async () => {
+  if(!confirm('Effacer Whisper de ce téléphone (modèles et code) ? Il faudra retélécharger celui que tu choisiras.')) return;
+  try { await caches.delete('transformers-cache'); await caches.delete('essai-vocal-code'); } catch(e){}
+  majStockage();
+};
+/* Demande à Chrome de ne pas effacer de lui-même ce que le site garde (modèles, données) quand la place manque */
+(async () => { try { if(navigator.storage && navigator.storage.persist && !await navigator.storage.persisted()) await navigator.storage.persist(); } catch(e){} majStockage(); })();
 isoler();
 document.addEventListener('visibilitychange', async () => {   /* le verrou d'écran tombe quand on quitte la page : repris au retour */
   if(E && document.visibilityState === 'visible') try { E.verrou = await navigator.wakeLock.request('screen'); } catch(e){}
