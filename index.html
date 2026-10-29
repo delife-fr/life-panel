@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-JJWvDfgD4GwwR1Fbn6Rbls60tgi5V8SZhrbh8+7jVhg='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-RB5IE6WOZPu4IcJAqEvC0pDoXdEVSA7z5RnfDY4e818='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com http://localhost:* http://127.0.0.1:*; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -184,6 +184,15 @@
   v3.37 : événements avec des tags, comme les tâches, notes, documents et contacts (champ « Tags » du formulaire, suggestions,
   puces dans la fiche, recherche « #tag ») ; plus de catégorie d'événement ni de couleur par catégorie (tous les événements en
   violet). L'ancienne catégorie des événements est oubliée, sans devenir un tag. Données VERSION 20.
+  v3.38 : notes vocales dans l'Inbox. En haut de la page, un bouton micro (un appui pour parler, un autre pour arrêter) ; le vocal
+  arrive aussitôt dans la liste, avec son lecteur et un cadre pour le texte, que Whisper écrit ensuite dans le téléphone (le son ne
+  part nulle part). Supprimer le son ou le texte, chacun de son côté (corbeille de 30 jours) ; un appui sur le texte pour le corriger.
+  Le son reste dans ce navigateur (IndexedDB), jamais dans donnees.json ni sur GitHub : seul le texte est synchronisé. Whisper (Small,
+  8 bits, sur le processeur) tourne dans un fil à part (vocal-whisper.js) qui a sa propre CSP, ajoutée par sw.js (jsDelivr et
+  huggingface.co seulement, jamais GitHub) ; son code n'est exécuté qu'après vérification de son empreinte ; le modèle (≈ 270 Mo)
+  est téléchargé une fois, avec ton accord, puis relu depuis l'appareil ; Whisper quitte la mémoire 2 min après son dernier travail.
+  sw.js rend la page « isolée » (COOP / COEP) : Whisper calcule sur plusieurs cœurs. Raccourci Android « Vocal » (appui long sur
+  l'icône) : l'enregistrement démarre aussitôt. Carte « Notes vocales » (page Données). Données VERSION 21.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -511,6 +520,35 @@ li.tache:has(> .corps > .etapes:not([hidden])) > .case{margin-top:2px}
 .icone-btn{width:30px;height:30px;border-radius:var(--r3);border:0;background:transparent;color:var(--texte-faible);display:inline-grid;place-items:center;flex-shrink:0;transition:background .15s,color .15s,opacity .15s}
 .icone-btn:hover{background:rgb(var(--sur) / 0.071);color:var(--texte)}
 .icone-btn.danger:hover{color:var(--i-rose);background:#d551811a}
+/* Notes vocales (v3.38) : micro en haut de l'Inbox, puis lecteur et texte de chaque vocal */
+.vocal-capture{display:flex;align-items:center;gap:14px;margin:0 0 14px}
+.vocal-capture .micro{width:64px;height:64px;border-radius:50%;border:0;background:var(--jaune);color:#fff;display:grid;place-items:center;flex-shrink:0;box-shadow:var(--ombre);transition:background .2s,transform .1s}
+.vocal-capture .micro:active{transform:scale(.95)}
+.vocal-capture.enreg .micro{background:var(--rouge);animation:vocal-pulse 1.6s ease-in-out infinite}
+@keyframes vocal-pulse{50%{box-shadow:0 0 0 9px #e6676730}}
+.vocal-etat{display:flex;flex-direction:column;gap:3px;min-width:0}
+.vocal-etat strong{font-size:var(--t7);font-weight:600;font-variant-numeric:tabular-nums}
+.vocal-etat > span{font-size:var(--t3);color:var(--texte-doux)}
+.vocal-etat .niveau{display:block;width:150px;max-width:100%;height:5px;border-radius:3px;background:rgb(var(--sur) / 0.08);overflow:hidden;margin-top:4px}
+.vocal-etat .niveau i{display:block;height:100%;width:0;background:var(--i-vert)}
+.vocal-info{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:0 0 14px;padding:10px 12px;border-radius:var(--r4);background:#c9850014;border:1px solid #c9850033;font-size:var(--t3);color:var(--texte-doux)}
+.vocal-info > span:first-child{flex:1 1 220px}
+.vocal-info.ko{background:#d5518112;border-color:#d5518133}
+.barre-vocal{display:block;flex:1 1 100%;height:5px;border-radius:3px;background:rgb(var(--sur) / 0.08);overflow:hidden}
+.barre-vocal i{display:block;height:100%;background:var(--i-jaune)}
+#vocal-whisper:empty{display:none}
+#carte-vocal-progres .vocal-info{margin:0 0 12px}
+.liste > li.vocal{flex-direction:column;align-items:stretch;gap:8px}
+.vocal-tete{display:flex;align-items:center;gap:10px}
+.vocal-tete .s{flex:1;min-width:0;font-size:var(--t2);color:var(--texte-faible)}
+.vocal-son,.vocal-texte{display:flex;align-items:center;gap:6px}
+.vocal-son audio{flex:1;min-width:0;height:40px}
+.texte-vocal{flex:1;min-width:0;margin:0;text-align:left;font-size:var(--t4);line-height:1.45;color:var(--texte);background:rgb(var(--sur) / 0.035);border:1px solid var(--trait-doux);border-radius:var(--r4);padding:9px 11px;white-space:pre-wrap;overflow-wrap:anywhere}
+button.texte-vocal{cursor:text}
+button.texte-vocal:hover{border-color:var(--trait)}
+.texte-vocal em,.texte-vocal.attente{color:var(--texte-faible);font-style:italic}
+.texte-vocal.attente .btn{font-style:normal;margin-left:6px}
+.vocal-ailleurs{flex:1;margin:0;display:flex;align-items:center;gap:6px;font-size:var(--t3);color:var(--texte-faible)}
 .puce{display:inline-flex;align-items:center;gap:4px;font-size:var(--t2);padding:2px 9px;border-radius:99px;border:1px solid var(--trait);background:rgb(var(--sur) / 0.031);color:var(--texte-doux);white-space:nowrap;line-height:1.5}
 button.puce{cursor:pointer}
 .puce.alerte{border-color:#c985004d;background:#c9850022;color:var(--i-jaune)}
@@ -1231,7 +1269,7 @@ td.act{text-align:right;white-space:nowrap;width:1%}
 /* ==========================================================================
    A. DONNÉES — un seul modèle, une seule clé
    ========================================================================== */
-const VERSION = 20;  /* 8 : archives et corbeille · 9 : module Documents, tags communs · 10 : liste des comptes (statistiques, budgets) · 11 : couleur de chaque catégorie · 12 : téléphone et adresse des contacts · 13 : autre téléphone des contacts · 14 : e-mail des contacts · 15 : dossier Drive des projets, versions remplacées par la synchro (corbeille) · 16 : date de modification des mouvements et de l'Inbox (fusion de la synchro) · 17 : note des mouvements · 18 : événements du calendrier · 19 : étapes des tâches · 20 : tags des événements (catégories d'événements retirées) */
+const VERSION = 21;  /* 8 : archives et corbeille · 9 : module Documents, tags communs · 10 : liste des comptes (statistiques, budgets) · 11 : couleur de chaque catégorie · 12 : téléphone et adresse des contacts · 13 : autre téléphone des contacts · 14 : e-mail des contacts · 15 : dossier Drive des projets, versions remplacées par la synchro (corbeille) · 16 : date de modification des mouvements et de l'Inbox (fusion de la synchro) · 17 : note des mouvements · 18 : événements du calendrier · 19 : étapes des tâches · 20 : tags des événements (catégories d'événements retirées) · 21 : notes vocales de l'Inbox (son gardé dans le navigateur, texte synchronisé) */
 const CLE = 'lifepanel';                   /* copie légère dans localStorage (voir « Stockage dans le navigateur ») */
 const CLE_SECOURS = 'lifepanel.secours';   /* ancienne place de la copie de secours (v3.3 à v3.8), reprise dans IndexedDB */
 const MIROIR_MAX = 2e6;                    /* au-delà de 2 millions de caractères, pas de copie dans localStorage */
@@ -1347,8 +1385,9 @@ const FORMES = {
   contacts:c => { const aRepondre = itemsContact(c.aRepondre); return {id:txt(c.id) || uid(), nom:txt(c.nom) || 'Sans nom', telephone:txt(c.telephone), autreTelephone:txt(c.autreTelephone), email:txt(c.email), adresse:txt(c.adresse), anniversaire:dateISO(c.anniversaire),
     derniereConversation:dateISO(c.derniereConversation), nouvelles:txt(c.nouvelles), projet:c.projet || null,
     aDire:itemsContact(c.aDire), aRepondre, idees:itemsContact(c.idees), tags:tagRepondre(nettoyerTags(c.tags), aRepondre), modif:txt(c.modif), ...archivage(c)}; },
-  inbox:x => { const created = txt(x.created) || maintenant();
-    return {id:txt(x.id) || uid(), text:txt(x.text), created, status:x.status === 'archived' ? 'archived' : 'open', archived:txt(x.archived), modif:txt(x.modif) || created}; },
+  inbox:x => { const created = txt(x.created) || maintenant(), vocal = vocalValide(x.vocal);
+    return {id:txt(x.id) || uid(), text:txt(x.text), created, status:x.status === 'archived' ? 'archived' : 'open', archived:txt(x.archived), modif:txt(x.modif) || created,
+      ...(vocal ? {vocal} : {})}; },   /* VERSION 21 : vocal seulement s'il y en a un (les autres éléments restent identiques) */
   evenements:e => { const cree = txt(e.cree) || maintenant(), r = e.recurrence && typeof e.recurrence === 'object' ? e.recurrence : {};
     const freq = ['semaine', 'mois', 'an'].includes(r.freq) ? r.freq : '', heure = heureValide(e.heure);
     return {id:txt(e.id) || uid(), titre:txt(e.titre).trim() || 'Sans titre', date:dateISO(e.date) || aujourdhui(), heure, fin:heure ? heureValide(e.fin) : '',
@@ -1358,6 +1397,11 @@ const FORMES = {
       projet:e.projet || null, tags:nettoyerTags(e.tags), note:txt(e.note),
       rappel:RAPPELS_EVT.includes(Number(e.rappel)) ? Number(e.rappel) : null, cree, modif:txt(e.modif) || cree}; }
 };
+/* Vocal d'un élément de l'Inbox (VERSION 21) : identifiant du son (gardé dans le navigateur qui l'a enregistré, jamais dans les
+   données), durée en secondes, état du texte : attente (Whisper ne l'a pas encore écrit), fait, erreur, sans (texte supprimé) */
+const ETATS_VOCAL = ['attente', 'fait', 'erreur', 'sans'];
+const vocalValide = v => v && typeof v === 'object' && !Array.isArray(v) && txt(v.id)
+  ? {id:txt(v.id), duree:Math.max(0, Math.round(Number(v.duree) || 0)), etat:ETATS_VOCAL.includes(v.etat) ? v.etat : 'fait'} : null;
 /* Crée un élément complet dans la liste voulue (en tête pour l'Inbox) et le renvoie */
 function ajouter(liste, brut){
   const x = FORMES[liste](brut);
@@ -1375,7 +1419,7 @@ function normaliser(brut){
   const tab = k => Array.isArray(brut[k]) ? brut[k].filter(x => x && typeof x === 'object') : [];
   if(typeof brut.prenom === 'string') d.prenom = brut.prenom;
   LISTES_DONNEES.forEach(k => { d[k] = tab(k).map(FORMES[k]); });
-  d.inbox = d.inbox.filter(x => x.text);
+  d.inbox = d.inbox.filter(x => x.text || x.vocal);
   d.projets.forEach(p => { if(!p.couleur) p.couleur = couleurLibre(d.projets); });   /* une couleur par projet, gardée */
   /* v3.4 à v3.7 : les documents étaient rangés dans leur projet → ils rejoignent la liste unique (projet conservé) */
   const dejaLa = new Set(d.documents.map(x => x.id));
@@ -1499,6 +1543,7 @@ function idb(){
 }
 async function idbLire(k){ const db = await idb(); return new Promise((ok, ko) => { const q = db.transaction('poignees').objectStore('poignees').get(k); q.onsuccess = () => ok(q.result ?? null); q.onerror = () => ko(q.error); }); }
 async function idbEcrire(k, v){ const db = await idb(); return new Promise((ok, ko) => { const tx = db.transaction('poignees', 'readwrite'); tx.objectStore('poignees').put(v, k); tx.oncomplete = () => ok(); tx.onerror = tx.onabort = () => ko(tx.error); }); }
+async function idbCles(){ const db = await idb(); return new Promise((ok, ko) => { const q = db.transaction('poignees').objectStore('poignees').getAllKeys(); q.onsuccess = () => ok(q.result || []); q.onerror = () => ko(q.error); }); }
 async function idbSupprimer(k){ const db = await idb(); return new Promise((ok, ko) => { const tx = db.transaction('poignees', 'readwrite'); tx.objectStore('poignees').delete(k); tx.oncomplete = () => ok(); tx.onerror = tx.onabort = () => ko(tx.error); }); }
 
 /* Écrit le texte JSON des données dans le navigateur (copie légère tout de suite, IndexedDB juste après) */
@@ -1816,6 +1861,8 @@ const ICONES = {
   horloge:'<circle cx="12" cy="12" r="8.6"/><path d="M12 7.2V12l3.2 2"/>',
   plus:'<path d="M12 5.6v12.8M5.6 12h12.8"/>',
   ampoule:'<path d="M9.2 17.6h5.6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.4 10.9c.6.5.9 1.1.9 1.8h5c0-.7.3-1.3.9-1.8A6 6 0 0 0 12 3z"/>',
+  micro:'<rect x="9" y="3" width="6" height="11.4" rx="3"/><path d="M5.6 11a6.4 6.4 0 0 0 12.8 0M12 17.4V21M8.8 21h6.4"/>',
+  stop:'<rect x="6.6" y="6.6" width="10.8" height="10.8" rx="2.2"/>',
   reglages:'<circle cx="12" cy="12" r="3.2"/><path d="M19.2 14.6a1.6 1.6 0 0 0 .3 1.8l.1.1a1.9 1.9 0 1 1-2.7 2.7l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5v.2a1.9 1.9 0 1 1-3.8 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a1.9 1.9 0 1 1-2.7-2.7l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1h-.2a1.9 1.9 0 1 1 0-3.8h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a1.9 1.9 0 1 1 2.7-2.7l.1.1a1.6 1.6 0 0 0 1.8.3h.1a1.6 1.6 0 0 0 1-1.5v-.2a1.9 1.9 0 1 1 3.8 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a1.9 1.9 0 1 1 2.7 2.7l-.1.1a1.6 1.6 0 0 0-.3 1.8v.1a1.6 1.6 0 0 0 1.5 1h.2a1.9 1.9 0 1 1 0 3.8h-.1a1.6 1.6 0 0 0-1.5 1z"/>',
   fleche:'<path d="M5 12h13M13 6.6 18.4 12 13 17.4"/>',
   retour:'<path d="M19 12H6M11 6.6 5.6 12 11 17.4"/>',
@@ -2021,6 +2068,9 @@ const anniversaires = max => contactsActifs().map(c => ({c, j:joursAvantAnniv(c.
   .filter(x => x.j !== null && x.j <= max).sort((a, b) => a.j - b.j);
 const reponsesEnAttente = () => contactsActifs().reduce((n, c) => n + c.aRepondre.filter(i => !i.ok).length, 0);
 const inboxOuverte = () => DB.inbox.filter(x => x.status !== 'archived');
+const dureeVocal = s => Math.floor(s / 60) + ':' + String(Math.round(s) % 60).padStart(2, '0');
+/* Ce qu'on montre d'un élément de l'Inbox ailleurs que sur sa page (journal, recherche, archives, corbeille) : son texte, sinon « Vocal de 0:19 » */
+const texteInbox = x => x.text || (x.vocal ? 'Vocal de ' + dureeVocal(x.vocal.duree) : '');
 
 /* --- Documents : échéance et préavis ---
    etat : 'expire' (date passée), 'preavis' (dans le préavis, aujourd'hui compris), 'plus-tard', 'sans' (pas d'échéance) */
@@ -2127,7 +2177,7 @@ const SOURCES_JOURNAL = [
   [() => DB.documents, x => x.modif, x => ({icone:'document', couleur:'bleu', titre:x.modif !== x.ajoute ? 'Document modifié' : 'Document ajouté', sous:x.titre, href:href('document', x.id)})],
   [() => DB.taches, t => t.fait ? t.faitLe : '', t => ({icone:'coche', couleur:'bleu', titre:'Tâche terminée', sous:t.nom, href:'#/taches'})],
   [() => DB.contacts, c => c.derniereConversation ? c.derniereConversation + 'T12:00:00' : '', c => ({icone:'bulle', couleur:'rose', titre:'Échange avec ' + c.nom, sous:dateCourte(c.derniereConversation), href:href('contact', c.id)})],
-  [inboxOuverte, x => x.created, x => ({icone:'ampoule', couleur:'jaune', titre:'Capture dans l’Inbox', sous:x.text, href:'#/inbox'})]
+  [inboxOuverte, x => x.created, x => ({icone:'ampoule', couleur:'jaune', titre:'Capture dans l’Inbox', sous:texteInbox(x), href:'#/inbox'})]
 ];
 /* Les n entrées les plus récentes. On ne regarde d'abord que les 30 derniers jours (puis 240, puis tout) :
    un élément plus ancien ne peut pas passer devant, même avec l'écart entre heure locale et heure UTC (marge de 2 jours). */
@@ -2698,13 +2748,316 @@ function pageInbox(){
   const ouverts = inboxOuverte();
   return titre('Inbox', 'Dépose ici ce que tu ne veux pas classer tout de suite. Tu trieras plus tard.', encartArchives('inbox') + btnAction('capture', ico('plus', 14) + 'Capture rapide', 'btn p')) + `
     <section class="carte">${enteteCarte('plus', 'bleu', 'Ajouter quelque chose')}
+      <div id="bloc-vocal">${blocVocal()}</div>
       <form data-form="inbox" style="display:grid;grid-template-columns:1fr auto;gap:8px"><input class="saisie" name="texte" placeholder="Ex. Appeler le garage vendredi à 15h" autocomplete="off" aria-label="Nouvel élément"><button class="btn ghost" type="submit">Ajouter</button></form></section>
     <section class="carte">${enteteCarte('ampoule', 'jaune', pluriel(ouverts.length, 'élément') + ' à traiter')}
-      ${ouverts.length ? `<ul class="liste">${ouverts.map(x => `<li>${pastille('ampoule', 'jaune', 28, 14)}<span class="corps"><span class="t" style="white-space:normal">${esc(x.text)}</span><span class="s">${esc(ilya(x.created))}</span></span>
-        <div class="boutons">${btnAction('inbox-traiter', 'Traiter', 'btn compact', `data-id="${esc(x.id)}"`)}
-          <button class="icone-btn" data-action="inbox-archiver" data-id="${esc(x.id)}" title="Archiver" aria-label="Archiver">${ico('archive', 15)}</button>
-          <button class="icone-btn danger" data-action="inbox-supprimer" data-id="${esc(x.id)}" title="Supprimer" aria-label="Supprimer">${ico('corbeille', 15)}</button></div></li>`).join('')}</ul>`
+      ${ouverts.length ? `<ul class="liste">${ouverts.map(x => x.vocal ? ligneVocal(x) : ligneInbox(x)).join('')}</ul>`
         : vide('Inbox vide. Bravo !', btnAction('capture', 'Nouvelle capture'))}</section>`;
+}
+const ligneInbox = x => `<li>${pastille('ampoule', 'jaune', 28, 14)}<span class="corps"><span class="t" style="white-space:normal">${esc(x.text)}</span><span class="s">${esc(ilya(x.created))}</span></span>
+  <div class="boutons">${btnAction('inbox-traiter', 'Traiter', 'btn compact', `data-id="${esc(x.id)}"`)}
+    <button class="icone-btn" data-action="inbox-archiver" data-id="${esc(x.id)}" title="Archiver" aria-label="Archiver">${ico('archive', 15)}</button>
+    <button class="icone-btn danger" data-action="inbox-supprimer" data-id="${esc(x.id)}" title="Supprimer" aria-label="Supprimer">${ico('corbeille', 15)}</button></div></li>`;
+/* Un vocal : son lecteur, puis le cadre du texte ; chacun a sa corbeille (l'autre reste) */
+function ligneVocal(x){
+  const v = x.vocal, ici = VOCAUX.locaux.has(v.id), id = esc(x.id);
+  const attente = !ici ? 'Texte en attente : Whisper l’écrira sur l’appareil qui a enregistré le vocal.'
+    : W.enCours === v.id ? 'Transcription en cours…' : W.present === false && !W.fil ? 'Texte en attente : Whisper n’est pas encore dans cet appareil.' : 'Transcription bientôt…';
+  const texte = v.etat === 'sans' ? ''
+    : v.etat === 'attente' ? `<div class="vocal-texte"><p class="texte-vocal attente">${attente}</p></div>`
+    : v.etat === 'erreur' ? `<div class="vocal-texte"><p class="texte-vocal attente">La transcription a échoué.${ici ? ' ' + btnAction('vocal-reessayer', 'Réessayer', 'btn compact', `data-id="${id}"`) : ''}</p></div>`
+    : `<div class="vocal-texte"><button type="button" class="texte-vocal" data-action="vocal-corriger" data-id="${id}" title="Corriger le texte">${x.text ? esc(x.text) : '<em>Rien d’entendu.</em>'}</button>
+        <button class="icone-btn danger" data-action="vocal-suppr-texte" data-id="${id}" title="Supprimer le texte (le son reste)" aria-label="Supprimer le texte">${ico('corbeille', 15)}</button></div>`;
+  return `<li class="vocal">
+    <div class="vocal-tete">${pastille('micro', 'jaune', 28, 14)}<span class="s">Vocal de ${dureeVocal(v.duree)} · ${esc(ilya(x.created))}</span>
+      <div class="boutons">${x.text ? btnAction('inbox-traiter', 'Traiter', 'btn compact', `data-id="${id}"`) : ''}
+        <button class="icone-btn" data-action="inbox-archiver" data-id="${id}" title="Archiver" aria-label="Archiver">${ico('archive', 15)}</button></div></div>
+    <div class="vocal-son">${ici ? `<audio controls preload="metadata" data-vocal="${esc(v.id)}"></audio>` : `<p class="vocal-ailleurs">${ico('micro', 14)}Le son est resté sur l’appareil qui l’a enregistré.</p>`}
+      <button class="icone-btn danger" data-action="vocal-suppr-son" data-id="${id}" title="Supprimer le son (le texte reste)" aria-label="Supprimer le son">${ico('corbeille', 15)}</button></div>
+    ${texte}</li>`;
+}
+
+/* --- NOTES VOCALES (v3.38) ---
+   Le son est enregistré par MediaRecorder (Opus, 32 kbit/s : ≈ 0,25 Mo par minute) et gardé dans ce navigateur (IndexedDB, clé
+   « vocal:ID ») : il n'entre jamais dans donnees.json ni sur GitHub. L'élément de l'Inbox est créé dès l'arrêt (texte vide, vocal
+   « en attente ») et synchronisé comme les autres ; Whisper écrit le texte ensuite (voir « Whisper » plus bas). */
+const VOCAL_MAX_S = 10 * 60;   /* au-delà, l'enregistrement s'arrête et le vocal est gardé */
+const VOCAL = {rec:null, flux:null, morceaux:[], t0:0, minuterie:0, ctx:null, analyseur:null, image:0, verrou:null, demarrage:false};
+const VOCAUX = {locaux:new Set(), urls:new Map()};   /* sons présents dans ce navigateur ; adresses blob: déjà données aux lecteurs */
+
+function blocVocal(){
+  const enreg = !!VOCAL.rec;
+  return `<div class="vocal-capture${enreg ? ' enreg' : ''}">
+      <button type="button" class="micro" data-action="vocal-micro" aria-label="${enreg ? 'Arrêter et garder le vocal' : 'Enregistrer un vocal'}">${ico(enreg ? 'stop' : 'micro', 26, 'currentColor', 2)}</button>
+      <div class="vocal-etat"><strong id="vocal-chrono">${enreg ? dureeVocal((performance.now() - VOCAL.t0) / 1000) : 'Note vocale'}</strong>
+        <span>${enreg ? 'J’écoute… appuie pour arrêter.' : VOCAL.demarrage ? 'Ouverture du micro…' : 'Appuie pour parler, encore pour arrêter.'}</span>
+        ${enreg ? '<span class="niveau" aria-hidden="true"><i id="vocal-niveau"></i></span>' : ''}</div></div>
+    <div id="vocal-whisper">${etatWhisperHtml()}</div>`;
+}
+/* Seul le haut de la carte est redessiné : ni la liste (un vocal en cours d'écoute), ni le champ de texte ne sont touchés */
+function majBlocVocal(){ const b = $('#bloc-vocal'); if(b) b.innerHTML = blocVocal(); }
+
+async function vocalDemarrer(){
+  if(VOCAL.rec || VOCAL.demarrage) return;
+  if(!navigator.mediaDevices || !window.MediaRecorder){ toast('Ce navigateur ne sait pas enregistrer le son.'); return; }
+  if(!stockage.idb){ toast('Ce navigateur refuse de garder des fichiers (IndexedDB) : impossible de garder un vocal.'); return; }
+  VOCAL.demarrage = true; majBlocVocal();
+  try {
+    const flux = await navigator.mediaDevices.getUserMedia({audio:{channelCount:1, echoCancellation:true, noiseSuppression:true, autoGainControl:true}});
+    const type = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+    const rec = new MediaRecorder(flux, type ? {mimeType:type, audioBitsPerSecond:32000} : {});
+    Object.assign(VOCAL, {rec, flux, morceaux:[], t0:performance.now()});
+    rec.ondataavailable = e => { if(e.data.size) VOCAL.morceaux.push(e.data); };
+    rec.start(1000);
+    try {   /* niveau du son : facultatif (sans appui, au lancement par le raccourci, Chrome peut refuser de l'animer) */
+      VOCAL.ctx = new AudioContext(); VOCAL.analyseur = VOCAL.ctx.createAnalyser(); VOCAL.analyseur.fftSize = 1024;
+      VOCAL.ctx.createMediaStreamSource(flux).connect(VOCAL.analyseur); VOCAL.ctx.resume().catch(() => {});
+    } catch(e){ VOCAL.ctx = VOCAL.analyseur = null; }
+    VOCAL.minuterie = setInterval(() => {
+      const t = (performance.now() - VOCAL.t0) / 1000, c = $('#vocal-chrono');
+      if(c) c.textContent = dureeVocal(t);
+      if(t >= VOCAL_MAX_S) vocalArreter();
+    }, 250);
+    animerNiveau();
+    try { VOCAL.verrou = await navigator.wakeLock.request('screen'); } catch(e){}   /* écran allumé pendant l'enregistrement */
+    whisperPreparer();   /* Whisper se charge pendant que tu parles : le texte arrivera plus vite */
+  } catch(e){
+    toast(e && e.name === 'NotAllowedError' ? 'Micro refusé : autorise-le pour LIFE PANEL (réglages du site dans Chrome).' : 'Micro indisponible (' + (e && (e.name || e.message)) + ').');
+  } finally { VOCAL.demarrage = false; majBlocVocal(); }
+}
+function animerNiveau(){
+  if(!VOCAL.rec) return;
+  const n = $('#vocal-niveau');
+  if(n && VOCAL.analyseur){
+    const d = new Float32Array(VOCAL.analyseur.fftSize); VOCAL.analyseur.getFloatTimeDomainData(d);
+    let s = 0; for(let i = 0; i < d.length; i++) s += d[i] * d[i];
+    n.style.width = Math.min(100, Math.sqrt(s / d.length) * 600) + '%';
+  }
+  VOCAL.image = requestAnimationFrame(animerNiveau);
+}
+async function vocalArreter(){
+  const {rec, flux, t0} = VOCAL; if(!rec) return;
+  VOCAL.rec = null;   /* un 2e appui pendant l'arrêt ne fait rien */
+  const duree = Math.floor((performance.now() - t0) / 1000);   /* recalée sur le son lui-même à la transcription */
+  clearInterval(VOCAL.minuterie); cancelAnimationFrame(VOCAL.image);
+  if(rec.state !== 'inactive'){ const fin = new Promise(ok => { rec.onstop = ok; }); try { rec.stop(); } catch(e){} await fin; }
+  flux.getTracks().forEach(t => t.stop());
+  if(VOCAL.ctx) VOCAL.ctx.close().catch(() => {});
+  try { if(VOCAL.verrou) await VOCAL.verrou.release(); } catch(e){}
+  const blob = new Blob(VOCAL.morceaux, {type:rec.mimeType || 'audio/webm'});
+  Object.assign(VOCAL, {flux:null, morceaux:[], ctx:null, analyseur:null, verrou:null});
+  majBlocVocal();
+  if(duree < 1 || !blob.size){ toast('Vocal trop court : rien n’est gardé.'); return; }
+  const id = uid();
+  try { await idbEcrire('vocal:' + id, {blob, cree:maintenant(), duree}); }
+  catch(e){ toast('Le navigateur a refusé de garder le son : le vocal est perdu.'); return; }
+  VOCAUX.locaux.add(id);
+  ajouter('inbox', {text:'', created:maintenant(), vocal:{id, duree, etat:'attente'}});
+  sauver(); rendreSiPossible(); toast('Vocal ajouté à l’Inbox');
+  protegerStockage(); whisperPlanifier();
+}
+/* Sons de ce navigateur : la liste des identifiants (lue au démarrage), puis les lecteurs de la page */
+async function chargerVocauxLocaux(){
+  if(!stockage.idb) return;
+  try { (await idbCles()).forEach(k => { if(typeof k === 'string' && k.startsWith('vocal:')) VOCAUX.locaux.add(k.slice(6)); }); } catch(e){}
+}
+async function brancherLecteurs(){
+  for(const a of $$('#vue audio[data-vocal]')){
+    const id = a.dataset.vocal;
+    let url = VOCAUX.urls.get(id);
+    if(!url){ let v = null; try { v = await idbLire('vocal:' + id); } catch(e){} if(!v || !v.blob) continue; url = URL.createObjectURL(v.blob); VOCAUX.urls.set(id, url); }
+    if(!a.isConnected) continue;
+    /* Un son enregistré par Chrome (WebM) ne dit pas sa durée : on saute à la fin puis on revient, et le lecteur la connaît */
+    a.onloadedmetadata = () => { if(a.duration === Infinity){ a.ontimeupdate = () => { a.ontimeupdate = null; a.currentTime = 0; }; a.currentTime = 1e9; } };
+    a.src = url;
+  }
+}
+/* Un vocal en cours d'écoute : la page n'est pas redessinée (le lecteur serait remplacé et l'écoute coupée) */
+const lectureEnCours = () => $$('#vue audio').some(a => !a.paused && !a.ended);
+/* Redessine la page, sauf sous les doigts (saisie, fenêtre ouverte) ou pendant une écoute : ce sera fait juste après */
+function rendreSiPossible(){
+  if(modaleOuverte()) rendreApresModale = true;
+  else if(saisieEnCours() || lectureEnCours()) rendreApresSaisie = true;
+  else rendre();
+}
+/* Demande à Chrome de ne pas effacer de lui-même ce que LIFE PANEL garde (données, sons, Whisper) quand la place manque */
+function protegerStockage(){ try { navigator.storage.persisted().then(p => p || navigator.storage.persist()).catch(() => {}); } catch(e){} }
+/* Supprimer le son ou le texte d'un vocal : la partie retirée part à la corbeille comme un élément de l'Inbox à part entière
+   (restaurable 30 jours), l'autre reste. Sans l'autre partie, c'est l'élément entier qui part. */
+function retirerPartieVocal(x, partie){
+  const texte = !!x.text;
+  if(partie === 'son' ? !texte : false){ retirerVersCorbeille('inbox', x); return; }
+  if(partie === 'texte' && !texte){ x.vocal.etat = 'sans'; x.modif = maintenant(); return; }   /* « Rien d'entendu » : rien à garder */
+  const copie = JSON.parse(JSON.stringify(x)); copie.id = uid();
+  if(partie === 'son'){ copie.text = ''; delete x.vocal; }   /* reste : un élément de texte ordinaire */
+  else { delete copie.vocal; x.text = ''; x.vocal.etat = 'sans'; }   /* reste : le son seul */
+  mettreCorbeille('inbox', copie);
+  x.modif = maintenant();
+}
+/* Élément traité (devenu tâche, note…) : il quitte l'Inbox ; son vocal, s'il en a un, part à la corbeille (restaurable 30 jours) */
+function retirerInboxTraite(id){
+  const x = DB.inbox.find(i => i.id === id); if(!x) return;
+  if(x.vocal) mettreCorbeille('inbox', {...JSON.parse(JSON.stringify(x)), text:''});
+  DB.inbox = DB.inbox.filter(i => i !== x);
+}
+function ficheTexteVocal(x){
+  ouvrirModale(teteModale('Corriger le texte', 'micro', 'jaune') + `
+    <label class="champ" for="vocal-texte"><span>Texte du vocal de ${dureeVocal(x.vocal.duree)}</span><textarea id="vocal-texte" style="min-height:150px">${esc(x.text)}</textarea></label>
+    <div class="actions"><button class="btn" data-action="fermer">Annuler</button><button class="btn p" id="vocal-texte-ok">Enregistrer</button></div>`);
+  $('#vocal-texte-ok').onclick = () => {
+    const y = DB.inbox.find(i => i.id === x.id), t = $('#vocal-texte').value.trim();
+    if(y && y.vocal && t !== y.text){ y.text = t; y.vocal.etat = t ? 'fait' : 'sans'; y.modif = maintenant(); sauver(); }
+    fermerModale(); rendre();
+  };
+}
+/* Sons devenus inutiles (élément effacé pour de bon, ici ou sur un autre appareil) : retirés de ce navigateur.
+   Jamais un son de moins d'un jour : il peut venir d'être enregistré, pas encore rangé. */
+async function nettoyerVocaux(){
+  if(DB.reglages.demo || !VOCAUX.locaux.size) return;
+  const gardes = new Set([...DB.inbox, ...DB.corbeille.filter(e => e.type === 'inbox').map(e => e.element)].filter(x => x && x.vocal).map(x => x.vocal.id));
+  for(const id of [...VOCAUX.locaux]){
+    if(gardes.has(id)) continue;
+    try {
+      const v = await idbLire('vocal:' + id);
+      if(v && !(Date.now() - Date.parse(v.cree) > 86400000)) continue;
+      await idbSupprimer('vocal:' + id); VOCAUX.locaux.delete(id);
+      const u = VOCAUX.urls.get(id); if(u){ URL.revokeObjectURL(u); VOCAUX.urls.delete(id); }
+    } catch(e){}
+  }
+}
+
+/* --- Whisper (v3.38) : le texte des vocaux, écrit dans cet appareil ---
+   Fil à part (vocal-whisper.js), lancé seulement quand il y a un vocal à transcrire (ou pendant un enregistrement, pour être prêt
+   à l'arrêt), arrêté 2 min après son dernier travail : le modèle (≈ 500 Mo en mémoire) ne reste pas chargé pour rien. Le modèle
+   n'est téléchargé qu'avec ton accord (bouton), une seule fois ; ensuite il est relu depuis l'appareil. Un vocal à la fois, le plus
+   ancien d'abord. Le fil n'est lancé que si le service worker lui donne sa règle de sécurité (jamais sans). */
+const WHISPER = {modele:'onnx-community/whisper-small', fichiers:['onnx/encoder_model_quantized.onnx', 'onnx/decoder_model_merged_quantized.onnx'], taille:'≈ 270 Mo', repos:120000};
+const W = {fil:null, etat:'repos', present:null, telechargement:false, charge:0, total:0, erreur:'', enCours:'', attente:new Map(), suivant:1, minuterie:0};
+const vocauxEnAttente = () => DB.inbox.filter(x => x.vocal && x.vocal.etat === 'attente' && VOCAUX.locaux.has(x.vocal.id)).reverse();
+const whisperPossible = () => !!(window.Worker && 'caches' in window && navigator.serviceWorker && navigator.serviceWorker.controller);
+/* Modèle déjà dans l'appareil ? (transformers.js le garde dans Cache Storage « transformers-cache ») */
+async function whisperPresent(){
+  try { const u = (await (await caches.open('transformers-cache')).keys()).map(r => r.url);
+    W.present = WHISPER.fichiers.every(f => u.some(x => x.endsWith('/' + WHISPER.modele + '/resolve/main/' + f))); }
+  catch(e){ W.present = false; }
+  return W.present;
+}
+function whisperLancer(){
+  if(W.fil) return;
+  if(!whisperPossible()){ W.etat = 'erreur'; W.erreur = 'il faut ouvrir LIFE PANEL depuis son adresse en ligne (ou l’appli installée), puis réessayer.'; majEtatWhisper(); return; }
+  Object.assign(W, {etat:'chargement', erreur:'', charge:0, total:0});
+  W.fil = new Worker('vocal-whisper.js', {type:'module'});
+  W.fil.onmessage = ({data:m}) => {
+    if(m.type === 'progression'){ W.charge = m.charge; W.total = m.total; if(W.telechargement) majEtatWhisper(); }
+    else if(m.type === 'pret'){ Object.assign(W, {etat:'pret', present:true, telechargement:false}); majEtatWhisper(); whisperPomper(); }
+    else if(m.type === 'texte' || m.type === 'erreur' && m.quoi === 'transcrire'){ const r = W.attente.get(m.id); W.attente.delete(m.id); if(r) m.type === 'texte' ? r.ok(m) : r.ko(new Error(m.texte)); }
+    else if(m.type === 'erreur') whisperEchec(m.texte);
+  };
+  W.fil.onerror = e => whisperEchec((e && e.message) || 'le fil de calcul s’est arrêté');
+  W.fil.postMessage({type:'charger'});
+  majEtatWhisper();
+}
+function whisperEchec(texte){ whisperArreter(); Object.assign(W, {etat:'erreur', erreur:texte, telechargement:false}); majEtatWhisper(); }
+const WHISPER_ARRETE = 'Whisper arrêté';
+function whisperArreter(){
+  if(W.fil) W.fil.terminate();
+  Object.assign(W, {fil:null, etat:'repos', enCours:''});
+  W.attente.forEach(r => r.ko(new Error(WHISPER_ARRETE))); W.attente.clear();
+  clearTimeout(W.minuterie);
+}
+/* Plus rien à faire depuis 2 min (ni vocal à transcrire, ni enregistrement) : Whisper quitte la mémoire */
+function whisperRepos(){
+  clearTimeout(W.minuterie);
+  W.minuterie = setTimeout(() => { if(W.fil && !W.enCours && !VOCAL.rec && !vocauxEnAttente().length) whisperArreter(); }, WHISPER.repos);
+}
+/* Pendant un enregistrement : chargé d'avance si le modèle est déjà là (jamais de téléchargement sans ton accord) */
+async function whisperPreparer(){ if(!W.fil && W.etat !== 'erreur' && whisperPossible() && await whisperPresent()) whisperLancer(); }
+/* Des vocaux attendent leur texte : Whisper se lance si le modèle est là, sinon la page propose de le télécharger */
+async function whisperPlanifier(){
+  if(!vocauxEnAttente().length) return;
+  if(W.fil){ whisperPomper(); return; }
+  if(W.etat === 'erreur') return;   /* attend « Réessayer » */
+  if(await whisperPresent() && whisperPossible()) whisperLancer();
+  else { majEtatWhisper(); if(lireRoute().nom === 'inbox') rendreSiPossible(); }   /* propose le téléchargement */
+}
+async function whisperTelecharger(){
+  if(W.fil) return;
+  W.etat = 'repos'; W.erreur = ''; W.telechargement = !(await whisperPresent());
+  whisperLancer();
+}
+function transcrireWhisper(audio){
+  return new Promise((ok, ko) => {
+    if(!W.fil || W.etat !== 'pret') return ko(new Error(WHISPER_ARRETE));
+    const id = W.suivant++; W.attente.set(id, {ok, ko});
+    W.fil.postMessage({type:'transcrire', id, audio}, [audio.buffer]);
+  });
+}
+/* Son du vocal → 16 kHz mono, ce que lit Whisper (Chrome décode l'Opus et change la fréquence en une fois) */
+async function decoderSeize(blob){
+  const b = await new OfflineAudioContext(1, 1, 16000).decodeAudioData(await blob.arrayBuffer());
+  const o = new Float32Array(b.length);
+  for(let c = 0; c < b.numberOfChannels; c++){ const d = b.getChannelData(c); for(let i = 0; i < d.length; i++) o[i] += d[i] / b.numberOfChannels; }
+  return o;
+}
+/* Vocal sans parole : Whisper n'est pas appelé (sur du silence, il invente des phrases) */
+const silencieux = pcm => { let s = 0; for(let i = 0; i < pcm.length; i++) s += pcm[i] * pcm[i]; return Math.sqrt(s / Math.max(1, pcm.length)) < 0.004; };
+async function whisperPomper(){
+  if(W.etat !== 'pret' || W.enCours) return;
+  const x = vocauxEnAttente()[0];
+  if(!x){ whisperRepos(); return; }
+  const id = x.vocal.id;
+  W.enCours = id; clearTimeout(W.minuterie);
+  if(lireRoute().nom === 'inbox') rendreSiPossible();
+  let texte = null, erreur = '', vraie = 0;
+  try {
+    const v = await idbLire('vocal:' + id);
+    if(!v || !v.blob) throw new Error('son introuvable dans cet appareil');
+    const pcm = await decoderSeize(v.blob);
+    vraie = Math.max(1, Math.floor(pcm.length / 16000));   /* durée du son lui-même, comme l'affiche le lecteur */
+    texte = silencieux(pcm) ? '' : (await transcrireWhisper(pcm)).texte;
+  } catch(e){ erreur = String(e && e.message || e); }
+  if(W.enCours !== id) return;   /* Whisper arrêté entre-temps (effacé) : le vocal reste en attente */
+  W.enCours = '';
+  const y = DB.inbox.find(i => i.vocal && i.vocal.id === id);   /* toujours là ? (archivé : oui ; supprimé : non) */
+  if(y && y.vocal.etat === 'attente'){
+    if(vraie) y.vocal.duree = vraie;
+    if(texte !== null){ y.text = texte; y.vocal.etat = 'fait'; }
+    else { y.vocal.etat = 'erreur'; toast('Transcription impossible : ' + erreur); }
+    y.modif = maintenant(); sauver();
+  }
+  if(lireRoute().nom === 'inbox') rendreSiPossible();
+  whisperPomper();
+}
+/* État de Whisper, en haut de l'Inbox et dans la carte « Notes vocales » : seulement quand il y a quelque chose à dire */
+function etatWhisperHtml(carte = false){
+  const n = vocauxEnAttente().length;
+  if(W.etat === 'chargement' && W.telechargement) return `<div class="vocal-info"><span>Téléchargement de Whisper, une seule fois${W.total ? ` : ${tailleLisible(W.charge)} sur ${tailleLisible(W.total)}` : '…'}</span>${W.total ? `<span class="barre-vocal"><i style="width:${(100 * W.charge / W.total).toFixed(1)}%"></i></span>` : ''}</div>`;
+  if(W.etat === 'erreur') return `<div class="vocal-info ko"><span>Whisper : ${esc(W.erreur)}</span>${btnAction('vocal-whisper-reessayer', 'Réessayer', 'btn compact')}</div>`;
+  if(!carte && W.present === false && n && !W.fil) return `<div class="vocal-info"><span>Pour écrire ${n > 1 ? 'tes vocaux' : 'ton vocal'} en texte, Whisper doit être téléchargé une fois dans cet appareil (${WHISPER.taille}, Wi-Fi conseillé). Il tourne ici : rien n’est envoyé.</span>${btnAction('vocal-telecharger', ico('telecharger', 14) + 'Télécharger Whisper', 'btn p compact')}</div>`;
+  return '';
+}
+function majEtatWhisper(){
+  const b = $('#vocal-whisper'); if(b) b.innerHTML = etatWhisperHtml();
+  const c = $('#carte-vocal-progres'); if(c) c.innerHTML = etatWhisperHtml(true);
+  if(W.etat !== 'chargement' && $('#carte-vocal-etat')) majCarteVocal();
+}
+/* Carte « Notes vocales » (page Données) : Whisper et sons de cet appareil ; complétée juste après l'affichage */
+const carteVocal = () => `<section class="carte c6 etire">${enteteCarte('micro', 'jaune', 'Notes vocales')}
+    <p class="aide">Le son de tes vocaux reste dans ce navigateur : il n’est ni dans <code>donnees.json</code> ni sur GitHub. Seul le texte, écrit ici par Whisper, voyage avec tes données.</p>
+    <p class="aide" id="carte-vocal-etat">…</p><div id="carte-vocal-progres">${etatWhisperHtml(true)}</div>
+    <div class="boutons" id="carte-vocal-boutons"></div></section>`;
+async function majCarteVocal(){
+  if(!$('#carte-vocal-etat')) return;
+  const present = await whisperPresent();
+  let n = 0, octets = 0, p = null;
+  for(const id of VOCAUX.locaux){ try { const v = await idbLire('vocal:' + id); if(v && v.blob){ n++; octets += v.blob.size; } } catch(e){} }
+  try { p = await navigator.storage.persisted(); } catch(e){}
+  const e = $('#carte-vocal-etat'), b = $('#carte-vocal-boutons'); if(!e || !b) return;
+  e.textContent = [present ? `Whisper (Small) est gardé dans cet appareil (${WHISPER.taille}).` : 'Whisper n’est pas encore téléchargé dans cet appareil.',
+    n ? `${pluriel(n, 'son gardé', 'sons gardés')} ici (${tailleLisible(octets)}).` : 'Aucun son gardé ici.',
+    n || present ? (p ? 'Chrome les protège : il ne les effacera pas de lui-même.' : p === false ? 'Chrome pourrait les effacer si l’appareil manque de place.' : '') : ''].filter(Boolean).join(' ');
+  b.innerHTML = W.etat === 'chargement' && W.telechargement ? '' : present ? btnAction('vocal-effacer-whisper', ico('corbeille', 14) + 'Effacer Whisper de cet appareil')
+    : btnAction('vocal-telecharger', ico('telecharger', 14) + `Télécharger Whisper (${WHISPER.taille})`);
 }
 
 /* --- TÂCHES --- */
@@ -3262,7 +3615,7 @@ const TYPES_ARCHIVES = [
     sous:c => [c.telephone, nomProjet(c.projet)], lien:c => href('contact', c.id)},
   {id:'projets', nom:'Projets', icone:'dossier', couleur:'violet', fem:false, liste:() => DB.projets.filter(p => p.archive), titre:p => p.nom, quand:p => p.modif,
     sous:p => [p.resume], lien:p => href('projet', p.id), sortir:'Réactiver'},
-  {id:'inbox', nom:'Inbox', icone:'ampoule', couleur:'jaune', fem:false, liste:() => DB.inbox.filter(x => x.status === 'archived'), titre:x => x.text, quand:x => x.archived || x.created,
+  {id:'inbox', nom:'Inbox', icone:'ampoule', couleur:'jaune', fem:false, liste:() => DB.inbox.filter(x => x.status === 'archived'), titre:texteInbox, quand:x => x.archived || x.created,
     sous:x => ['capturé ' + dateCourteAn(x.created)]}
 ];
 const TYPE_ARCHIVES = Object.fromEntries(TYPES_ARCHIVES.map(t => [t.id, t]));
@@ -3456,7 +3809,7 @@ const TYPES_ELEMENTS = {
   mouvements:{nom:'Mouvement', icone:'euro', couleur:'vert', titre:x => (x.libelle || x.categorie || 'Mouvement') + ' · ' + eur(x.montant)},
   projets:{nom:'Projet', icone:'dossier', couleur:'violet', titre:x => x.nom},
   documents:{nom:'Document', icone:'document', couleur:'bleu', titre:x => x.titre || titreDepuisLien(x.url)},
-  inbox:{nom:'Élément de l’Inbox', icone:'ampoule', couleur:'jaune', titre:x => x.text},
+  inbox:{nom:'Élément de l’Inbox', icone:'ampoule', couleur:'jaune', titre:texteInbox},
   evenements:{nom:'Événement', icone:'calendrier', couleur:'violet', titre:x => x.titre + ' · ' + dateCourte(x.date)}
 };
 function pageCorbeille(){
@@ -3498,6 +3851,7 @@ function pageDonnees(){
           ghActif() && (dossier || dossierMemorise) ? btnAction('dossier-oublier', 'Ne plus utiliser', 'btn f') : ''}</div>` : ''}</section>
       ${carteGitHub()}
       ${carteNotif()}
+      ${carteVocal()}
       ${carteIa()}
       ${carteDrive()}
       <section class="carte c6 etire">${enteteCarte('reglages', 'gris', 'Paramètres')}
@@ -3524,7 +3878,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.37 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.38 · un seul fichier, aucune bibliothèque externe (Whisper, pour les vocaux, est téléchargé à la demande)${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -3581,7 +3935,7 @@ function rendre(){
     if(r.nom !== 'archives'){ ongletArchives = 'tout'; FILTRES.archives = ''; } }   /* Archives rouvertes depuis le volet : tous les types */   /* en revenant sur une page : de nouveau les plus récents d'abord, toutes catégories */
   const vue = $('#vue');
   vue.classList.remove('anim');
-  try { vue.innerHTML = ROUTES[r.nom](r.id); ajusterGraphes(); }
+  try { vue.innerHTML = ROUTES[r.nom](r.id); ajusterGraphes(); if(r.nom === 'inbox') brancherLecteurs(); if(r.nom === 'donnees') majCarteVocal(); }
   catch(err){ console.error(err); vue.innerHTML = pageErreur(err); }
   const actif = PARENT[r.nom] || r.nom;
   $$('#volet a[data-route]').forEach(a => { const on = a.dataset.route === actif; a.classList.toggle('actif', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
@@ -4331,7 +4685,7 @@ function ficheCapture(texte = '', inboxId = ''){
     const t = zone.value.trim(); if(!t){ zone.focus(); return; }
     const a = analyserCapture(t); let type = $('#modale [name="capture-type"]:checked').value;
     if(type === 'auto') type = a.type;
-    const apres = inboxId ? () => { DB.inbox = DB.inbox.filter(x => x.id !== inboxId); } : null;   /* retiré de l'Inbox seulement une fois enregistré */
+    const apres = inboxId ? () => retirerInboxTraite(inboxId) : null;   /* retiré de l'Inbox seulement une fois enregistré (son vocal : à la corbeille) */
     if(type === 'tache') formTache({nom:t, date:a.date || aujourdhui(), heure:a.heure || ''}, apres);
     else if(type === 'evenement'){ const q = a.type === 'evenement' ? a : {...lireQuand(norm(t)), titre:titreSansQuand(t)};
       formEvenement({titre:q.titre.slice(0, 120), date:q.date || aujourdhui(), heure:q.heure || '', note:t.includes('\n') ? t : ''}, {apres}); }
@@ -4625,8 +4979,27 @@ const ACTIONS = {
   'inbox-traiter': el => { const x = DB.inbox.find(i => i.id === el.dataset.id); if(x) ficheCapture(x.text, x.id); },
   'inbox-archiver': el => { const x = DB.inbox.find(i => i.id === el.dataset.id); if(!x) return; x.status = 'archived'; x.archived = x.modif = maintenant(); sauver(); rendre(); toast('Archivé'); },
   'inbox-supprimer': async el => { const x = DB.inbox.find(i => i.id === el.dataset.id); if(!x) return;
-    if(!await confirmerSuppression(x, {titre:'Supprimer cet élément ?', texte:`« ${esc(extrait(x.text, 80))} » sera mis à la corbeille.`})) return;
+    if(!await confirmerSuppression(x, {titre:'Supprimer cet élément ?', texte:`« ${esc(extrait(texteInbox(x), 80))} » sera mis à la corbeille.`})) return;
     retirerVersCorbeille('inbox', x); sauver(); rendre(); toast('Élément mis à la corbeille'); },
+  /* Notes vocales (v3.38) */
+  'vocal-micro': () => VOCAL.rec ? vocalArreter() : vocalDemarrer(),
+  'vocal-telecharger': () => whisperTelecharger(),
+  'vocal-whisper-reessayer': () => whisperTelecharger(),
+  'vocal-reessayer': el => { const x = DB.inbox.find(i => i.id === el.dataset.id); if(!x || !x.vocal) return;
+    x.vocal.etat = 'attente'; x.modif = maintenant(); sauver(); rendre(); if(W.etat === 'erreur') whisperTelecharger(); else whisperPlanifier(); },
+  'vocal-corriger': el => { const x = DB.inbox.find(i => i.id === el.dataset.id); if(x && x.vocal) ficheTexteVocal(x); },
+  'vocal-suppr-son': async el => { const x = DB.inbox.find(i => i.id === el.dataset.id); if(!x || !x.vocal) return;
+    if(!await confirmerSuppression(x, {titre:'Supprimer le son ?', texte:x.text ? 'Le texte reste dans l’Inbox ; le son est mis à la corbeille.' : 'Ce vocal n’a pas de texte : il est mis à la corbeille.'})) return;
+    retirerPartieVocal(x, 'son'); sauver(); rendre(); toast(x.text ? 'Son mis à la corbeille, le texte reste' : 'Vocal mis à la corbeille'); },
+  'vocal-suppr-texte': async el => { const x = DB.inbox.find(i => i.id === el.dataset.id); if(!x || !x.vocal) return;
+    const avait = !!x.text;
+    if(avait && !await confirmerSuppression(x, {titre:'Supprimer le texte ?', texte:`Le son reste dans l’Inbox ; « ${esc(extrait(x.text, 80))} » est mis à la corbeille.`})) return;
+    retirerPartieVocal(x, 'texte'); sauver(); rendre(); toast(avait ? 'Texte mis à la corbeille, le son reste' : 'Texte retiré, le son reste'); },
+  'vocal-effacer-whisper': async () => {
+    if(!await confirmer({titre:'Effacer Whisper de cet appareil ?', texte:`Le modèle (${WHISPER.taille}) et son code quittent ce navigateur. Tes vocaux et leurs textes restent ; pour en transcrire d’autres, il faudra le retélécharger.`, ok:'Effacer'})) return;
+    whisperArreter();
+    try { await caches.delete('transformers-cache'); await caches.delete('whisper-code'); } catch(e){}
+    W.present = false; rendre(); toast('Whisper effacé de cet appareil'); },
   'inbox-vider': async () => { const l = DB.inbox.filter(x => x.status === 'archived'); if(!l.length) return;
     if(!await confirmer({titre:'Vider les archives de l’Inbox ?', texte:`${pluriel(l.length, 'élément archivé', 'éléments archivés')} ${l.length > 1 ? 'seront mis' : 'sera mis'} à la corbeille.` + RAPPEL_CORBEILLE, ok:'Vider'})) return;
     l.forEach(x => retirerVersCorbeille('inbox', x)); sauver(); rendre(); toast('Archives de l’Inbox mises à la corbeille'); },
@@ -5031,7 +5404,7 @@ function indexRecherche(){
   DB.evenements.forEach(e => { const j = prochaineOccurrence(e) || e.date, noms = e.contacts.map(contact).filter(Boolean).map(c => c.nom);
     ajout('calendrier', {titre:e.titre, textes:[e.lieu, nomDe(e.projet), noms.join(' '), texteRepetition(e)], long:e.note, h:href('evenement', e.id),
       sous:[labelJour(j) + (e.heure ? ' · ' + heureIci(e, j) : ''), e.lieu, nomDe(e.projet)].filter(Boolean).join(' · '), date:e.modif, tags:e.tags, projet:nomDe(e.projet), jour:j}); });
-  inboxOuverte().forEach(x => ajout('inbox', {titre:x.text, h:'#/inbox', sous:'capturé ' + ilya(x.created), date:x.created, jour:jourDe(x.created)}));
+  inboxOuverte().forEach(x => ajout('inbox', {titre:texteInbox(x), h:'#/inbox', sous:'capturé ' + ilya(x.created), date:x.created, jour:jourDe(x.created)}));
   l.forEach(e => { e.n = norm(e.titre); e.tn = e.tags.map(norm); e.r = norm(e.textes.join(' ') + ' ' + e.tags.join(' ') + ' ' + e.long); e.pn = norm(e.projet); });
   cacheIndex = {cle, db:DB, l};
   return l;
@@ -6067,12 +6440,14 @@ function appliquerDistant(d){
   enregistrerNavigateur(JSON.stringify(DB));
   planifierEcritureDossier(); majPied();
   if(modaleOuverte()) rendreApresModale = true;
-  else if(saisieEnCours()) rendreApresSaisie = true;
+  else if(saisieEnCours() || lectureEnCours()) rendreApresSaisie = true;
   else rendre();
 }
-document.addEventListener('focusout', () => setTimeout(() => {
-  if(rendreApresSaisie && !saisieEnCours() && !modaleOuverte()){ rendreApresSaisie = false; rendre(); }
-}, 60));
+const rendreEnAttente = () => setTimeout(() => {
+  if(rendreApresSaisie && !saisieEnCours() && !lectureEnCours() && !modaleOuverte()){ rendreApresSaisie = false; rendre(); }
+}, 60);
+document.addEventListener('focusout', rendreEnAttente);
+['pause', 'ended'].forEach(t => document.addEventListener(t, rendreEnAttente, true));   /* fin de l'écoute d'un vocal */
 const deQui = par => par && par.appareil ? par.appareil : 'ton autre appareil';
 
 /* --- Fusion à trois : base (dernière version synchronisée), moi (ce navigateur), eux (GitHub) ---
@@ -6721,7 +7096,7 @@ Documents expirés ou à échéance sous 30 jours :
 ${liste(docs, 15, x => court(x.titre, 80) + ' · ' + (x.echeance || etatDocument(x).etat), 'documents', 1000)}
 Contacts à qui répondre : ${repondre.slice(0, 20).map(c => court(c.nom, 40)).join(', ') || 'personne'}${repondre.length > 20 ? ' … (' + repondre.length + ' en tout)' : ''}
 Inbox à trier (${inbox.length}) :
-${liste(inbox, 10, x => court(x.text, 140), 'rechercher', 1200)}`;
+${liste(inbox, 10, x => court(texteInbox(x), 140), 'rechercher', 1200)}`;
 }
 function consignesIa(apercu = apercuIa()){
   return `Tu es l'assistant de LIFE PANEL, l'appli personnelle d'organisation de l'utilisateur (tâches, projets, calendrier, notes, documents, contacts, finances).
@@ -7039,7 +7414,7 @@ async function analyserCaptureIa(texte, inboxId, bouton){
     const rep = await genererIa(consigneCapture(texte), {max:LIMITES_IA.capture, surFil:(c, p) => { bouton.textContent = 'Analyse : ' + progresIa(c, p); }});
     if(!$('#capture-texte')) return;   /* fenêtre fermée entre-temps */
     const j = lireJson(rep); if(!j) throw new Error('réponse illisible');
-    ouvrirProposition(propositionCapture(j, texte), texte, inboxId ? () => { DB.inbox = DB.inbox.filter(x => x.id !== inboxId); } : null);
+    ouvrirProposition(propositionCapture(j, texte), texte, inboxId ? () => retirerInboxTraite(inboxId) : null);
   } catch(e){
     if(e && e.name === 'AbortError') return;
     if(bouton.isConnected){ bouton.disabled = false; bouton.innerHTML = lib; }
@@ -7155,7 +7530,8 @@ function majPied(){
     <span class="e droite"><span class="led"></span>${actif ? 'Synchro GitHub · dépôt privé' : 'Local · aucune connexion externe'}<span class="raccourci-k"> · <kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span></span>`;
 }
 /* Appli installée (Android) : raccourcis de l'icône (appui long) et « Partager → LIFE PANEL ».
-   Le lanceur ouvre « ./?action=inbox » (page Inbox), « ./?action=depense » (nouvelle dépense) ou « ./?titre=…&texte=…&lien=… » (partage) ;
+   Le lanceur ouvre « ./?action=inbox » (page Inbox), « ./?action=vocal » (Inbox, enregistrement lancé), « ./?action=depense »
+   (nouvelle dépense) ou « ./?titre=…&texte=…&lien=… » (partage) ;
    l'adresse est aussitôt nettoyée pour qu'un rechargement ne refasse pas l'action. */
 function ouvertureDepuisAndroid(){
   const q = new URLSearchParams(location.search), action = q.get('action');
@@ -7164,6 +7540,7 @@ function ouvertureDepuisAndroid(){
   const aller = h => { history.replaceState(null, '', location.pathname + h); rendre(); };
   if(action === 'depense'){ aller('#/finances'); formMouvement({type:'depense'}); }
   else if(action === 'inbox') aller('#/inbox');   /* la page Inbox elle-même (sa « Capture rapide » est à un appui) */
+  else if(action === 'vocal'){ aller('#/inbox'); vocalDemarrer(); }   /* raccourci « Vocal » : on parle tout de suite (micro déjà autorisé) */
   else if(partage.length){   /* un texte partagé : titre, texte, lien sans doublon (le lien est souvent déjà dans le texte) */
     const morceaux = partage.filter((m, i) => !partage.some((n, j) => j !== i && n.includes(m) && (n.length > m.length || j < i)));
     aller('#/inbox'); ficheCapture(morceaux.join('\n'));
@@ -7210,11 +7587,15 @@ async function demarrer(){
   if(f && f.fin > Date.now() && tache(f.taskId)){ focusEnCours = f; lancerMinuteur(); }
   else if(f){ try { localStorage.removeItem(CLE_FOCUS); } catch(e){} }
   try { await initDrive(); } catch(e){}   /* dossier Drive relié sur cet appareil : accès déjà accordé ? */
+  await chargerVocauxLocaux();   /* sons des vocaux gardés dans ce navigateur */
 
   rendre();
   if(choix) ficheMigration(choix);
   else ouvertureDepuisAndroid();
   initGitHub().then(() => initNotif()).catch(() => {});   /* synchronisation GitHub, si elle a été activée sur cet appareil, puis notifications */
+  /* Vocaux : texte à écrire (transcriptions interrompues), protection du stockage, sons devenus inutiles (1 min après le démarrage, synchro faite) */
+  if(VOCAUX.locaux.size){ protegerStockage(); setTimeout(() => nettoyerVocaux().catch(() => {}), 60000); }
+  if(navigator.serviceWorker) navigator.serviceWorker.ready.then(() => setTimeout(whisperPlanifier, 500)).catch(() => {});
   /* Appli installable (icône, plein écran, hors ligne) : seulement pour la version en ligne (https) */
   if(location.protocol === 'https:' || location.hostname === 'localhost'){
     if(!$('link[rel="manifest"]')){ const l = document.createElement('link'); l.rel = 'manifest'; l.href = 'manifest.webmanifest'; document.head.appendChild(l); }
@@ -7259,7 +7640,9 @@ async function demarrer(){
   window.addEventListener('online', () => { if(ghActif()) ghSynchroniser('reseau'); });
   /* Vérification toutes les 30 s tant que la page est affichée (sauf si une synchro vient d'avoir lieu) */
   setInterval(() => { if(ghActif() && document.visibilityState === 'visible' && !gh.enCours && Date.now() - gh.controle > 25000) ghSynchroniser('periodique'); }, 30000);
-  window.addEventListener('hashchange', () => { fermerModale({historique:false}); fermerVolet({historique:false}); fermerDossiers({historique:false}); fermerPalette(); rendre(); });
+  window.addEventListener('hashchange', () => { fermerModale({historique:false}); fermerVolet({historique:false}); fermerDossiers({historique:false}); fermerPalette();
+    if(VOCAL.rec && lireRoute().nom !== 'inbox') vocalArreter();   /* on quitte l'Inbox pendant un enregistrement : le vocal est gardé */
+    rendre(); });
   let tGraphes = null;   /* fenêtre redimensionnée ou téléphone tourné : graphiques redessinés à la nouvelle largeur */
   window.addEventListener('resize', () => { clearTimeout(tGraphes); tGraphes = setTimeout(ajusterGraphes, 150); });
   /* Une erreur imprévue n'est plus silencieuse : un message l'annonce */
