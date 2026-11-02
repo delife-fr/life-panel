@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-td+XSQjs3XSRM+6CIUc9HCQUQETn5/LHG9zn2B9W2wM='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-b345aOzPAIlm1EzwZ2CyIeIXwGLzNBay5WgwUUYWZ5Q='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -200,6 +200,8 @@
   (lecture seule). Dossier affiché même sans aucune note dans LIFE PANEL. Documents → Mon Drive : un .md s'y lit aussi dans la liseuse.
   v3.39.1 : Notes → « Mon Drive » juste sous « Toutes les notes », puis l'intitulé « Tags » au-dessus des tags, comme dans Documents
   (plus de rubrique « Google Drive »).
+  Champ « Rechercher » de Tâches, Notes, Documents et Archives : « #tag » garde ce qui porte ce tag, comme dans Contacts et la
+  recherche générale (avant : rien trouvé, seul « tag » sans # marchait).
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -1702,6 +1704,12 @@ function correspond(q, ...champs){
   const t = norm(champs.flat().join(' '));
   return mots.every(m => t.includes(m));
 }
+/* Champ « Rechercher » d'une liste (tâches, notes, documents, contacts, archives) : « #tag » garde seulement ce qui porte ce tag
+   (tag entier, sans tenir compte des accents ni des majuscules, comme la recherche générale) ; les autres mots sont cherchés dans le texte */
+function correspondTags(q, tags, ...champs){
+  const mots = String(q || '').split(/\s+/), voulus = mots.filter(m => m.length > 1 && m.startsWith('#')).map(m => norm(m.replace(/^#+/, ''))).filter(Boolean);
+  return voulus.every(t => tags.some(x => norm(x) === t)) && correspond(mots.filter(m => !m.startsWith('#')).join(' '), tags, ...champs);
+}
 const texteBrut = s => String(s || '').replace(/`([^`]*)`/g, '$1').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
   .replace(/^#{1,6}\s*/gm, '').replace(/^\s*(?:[-*+]|\d+[.)])\s+/gm, '').replace(/[*_~]/g, '').replace(/\s+/g, ' ').trim();
 const extrait = (s, n) => { const t = texteBrut(s); return t.length > n ? t.slice(0, n - 1).trimEnd() + '…' : t; };
@@ -3061,7 +3069,7 @@ function pageTaches(){
 }
 function listeTaches(){
   const q = FILTRES.taches, auj = aujourdhui(), dem = decaleJour(1), fp = projetFiltre('taches');
-  const l = DB.taches.filter(t => (!fp || t.projet === fp) && correspond(q, t.nom, t.date, labelJour(t.date), nomProjet(t.projet), t.tags));
+  const l = DB.taches.filter(t => (!fp || t.projet === fp) && correspondTags(q, t.tags, t.nom, t.date, labelJour(t.date), nomProjet(t.projet)));
   if(!l.length) return q ? vide(`Aucune tâche ne correspond à « ${esc(q)} ».`) : vide('Aucune tâche pour l’instant.', btnAction('tache-nouvelle', 'Créer une tâche', 'btn p'));
   const ouvertes = l.filter(t => !t.fait), groupes = new Map(), nbGroupe = new Map();
   const cle = t => !t.date ? 'z' : t.date < auj ? '0' : t.date;
@@ -3420,7 +3428,7 @@ function pageNotes(){
       <div id="liste-notes">${listeNotes()}</div>`}
     </div></div>`;
 }
-const notesAffichees = () => DB.notes.filter(n => dansDossier(n) && correspond(FILTRES.notes, n.titre, n.contenu, n.tags, nomProjet(n.projet))).sort(parModif);
+const notesAffichees = () => DB.notes.filter(n => dansDossier(n) && correspondTags(FILTRES.notes, n.tags, n.titre, n.contenu, nomProjet(n.projet))).sort(parModif);
 function listeNotes(){
   if(!DB.notes.length) return vide('Aucune note pour l’instant.', btnAction('note-nouvelle', 'Écrire une note', 'btn p'));
   const q = FILTRES.notes, l = notesAffichees();
@@ -3490,7 +3498,7 @@ function pageDocuments(){
       <div id="liste-documents">${listeDocuments()}</div>`}
     </div></div>`;
 }
-const documentsAffiches = () => DB.documents.filter(x => dansDossierDoc(x) && correspond(FILTRES.documents, x.titre, x.note, x.url, x.tags, nomProjet(x.projet))).sort(ordreDocuments);
+const documentsAffiches = () => DB.documents.filter(x => dansDossierDoc(x) && correspondTags(FILTRES.documents, x.tags, x.titre, x.note, x.url, nomProjet(x.projet))).sort(ordreDocuments);
 function listeDocuments(){
   if(!DB.documents.length) return vide('Aucun document pour l’instant. Exemples : passeport, assurance auto, certificat médical, contrat… avec ou sans lien.', btnAction('document-nouveau', 'Ajouter un document', 'btn p') +
     (fsDispo() ? btnAction('filtre-docs', ico('dossierOuvert', 14) + 'Parcourir mon Drive', 'btn', `data-v="${VUE_DRIVE}"`) : ''));
@@ -3554,9 +3562,7 @@ function listeContacts(){
 function contactsAffiches(){
   const q = FILTRES.contacts, fp = projetFiltre('contacts');
   /* « #tag » dans le filtre : seulement les fiches qui portent ce tag (sans tenir compte des accents) ; le reste cherche dans le texte */
-  const mots = q.split(/\s+/), tags = mots.filter(m => m.length > 1 && m.startsWith('#')).map(m => m.replace(/^#+/, '')).filter(Boolean);
-  const texte = mots.filter(m => !m.startsWith('#')).join(' ');
-  const l = DB.contacts.filter(c => (!fp || c.projet === fp) && tags.every(t => aLeTag(c, t)) && correspond(texte, c.nom, c.telephone, c.autreTelephone, c.email, c.adresse, c.nouvelles, c.aDire.map(i => i.t), c.aRepondre.map(i => i.t), c.idees.map(i => i.t), nomProjet(c.projet), c.tags))
+  const l = DB.contacts.filter(c => (!fp || c.projet === fp) && correspondTags(q, c.tags, c.nom, c.telephone, c.autreTelephone, c.email, c.adresse, c.nouvelles, c.aDire.map(i => i.t), c.aRepondre.map(i => i.t), c.idees.map(i => i.t), nomProjet(c.projet)))
     .sort((a, b) => { const ja = joursAvantAnniv(a.anniversaire), jb = joursAvantAnniv(b.anniversaire); return (ja ?? 999) - (jb ?? 999) || a.nom.localeCompare(b.nom, 'fr'); });
   return l.filter(c => !c.archive);
 }
@@ -3636,7 +3642,7 @@ function listeArchives(){
   const q = FILTRES.archives, fp = projetFiltre('archives');
   const types = ongletArchives === 'tout' ? TYPES_ARCHIVES : [TYPE_ARCHIVES[ongletArchives]];
   const l = types.flatMap(t => t.liste().filter(x => !fp || x.projet === fp).map(x => ({t, x, titre:t.titre(x), quand:t.quand(x) || '', sous:t.sous(x).filter(Boolean)})))
-    .filter(e => correspond(q, e.titre, e.sous, e.x.tags || []))
+    .filter(e => correspondTags(q, e.x.tags || [], e.titre, e.sous))
     .sort((a, b) => b.quand.localeCompare(a.quand));
   const vider = ongletArchives === 'inbox' && l.length ? `<div class="boutons" style="margin:0 0 10px">${btnAction('inbox-vider', ico('corbeille', 14) + 'Tout mettre à la corbeille', 'btn f compact danger')}</div>` : '';
   if(!l.length) return vide(q ? `Aucun élément archivé ne correspond à « ${esc(q)} ».` : 'Rien d’archivé ici.');
