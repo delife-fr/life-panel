@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-PJq5Sh00KfW0T/7quHFLG61nAbzRLd2CEXt1aS6Wo9w='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-X+mNwtdKxucED684ScR6DlNx5lppuoI3/TBB1VqvWBM='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v3.37
+  LIFE PANEL — v3.39
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -195,6 +195,9 @@
   l'icône) : l'enregistrement démarre aussitôt. Carte « Notes vocales » (page Données). Données VERSION 21.
   IA locale retirée (inutilisée) : carte « IA locale », bouton de la barre, fenêtre « Demander », « Point du jour », « Analyser avec
   l'IA » (capture, Inbox), « Rédiger avec l'IA » (contacts), « Améliorer avec l'IA » (notes) ; la CSP n'autorise plus localhost.
+  v3.39 : Notes → dossier « Mon Drive » (colonne des dossiers, ou volet sur téléphone) : les notes Markdown (.md) du dossier Drive
+  relié, rangées par sous-dossier, sans les autres fichiers ; un clic ouvre la note mise en forme dans la liseuse de la v3.33
+  (lecture seule). Dossier affiché même sans aucune note dans LIFE PANEL. Documents → Mon Drive : un .md s'y lit aussi dans la liseuse.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -603,6 +606,7 @@ a.puce.proj:hover{filter:brightness(1.2)}
 .bloc-pliable.ouvert > .pliable-corps{display:block}
 .bloc-pliable > .pliable-corps{padding-top:0}
 .lien-texte{color:var(--i-bleu);text-decoration:underline;text-underline-offset:2px}
+button.lien-texte{border:0;background:none;padding:0;font:inherit;cursor:pointer}
 button.bouton-texte{border:0;background:transparent;padding:0;font:inherit;text-align:left;cursor:pointer;overflow-wrap:anywhere}
 .avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:var(--t3);font-weight:650;flex-shrink:0;letter-spacing:.02em}
 .avatar.grand{width:52px;height:52px;font-size:var(--t7)}
@@ -3387,24 +3391,30 @@ const teteDossiers = () => `<div class="dossiers-tete"><span class="etiq">Dossie
 const voileDossiers = () => `<div class="voile-volet voile-dossiers${dossiersOuverts ? ' on' : ''}" id="voile-dossiers" data-action="dossiers-fermer"></div>`;
 const dansDossier = n => (!projetFiltre('notes') || n.projet === projetFiltre('notes')) &&
   !n.archive && (!filtreTag || (filtreTag === SANS_TAG ? !n.tags.length : aLeTag(n, filtreTag)));
-const vraiTag = () => filtreTag && filtreTag !== SANS_TAG;
+const vraiTag = () => filtreTag && filtreTag !== SANS_TAG && filtreTag !== VUE_DRIVE;
+/* Dossier « Mon Drive » des Notes (v3.39) : les fichiers .md du dossier Drive relié, ouverts dans la liseuse (lecture seule) */
+const driveNotes = () => ({v:VUE_DRIVE, nom:'Mon Drive', icone:'dossierOuvert', n:''});
 function pageNotes(){
   const dossiers = dossiersNotes();
-  if(filtreTag){ const d = dossiers.find(d => norm(d.v) === norm(filtreTag)); filtreTag = d ? d.v : ''; }
-  const actif = dossiers.find(d => d.v === filtreTag) || dossiers[0];
-  const icone = d => d.v === '' ? 'base' : d.v === filtreTag ? 'dossierOuvert' : 'dossier';
-  const boutons = encartArchives('notes') + boutonDeplier('notes-deplier', 'note-', notesAffichees(), FILTRES.notes) +
+  if(filtreTag === VUE_DRIVE && !fsDispo()) filtreTag = '';
+  if(filtreTag && filtreTag !== VUE_DRIVE){ const d = dossiers.find(d => norm(d.v) === norm(filtreTag)); filtreTag = d ? d.v : ''; }
+  const vueDrive = filtreTag === VUE_DRIVE;
+  const actif = vueDrive ? driveNotes() : dossiers.find(d => d.v === filtreTag) || dossiers[0];
+  const icone = d => d.icone || (d.v === '' ? 'base' : d.v === filtreTag ? 'dossierOuvert' : 'dossier');
+  const boutons = encartArchives('notes') + (vueDrive ? '' : boutonDeplier('notes-deplier', 'note-', notesAffichees(), FILTRES.notes)) +
     btnAction('note-nouvelle', ico('plus', 14) + (vraiTag() ? 'Note dans « ' + esc(filtreTag) + ' »' : 'Nouvelle note'), 'btn p', vraiTag() ? `data-tag="${esc(filtreTag)}"` : '');
-  const tete = titre('Notes', 'Chaque tag est un dossier. Clique sur un titre pour ouvrir la note, sur la flèche pour la déplier.', boutons);
-  if(!DB.notes.length) return tete + `<div id="liste-notes">${listeNotes()}</div>`;
+  const tete = titre('Notes', vueDrive ? 'Les notes Markdown (.md) de ton dossier Google Drive, en lecture seule. Clic sur un fichier : il s’ouvre mis en forme.'
+    : 'Chaque tag est un dossier. Clique sur un titre pour ouvrir la note, sur la flèche pour la déplier.', boutons);
+  if(!DB.notes.length && !vueDrive && !fsDispo()) return tete + `<div id="liste-notes">${listeNotes()}</div>`;
+  const bouton = d => `<button class="dossier-btn${d.v === filtreTag ? ' actif' : ''}" data-action="filtre-tag" data-v="${esc(d.v)}"${d.v === filtreTag ? ' aria-current="true"' : ''}>
+        ${ico(icone(d), 16)}<span class="nom-d">${esc(d.nom)}</span><span class="nb">${d.n}</span></button>`;
   return tete + `<div class="notes-cadre">
     <nav class="carte dossiers${dossiersOuverts ? ' ouvert' : ''}" id="dossiers" aria-label="Dossiers de notes">${teteDossiers()}
-      ${dossiers.map(d => `<button class="dossier-btn${d.v === filtreTag ? ' actif' : ''}" data-action="filtre-tag" data-v="${esc(d.v)}"${d.v === filtreTag ? ' aria-current="true"' : ''}>
-        ${ico(icone(d), 16)}<span class="nom-d">${esc(d.nom)}</span><span class="nb">${d.n}</span></button>`).join('')}
+      ${dossiers.map(bouton).join('')}${fsDispo() ? `<div class="etiq">Google Drive</div>${bouton(driveNotes())}` : ''}
     </nav>${voileDossiers()}
-    <div class="notes-contenu">
+    <div class="notes-contenu">${vueDrive ? `<div class="barre-outils barre-dossier">${boutonDossiers(icone(actif), actif)}</div><section class="carte">${explorateurDrive('explo-notes', {base:'', mode:'notes'})}</section>` : `
       <div class="barre-outils">${champFiltre('notes', 'Rechercher…')}<span class="dossier-actif">${ico(icone(actif), 15)}${esc(actif.nom)}</span>${boutonDossiers(icone(actif), actif)}${puceFiltreProjet('notes')}</div>
-      <div id="liste-notes">${listeNotes()}</div>
+      <div id="liste-notes">${listeNotes()}</div>`}
     </div></div>`;
 }
 const notesAffichees = () => DB.notes.filter(n => dansDossier(n) && correspond(FILTRES.notes, n.titre, n.contenu, n.tags, nomProjet(n.projet))).sort(parModif);
@@ -3461,7 +3471,7 @@ function pageDocuments(){
   const actif = vueDrive ? drv : tous.find(d => d.v === filtreDocs) || g.tous, tag = filtreDocs.startsWith('t:') ? filtreDocs.slice(2) : '';
   const boutons = encartArchives('documents') + (vueDrive ? '' : boutonDeplier('documents-deplier', 'document-', documentsAffiches(), FILTRES.documents)) +
     btnAction('document-nouveau', ico('plus', 14) + 'Nouveau document', 'btn p', tag ? `data-tag="${esc(tag)}"` : '');
-  const tete = titre('Documents', vueDrive ? 'Les fichiers de ton dossier Google Drive, en lecture seule. Clic sur un fichier : il s’ouvre dans un nouvel onglet. L’icône calendrier crée une fiche pour suivre son échéance.'
+  const tete = titre('Documents', vueDrive ? 'Les fichiers de ton dossier Google Drive, en lecture seule. Clic sur un fichier : il s’ouvre dans un nouvel onglet (un .md, mis en forme dans LIFE PANEL). L’icône calendrier crée une fiche pour suivre son échéance.'
     : 'Tes papiers et leurs liens, avec une échéance à surveiller si besoin. Clic sur un titre : le lien s’ouvre (ou la fiche, s’il n’y a pas de lien).', boutons);
   if(!DB.documents.length && !vueDrive) return tete + `<div id="liste-documents">${listeDocuments()}</div>`;
   const choix = boutonDossiers(actif.icone, actif);
@@ -3863,7 +3873,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v3.38 · un seul fichier, aucune bibliothèque externe (Whisper, pour les vocaux, est téléchargé à la demande)${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v3.39 · un seul fichier, aucune bibliothèque externe (Whisper, pour les vocaux, est téléchargé à la demande)${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -6219,7 +6229,7 @@ async function ouvrirDrive(chemin, {brut = false, pile = []} = {}){
 
 /* --- Explorateur : id → {base, sous, mode, projet}
    mode : 'projet' (tuile d'un projet) · 'parcourir' (onglet « Mon Drive ») · 'choisir-dossier' (dossier d'un projet)
-   · 'choisir-fichier' (lien d'une fiche Document). Rendu tout de suite depuis la mémoire, lecture en arrière-plan. */
+   · 'choisir-fichier' (lien d'une fiche Document) · 'notes' (Notes → Mon Drive : dossiers et fichiers .md seulement). Rendu tout de suite depuis la mémoire, lecture en arrière-plan. */
 function explorateurDrive(id, {base = '', mode = 'parcourir', projet = null, sous = '', neuf = false} = {}){
   const st = drive.explos[id];
   if(neuf || !st || st.base !== base || st.mode !== mode) drive.explos[id] = {base, sous, mode, projet};
@@ -6244,8 +6254,12 @@ function contenuExplo(id){
   if(!c) corps = '<p class="aide" style="margin:0">Lecture du dossier…</p>';
   else if(c.erreur) corps = `<p class="aide" style="margin:0">${c.erreur === 'introuvable' ? `Dossier introuvable dans ton Drive : « ${esc(chemin || drive.racine.name)} » (renommé ou déplacé ?).` : 'Lecture impossible pour le moment.'}</p>` +
     (c.erreur === 'introuvable' && st.mode === 'projet' && st.projet ? `<div class="boutons" style="margin-top:10px">${btnAction('drive-projet-choisir', 'Choisir un autre dossier', 'btn compact', `data-projet="${esc(st.projet)}"`)}</div>` : '');
-  else if(!c.items.length) corps = '<p class="aide" style="margin:0">Dossier vide.</p>';
-  else corps = `<ul class="liste drive-liste">${c.items.map(x => ligneExplo(id, st, chemin, x)).join('')}</ul>`;
+  else {
+    const items = st.mode === 'notes' ? c.items.filter(x => x.dossier || EXT_MARKDOWN.test(extensionDe(x.nom))) : c.items, autres = c.items.length - items.length;
+    const reste = autres ? `<p class="aide" style="margin:${items.length ? '10px' : '0'} 0 0">${autres === 1 ? 'Un autre fichier (pas une note .md) n’est pas affiché ici : il est dans' : autres + ' autres fichiers (pas des notes .md) ne sont pas affichés ici : ils sont dans'} <button type="button" class="lien-texte" data-action="drive-voir">Documents › Mon Drive</button>.</p>` : '';
+    corps = !c.items.length ? '<p class="aide" style="margin:0">Dossier vide.</p>'
+      : (items.length ? `<ul class="liste drive-liste">${items.map(x => ligneExplo(id, st, chemin, x)).join('')}</ul>` : '<p class="aide" style="margin:0">Aucune note .md dans ce dossier.</p>') + reste;
+  }
   return `<div class="drive-fil">${fil}<span class="drive-outils">${outils}</span></div>${corps}`;
 }
 function ligneExplo(id, st, chemin, x){
@@ -6254,10 +6268,12 @@ function ligneExplo(id, st, chemin, x){
   const t = typeDocument('drive:' + complet), icone = ico(t.icone, 15, `var(--i-${t.couleur})`);
   if(st.mode === 'choisir-dossier') return `<li><span class="drive-nom inactif">${icone}<span>${esc(x.nom)}</span></span></li>`;
   if(st.mode === 'choisir-fichier') return `<li><button type="button" class="drive-nom" data-action="drive-choisir-fichier" data-chemin="${esc(complet)}" title="Choisir ce fichier">${icone}<span>${esc(x.nom)}</span></button></li>`;
+  const lire = EXT_MARKDOWN.test(extensionDe(x.nom)) ? 'Lire « ' + x.nom + ' » (mis en forme)' : 'Ouvrir « ' + x.nom + ' » dans un nouvel onglet';
+  if(st.mode === 'notes') return `<li>${boutonDrive(complet, 'drive-nom', icone + `<span>${esc(sansExtension(x.nom))}</span>`, lire)}</li>`;
   const fiche = DB.documents.find(y => y.url === 'drive:' + complet && !y.archive);
   const suivi = fiche ? `${badgeEcheance(fiche)}${btnAction('document-ouvrir', ico('document', 14), 'icone-btn', `data-id="${esc(fiche.id)}" title="Fiche : ${esc(fiche.titre)}" aria-label="Fiche du document"`)}`
     : btnAction('drive-suivre', ico('calendrier', 14), 'icone-btn', `data-chemin="${esc(complet)}"${st.projet ? ` data-projet="${esc(st.projet)}"` : ''} title="Suivre l’échéance : créer une fiche Document" aria-label="Suivre l’échéance"`);
-  return `<li>${boutonDrive(complet, 'drive-nom', icone + `<span>${esc(x.nom)}</span>`, 'Ouvrir « ' + x.nom + ' » dans un nouvel onglet')}<span class="drive-suivi">${suivi}</span></li>`;
+  return `<li>${boutonDrive(complet, 'drive-nom', icone + `<span>${esc(x.nom)}</span>`, lire)}<span class="drive-suivi">${suivi}</span></li>`;
 }
 /* Remplit les explorateurs affichés (page et fenêtre) : lecture si la liste manque ou date de plus de 5 min */
 function remplirExplos(){
