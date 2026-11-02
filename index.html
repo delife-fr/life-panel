@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-OTJJ0qSX0aqfP9Ee7DLa0DRJA0qHtg2l96rhoDtGgOg='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-td+XSQjs3XSRM+6CIUc9HCQUQETn5/LHG9zn2B9W2wM='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -198,7 +198,8 @@
   v3.39 : Notes → dossier « Mon Drive » (colonne des dossiers, ou volet sur téléphone) : les notes Markdown (.md) du dossier Drive
   relié, rangées par sous-dossier, sans les autres fichiers ; un clic ouvre la note mise en forme dans la liseuse de la v3.33
   (lecture seule). Dossier affiché même sans aucune note dans LIFE PANEL. Documents → Mon Drive : un .md s'y lit aussi dans la liseuse.
-  v3.39.1 : Notes → « Mon Drive » juste sous « Toutes les notes », comme dans Documents (plus de rubrique « Google Drive »).
+  v3.39.1 : Notes → « Mon Drive » juste sous « Toutes les notes », puis l'intitulé « Tags » au-dessus des tags, comme dans Documents
+  (plus de rubrique « Google Drive »).
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -3411,7 +3412,8 @@ function pageNotes(){
         ${ico(icone(d), 16)}<span class="nom-d">${esc(d.nom)}</span><span class="nb">${d.n}</span></button>`;
   return tete + `<div class="notes-cadre">
     <nav class="carte dossiers${dossiersOuverts ? ' ouvert' : ''}" id="dossiers" aria-label="Dossiers de notes">${teteDossiers()}
-      ${bouton(dossiers[0])}${fsDispo() ? bouton(driveNotes()) : ''}${dossiers.slice(1).map(bouton).join('')}
+      ${bouton(dossiers[0])}${fsDispo() ? bouton(driveNotes()) : ''}
+      ${dossiers.length > 1 ? `<div class="etiq">Tags</div>${dossiers.slice(1).map(bouton).join('')}` : ''}
     </nav>${voileDossiers()}
     <div class="notes-contenu">${vueDrive ? `<div class="barre-outils barre-dossier">${boutonDossiers(icone(actif), actif)}</div><section class="carte">${explorateurDrive('explo-notes', {base:'', mode:'notes'})}</section>` : `
       <div class="barre-outils">${champFiltre('notes', 'Rechercher…')}<span class="dossier-actif">${ico(icone(actif), 15)}${esc(actif.nom)}</span>${boutonDossiers(icone(actif), actif)}${puceFiltreProjet('notes')}</div>
