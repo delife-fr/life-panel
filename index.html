@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-ZIHTcdjmiR7qXCfJHb36iSFDz7SrXvqCqUrMe9DUiA4='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-in+WDg6M08Zc5S/fC8eLNCDQRbkE+Dc9q5zXK6zdXoM='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v4.1
+  LIFE PANEL — v4.2
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -205,6 +205,9 @@
   v4.1 : le Wiki à un clic, dans le même onglet : entrée « Wiki » du volet (sous les modules), sous-onglet « Wiki » de Notes sur téléphone,
   commande « Wiki » (Ctrl + K). Adresse déduite du domaine (panel.… → wiki.…). Le modèle Whisper (≈ 270 Mo) et son code, laissés dans
   l'appareil par la v3.38, sont effacés par sw.js (le bouton qui le faisait est parti avec les notes vocales).
+  v4.2 : horloge des rappels sur cron-job.org (toutes les 30 min, 6 h – 23 h 30, heure de Paris). L'appli lit notifications/envoyees.json :
+  après 9 h, si le résumé du matin n'est pas noté pour cet appareil, l'accueil le signale (« Le résumé du matin n'est pas arrivé ») ;
+  la carte Notifications donne le dernier envoi à cet appareil.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -2736,11 +2739,25 @@ function bandeauTri(){
 }
 /* Appareil qui recevait les rappels et dont l'inscription a disparu (adresse expirée, retirée par le robot) : on le dit, au lieu de se taire */
 const CLE_NOTIF_IGNORE = 'lifepanel.notif-ignore';
+const CLE_ROBOT_IGNORE = 'lifepanel.robot-ignore';   /* date du jour où l'alerte du robot a été ignorée */
 function alerteNotif(){
   let ignore = false; try { ignore = localStorage.getItem(CLE_NOTIF_IGNORE) === '1'; } catch(e){}
-  if(ignore || !notifDispo() || !ghActif() || !notif.charge || !notif.id || notif.entree || Notification.permission !== 'granted') return '';
-  return `<div class="bandeau jaune" id="bandeau-notif">${pastille('alerte', 'jaune')}<div class="txt"><strong>Cet appareil ne reçoit plus les rappels</strong><span>Son inscription n’est plus dans la liste (elle a expiré ou a été retirée). Réactive-la dans Données.</span></div>
+  if(!notifDispo() || !ghActif() || !notif.charge) return '';
+  if(!notif.entree){
+    if(ignore || !notif.id || Notification.permission !== 'granted') return '';
+    return `<div class="bandeau jaune" id="bandeau-notif">${pastille('alerte', 'jaune')}<div class="txt"><strong>Cet appareil ne reçoit plus les rappels</strong><span>Son inscription n’est plus dans la liste (elle a expiré ou a été retirée). Réactive-la dans Données.</span></div>
     <div class="boutons"><a class="btn p" href="#/donnees">Réactiver</a>${btnAction('notif-ignorer', 'Ignorer', 'btn')}</div></div>`;
+  }
+  return alerteRobot();
+}
+/* v4.2 : le robot des rappels ne passe plus (résumé du matin absent) */
+function alerteRobot(t = Date.now()){
+  let ignore = ''; try { ignore = localStorage.getItem(CLE_ROBOT_IGNORE) || ''; } catch(e){}
+  if(ignore === iso(new Date(t)) || !robotEnRetard(t)) return '';
+  const c = gh.cfg || {}, actions = c.owner ? `https://github.com/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/actions/workflows/${NOTIF.workflow}` : '';
+  const der = dernierEnvoi();
+  return `<div class="bandeau jaune" id="bandeau-robot">${pastille('alerte', 'jaune')}<div class="txt"><strong>Le résumé du matin n’est pas arrivé</strong><span>Le robot des rappels n’est pas passé depuis 8 h${der ? ' (dernier envoi ' + esc(ilya(der)) + ')' : ''}. Regarde l’historique de l’horloge sur cron-job.org, puis l’onglet Actions du dépôt.</span></div>
+    <div class="boutons">${actions ? `<a class="btn" href="${esc(actions)}" target="_blank" rel="noopener noreferrer">${ico('externe', 14)}Voir le robot</a>` : ''}${btnAction('robot-ignorer', 'Ignorer aujourd’hui', 'btn')}</div></div>`;
 }
 function pageAccueil(){
   const h = new Date().getHours(), auj = aujourdhui();
@@ -3648,7 +3665,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v4.1 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v4.2 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -4717,6 +4734,7 @@ const ACTIONS = {
   'accueil-tout': () => { accueilTout = !accueilTout; rendre(); },
   'note-wiki': el => formNote({titre:el.dataset.titre || ''}),
   'notif-ignorer': () => { try { localStorage.setItem(CLE_NOTIF_IGNORE, '1'); } catch(e){} rendre(); },
+  'robot-ignorer': () => { try { localStorage.setItem(CLE_ROBOT_IGNORE, aujourdhui()); } catch(e){} rendre(); },
   'tache-nouvelle': el => formTache({date:el.dataset.date || aujourdhui(), projet:el.dataset.projet || projetFiltre('taches') || '', priorite:el.dataset.priorite || 'p2'}),
   'tache-modifier': el => { const t = tache(el.dataset.id); if(t) formTache(t); },
   'tache-supprimer': async el => { const t = tache(el.dataset.id); if(!t) return;
@@ -6646,8 +6664,8 @@ function carteDrive(){
    montrée une seule fois pour être rangée dans les secrets GitHub, jamais gardée), l'inscription de cet appareil
    (notifications/appareils.json : adresse de notification, fuseau horaire, mode) et le fuseau tenu à jour.
    ========================================================================== */
-const NOTIF = {cle:'notifications/cle-publique.txt', appareils:'notifications/appareils.json', workflow:'rappels.yml'};
-const notif = {id:null, cle:'', entree:null, charge:false, perdu:false, erreur:'', enCours:false};
+const NOTIF = {cle:'notifications/cle-publique.txt', appareils:'notifications/appareils.json', envoyees:'notifications/envoyees.json', workflow:'rappels.yml'};
+const notif = {id:null, cle:'', entree:null, charge:false, perdu:false, erreur:'', enCours:false, envois:null, envoisLus:0};
 const notifDispo = () => location.protocol !== 'file:' && !!window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 const b64urlVersOctets = s => { const t = String(s).replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(t + '==='.slice((t.length + 3) % 4)), c => c.charCodeAt(0)); };
 const octetsVersB64url = o => btoa(String.fromCharCode(...new Uint8Array(o))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -6691,6 +6709,7 @@ async function initNotif(){
     try { liste = l ? (JSON.parse(l.texte).appareils || []) : []; } catch(e){}
     notif.entree = notif.id ? liste.find(a => a && a.id === notif.id) || null : null;
     notif.charge = true; notif.erreur = ''; notif.perdu = false;
+    if(notif.entree) await lireEnvois();
     if(notif.entree){
       const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
       if(!sub || Notification.permission !== 'granted') notif.perdu = true;   /* autorisation retirée : on le signale */
@@ -6705,6 +6724,24 @@ async function initNotif(){
   } catch(e){ notif.erreur = (e && e.message) || String(e); }
   if(['donnees', 'accueil'].includes(lireRoute().nom) && !modaleOuverte() && !saisieEnCours()) rendre();
 }
+/* v4.2 : ce que le robot des rappels a envoyé (clé « type|appareil|… » → heure du passage). Relu à l'ouverture, puis au retour sur la
+   page s'il date de plus de 15 min. Le résumé du matin est noté chaque jour, même vide : s'il manque après 9 h, le robot ne passe plus. */
+async function lireEnvois(){
+  try { const t = await ghLireTexte(NOTIF.envoyees); const e = t ? JSON.parse(t.texte).envoyees : {}; notif.envois = e && typeof e === 'object' ? e : {}; notif.envoisLus = Date.now(); }
+  catch(e){ /* lecture impossible : pas d'alerte (on ne sait pas) */ }
+}
+/* Le résumé de ce matin aurait dû partir vers cet appareil : il est plus de 9 h, l'appareil reçoit au moins le résumé, il était inscrit
+   depuis plus d'une heure (ou depuis 8 h), et rien n'est noté pour aujourd'hui. t : maintenant (pour les tests). */
+function robotEnRetard(t = Date.now()){
+  const e = notif.entree; if(!e || e.mode === 'rien' || !notif.envois || !notif.id) return false;
+  const d = new Date(t); if(d.getHours() < 9) return false;
+  const huit = new Date(d); huit.setHours(8, 0, 0, 0);
+  const depuis = Math.max(huit.getTime(), Date.parse(e.maj || '') || 0);
+  if(t - depuis < 3600e3) return false;
+  return !Object.prototype.hasOwnProperty.call(notif.envois, 'resume|' + notif.id + '|' + iso(d));
+}
+/* Dernier envoi noté pour cet appareil (ISO) ou '' */
+const dernierEnvoi = () => notif.envois && notif.id ? Object.entries(notif.envois).filter(([k]) => k.split('|')[1] === notif.id).map(([, v]) => String(v)).sort().pop() || '' : '';
 /* Une fois pour toutes : clé de l'expéditeur des notifications (ECDSA P-256, créée dans ce navigateur) */
 async function notifPreparer(){
   if(notif.cle && !await confirmer({titre:'Créer une nouvelle clé ?', ok:'Créer une nouvelle clé',
@@ -6767,7 +6804,7 @@ async function actionNotif(f, ...a){
 }
 function carteNotif(){
   const c = gh.cfg, lienActions = c ? `https://github.com/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/actions/workflows/${NOTIF.workflow}` : '#';
-  const regles = 'Résumé du matin vers 8 h (événements et tâches du jour, tâches en retard, anniversaires, documents), rappel d’une tâche 15 à 40 min avant son heure, rappel d’un événement selon son réglage (15 min, 1 h, la veille), rien entre 0 h et 6 h — à l’heure de l’appareil, même en voyage.';
+  const regles = 'Résumé du matin vers 8 h (événements et tâches du jour, tâches en retard, anniversaires, documents), rappel d’une tâche 10 à 40 min avant son heure (le robot passe toutes les 30 min, de 6 h à 23 h 30), rappel d’un événement selon son réglage (15 min, 1 h, la veille), rien entre 0 h et 6 h — à l’heure de l’appareil, même en voyage.';
   const carte = (texte, boutons = '') => `<section class="carte c6 etire">${enteteCarte('alerte', 'orange', 'Notifications')}<p class="aide">${texte}</p>${boutons ? `<div class="boutons">${boutons}</div>` : ''}</section>`;
   if(!notifDispo()) return carte(location.protocol === 'file:' ? 'Les notifications demandent la version en ligne de LIFE PANEL (adresse https), installée comme une appli sur le téléphone.' : 'Ce navigateur ne sait pas recevoir de notifications : utilise Chrome ou Opera.');
   if(!ghActif()) return carte('Les rappels sont envoyés depuis ton dépôt GitHub privé : active d’abord la synchronisation GitHub (carte ci-dessus).');
@@ -6781,7 +6818,8 @@ function carteNotif(){
     <p class="aide">${notif.perdu ? '<b>L’autorisation a été retirée sur cet appareil</b> : clique sur « Réactiver ». ' : ''}Activées sur <b>${esc(e.nom)}</b>, à l’heure de <b>${esc(e.fuseau)}</b>. ${regles}</p>
     <label class="champ" style="margin:0 0 12px"><span>Sur cet appareil</span><select data-notif-mode>${MODES_NOTIF.map(m => `<option value="${m.v}"${m.v === e.mode ? ' selected' : ''}>${esc(m.t)}</option>`).join('')}</select></label>
     <div class="boutons">${notif.perdu ? btnAction('notif-activer', 'Réactiver', 'btn p') : btnAction('notif-tester', 'Essayer ici', 'btn')}<a class="btn" href="${esc(lienActions)}" target="_blank" rel="noopener noreferrer">${ico('externe', 14)}Test depuis GitHub</a>${btnAction('notif-desactiver', 'Désactiver', 'btn f')}</div>
-    <p class="aide" style="margin:10px 0 0">« Test depuis GitHub » : bouton « Run workflow », case « test » cochée — une notification arrive sur chaque appareil inscrit.</p></section>`;
+    <p class="aide" style="margin:10px 0 0">« Test depuis GitHub » : bouton « Run workflow », case « test » cochée — une notification arrive sur chaque appareil inscrit.${
+      notif.envois ? ` Dernier envoi à cet appareil : <b>${dernierEnvoi() ? esc(ilya(dernierEnvoi())) : 'aucun depuis 14 jours'}</b>.` : ''}</p></section>`;
 }
 
 /* ==========================================================================
@@ -6903,7 +6941,8 @@ async function demarrer(){
      Retour sur la page : on regarde si l'autre appareil a modifié quelque chose. */
   document.addEventListener('visibilitychange', () => {
     if(document.visibilityState === 'hidden'){ if(dossier && ecr.nonEcrit) ecrireDossier(); if(ghActif() && gh.attente) ghSynchroniser('ecriture'); }
-    else { if(ghActif() && Date.now() - gh.controle > 10000) ghSynchroniser('retour'); if(notif.entree && notif.entree.fuseau !== fuseauIci()) initNotif(); }   /* fuseau changé (voyage) */
+    else { if(ghActif() && Date.now() - gh.controle > 10000) ghSynchroniser('retour'); if(notif.entree && notif.entree.fuseau !== fuseauIci()) initNotif();   /* fuseau changé (voyage) */
+      else if(notif.entree && Date.now() - notif.envoisLus > 15 * 60000) lireEnvois().then(() => { if(['accueil', 'donnees'].includes(lireRoute().nom) && !modaleOuverte() && !saisieEnCours()) rendre(); }); }
   });
   window.addEventListener('online', () => { if(ghActif()) ghSynchroniser('reseau'); });
   /* Vérification toutes les 30 s tant que la page est affichée (sauf si une synchro vient d'avoir lieu) */
