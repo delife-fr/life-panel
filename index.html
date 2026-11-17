@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-3YM2vpf8YBcqLKgTAj+Klzrw0phdaTngTSAXktCIWVU='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-DmOTFTzmGiNy/XIq3JVQsz4Qd66SFwkEDziRckR4RxA='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v4.3
+  LIFE PANEL — v4.4
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -214,6 +214,9 @@
   Formulaire d'une tâche : champ « Liste » (et « ＋ Nouvelle liste… ») ; puce de la liste sur chaque ligne de tâche (un clic ouvre la liste).
   Une tâche SANS DATE rangée dans une liste reste dans sa liste : elle n'apparaît plus dans « Tâches du jour » (datée, elle y apparaît
   le jour venu, comme avant). Affichage choisi gardé sur chaque appareil. Recherche : le nom de la liste trouve ses tâches. Données VERSION 22.
+  v4.4 : plus de priorité des tâches (P1, P2, P3) : ni pastille, ni choix dans le formulaire, ni tri. La file suit la date et l'heure, puis
+  l'ordre de création. Mêmes données (VERSION 22) : une nouvelle tâche n'a plus de champ « priorite » ; celui des anciennes est gardé tel quel,
+  sans être affiché ni utilisé (une appli plus ancienne encore ouverte ailleurs le lit toujours).
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -473,7 +476,7 @@ a.carte{display:block;color:inherit}
 .tache.faite .corps .t > span:first-child{text-decoration:line-through;color:var(--texte-faible)}
 .tache .s .retard{color:var(--i-rose)}
 .tache .s .auj{color:var(--i-vert)}
-/* Priorité et compteur des étapes : toujours côte à côte (passent ensemble à la ligne si le titre est long) */
+/* Compteur des étapes : passe à la ligne d'un bloc si le titre est long */
 .pastilles-tache{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap}
 .compte-etapes{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;font-size:var(--t1);font-variant-numeric:tabular-nums;padding:1px 7px;border-radius:99px;border:1px solid var(--trait);background:rgb(var(--sur) / 0.031);color:var(--texte-doux);cursor:pointer;transition:border-color .15s,color .15s}
 .compte-etapes:hover{color:var(--texte);border-color:rgb(var(--sur) / 0.188)}
@@ -498,10 +501,6 @@ li.tache:has(> .corps > .etapes:not([hidden])) > .case{margin-top:2px}
 .case:active{transform:scale(.86)}
 .case:checked{background:var(--vert);border-color:var(--vert)}
 .case:checked::after{content:"";width:9px;height:5px;border:solid #fff;border-width:0 0 2px 2px;transform:translate(0,-1px) rotate(-45deg)}
-.priorite{font-size:var(--t1);padding:1px 7px;border-radius:99px;border:1px solid transparent;font-weight:650;letter-spacing:.02em;white-space:nowrap;flex-shrink:0}
-.priorite.p1{color:var(--i-rose);background:#d5518118;border-color:#d5518138}
-.priorite.p2{color:var(--i-jaune);background:#c9850015;border-color:#c9850035}
-.priorite.p3{color:var(--texte-faible);background:rgb(var(--sur) / 0.027);border-color:var(--trait)}
 .groupe-titre{display:flex;align-items:center;gap:8px;margin:16px 0 4px}
 .groupe-titre:first-child{margin-top:0}
 .groupe-titre.retard .etiq{color:var(--i-rose)}
@@ -1158,7 +1157,6 @@ td.act{text-align:right;white-space:nowrap;width:1%}
   /* Tâches : le nom s'affiche en entier (sur deux lignes si besoin) au lieu d'être coupé après quelques lettres */
   .tache .corps .t{display:block}
   .tache .corps .t > span:first-child{white-space:normal;overflow:visible;overflow-wrap:anywhere}
-  .tache .corps .t > .priorite{display:inline-block;margin-left:7px;vertical-align:1px}
   .tache .corps .t > .pastilles-tache{vertical-align:-1px}   /* espace normal avant : rien en début de ligne s'il passe dessous */
   .actions-ligne{gap:0}
   /* Tâches : les boutons (Focus, Modifier, Supprimer) attendent derrière « ⋯ » ; le titre garde toute la largeur */
@@ -1167,7 +1165,7 @@ td.act{text-align:right;white-space:nowrap;width:1%}
   li.tache.actions-on{flex-wrap:wrap}
   li.tache.actions-on .actions-ligne{flex-basis:100%;justify-content:flex-end;gap:4px}
   li.tache.actions-on .plus-actions{color:var(--texte);background:rgb(var(--sur) / 0.071)}
-  /* Choix dans un formulaire (priorité, type de capture…) : colonnes égales au lieu de lignes inégales */
+  /* Choix dans un formulaire (type de capture, type de mouvement…) : colonnes égales au lieu de lignes inégales */
   .champ .segment{display:grid;grid-template-columns:repeat(auto-fit,minmax(68px,1fr))}
   .champ .segment label{display:flex}
   .champ .segment span{flex:1;display:flex;align-items:center;justify-content:center;padding:7px 4px;text-align:center}   /* cases de même hauteur, même si un libellé passe sur deux lignes */
@@ -1424,7 +1422,8 @@ const FORMES = {
     couleur:COULEURS.includes(p.couleur) ? p.couleur : '', dossier:cheminDrive(p.dossier), archive:!!p.archive, modif:txt(p.modif) || maintenant()}),
   taches:t => ({id:txt(t.id) || uid(), nom:txt(t.nom) || 'Sans titre', date:dateISO(t.date), heure:/^\d{2}:\d{2}$/.test(txt(t.heure)) ? txt(t.heure) : '',
     projet:t.projet || null, fait:!!t.fait, faitLe:t.fait ? txt(t.faitLe || t.modif) : '',
-    priorite:['p1','p2','p3'].includes(t.priorite) ? t.priorite : 'p2', estimation:positif(t.estimation, 100000), tags:nettoyerTags(t.tags), etapes:itemsContact(t.etapes), modif:txt(t.modif) || maintenant(),   /* VERSION 19 : étapes (cases à cocher), vides pour les anciennes tâches */
+    ...(['p1','p2','p3'].includes(t.priorite) ? {priorite:t.priorite} : {}),   /* v4.4 : priorité retirée ; gardée telle quelle sur les anciennes tâches, jamais créée */
+    estimation:positif(t.estimation, 100000), tags:nettoyerTags(t.tags), etapes:itemsContact(t.etapes), modif:txt(t.modif) || maintenant(),   /* VERSION 19 : étapes (cases à cocher), vides pour les anciennes tâches */
     liste:typeof t.liste === 'string' && t.liste ? t.liste : null,   /* VERSION 22 : liste personnalisée (id), null pour les anciennes tâches */
     ...archivage({...t, archive:t.archive && t.fait})}),   /* seule une tâche terminée peut être archivée */
   /* Liste de tâches personnalisée (VERSION 22) : juste un nom. Ses tâches portent son id (champ « liste ») ; une tâche est dans une liste au plus */
@@ -2042,10 +2041,9 @@ function progressionProjet(id){
 const tache = id => DB.taches.find(t => t.id === id) || null;
 const note = id => DB.notes.find(n => n.id === id) || null;
 const contact = id => DB.contacts.find(c => c.id === id) || null;
-const rangPrio = t => ({p1:0, p2:1, p3:2})[t.priorite] ?? 1;
+/* À faire d'abord, puis par date et par heure (sans date en dernier) ; à égalité, l'ordre de création (tri stable). v4.4 : plus de priorité */
 const trierTaches = arr => arr.slice().sort((a, b) =>
-  (a.fait - b.fait) || (rangPrio(a) - rangPrio(b)) ||
-  (a.date || '9999-12-31').localeCompare(b.date || '9999-12-31') || (a.heure || '99:99').localeCompare(b.heure || '99:99'));
+  (a.fait - b.fait) || (a.date || '9999-12-31').localeCompare(b.date || '9999-12-31') || (a.heure || '99:99').localeCompare(b.heure || '99:99'));
 const estEnRetard = t => !t.fait && !!t.date && t.date < aujourdhui();
 const tachesAFaire = () => trierTaches(DB.taches.filter(t => !t.fait && (t.date ? t.date <= aujourdhui() : !t.liste)));
 /* --- Listes de tâches (v4.3) : un nom, rien d'autre ; dans l'ordre alphabétique partout --- */
@@ -2358,7 +2356,6 @@ const vignetteProjet = (p, taille = 38, ti = 18) => { const c = couleurDe(p.id);
 /* Tag : commun à tous les modules ; un clic montre tout ce qui le porte (page Recherche « #tag ») */
 const puceTag = t => `<a class="puce tag" href="#/recherche?q=${encodeURIComponent('#' + t)}" title="Tout ce qui porte le tag #${esc(t)}">#${esc(t)}</a>`;
 const pucesTags = tags => tags.map(puceTag).join('');
-const badgePrio = t => `<span class="priorite ${t.priorite}" title="Priorité ${t.priorite.slice(1)}">P${t.priorite.slice(1)}</span>`;
 
 /* Une ligne de tâche — la même partout (accueil, Tâches, projet, calendrier) */
 /* Durée estimée : « 45 min » sous une heure, puis « 1 h », « 1 h 30 », « 60 h » (minutes arrondies) */
@@ -2376,7 +2373,7 @@ function ligneTache(t, {date = true, liste = true, projet = true} = {}){
   const enFocus = focusEnCours && focusEnCours.taskId === t.id;
   return `<li class="tache${t.fait ? ' faite' : ''}" data-tache="${esc(t.id)}"${date ? '' : ' data-sans-date="1"'}${liste ? '' : ' data-sans-liste="1"'}${projet ? '' : ' data-sans-projet="1"'}>
     <input type="checkbox" class="case" data-coche="tache" data-id="${esc(t.id)}" ${t.fait ? 'checked' : ''} aria-label="${t.fait ? 'Rouvrir' : 'Terminer'} : ${esc(t.nom)}">
-    <div class="corps"><div class="t"><span>${esc(t.nom)}</span>${(() => { const p = (t.fait ? '' : badgePrio(t)) + compteEtapes(t); return p ? ` <span class="pastilles-tache">${p}</span>` : ''; })()}</div>
+    <div class="corps"><div class="t"><span>${esc(t.nom)}</span>${(() => { const p = compteEtapes(t); return p ? ` <span class="pastilles-tache">${p}</span>` : ''; })()}</div>
       ${(() => { const pl = liste && t.liste ? puceListe(t.liste) : '', pp = projet && t.projet ? tagProjet(t.projet) : '';
         return meta.length || pp || pl || t.tags.length ? `<div class="s">${meta.join(' · ')}${pp}${pl}${pucesTags(t.tags)}</div>` : ''; })()}${listeEtapes(t)}</div>
     <div class="actions-ligne">
@@ -2946,7 +2943,7 @@ function pageTaches(){
 }
 /* Ajout rapide dans une liste : un nom, Entrée, c'est enregistré (sans date) ; le curseur reste dans le champ pour la suivante */
 const ajoutDansListe = l => `<form class="ajout ajout-tache" data-form="tache-liste" data-id="${esc(l.id)}">${ico('plus', 15)}<input name="t" placeholder="Ajouter une tâche à « ${esc(l.nom)} »…" autocomplete="off" enterkeyhint="done" aria-label="Ajouter une tâche à la liste ${esc(l.nom)}"></form>`;
-/* Groupes de la file, dans l'ordre d'affichage : [{nom (HTML), cls, taches, date}] ; dans un groupe, priorité puis date et heure.
+/* Groupes de la file, dans l'ordre d'affichage : [{nom (HTML), cls, taches, date}] ; dans un groupe, date et heure, puis l'ordre de création.
    date : true si chaque ligne doit montrer sa date (inutile sous « Aujourd'hui » ou « Demain ») */
 function groupesTaches(ouvertes){
   const triees = trierTaches(ouvertes), par = (cle, nom) => { const m = new Map(); triees.forEach(t => { const k = cle(t); if(!m.has(k)) m.set(k, []); m.get(k).push(t); });
@@ -2956,7 +2953,7 @@ function groupesTaches(ouvertes){
     nom:g.k ? tagProjet(g.k) + (projet(g.k) && projet(g.k).archive ? '<span class="aide" style="margin:0">archivé</span>' : '') : '<span class="etiq">Sans projet</span>'}));
   if(vueTaches === 'liste') return par(t => t.liste || '', nomListe).map(g => ({...g, date:true,
     nom:g.k ? `<a class="etiq lien-liste" href="#/taches?liste=${encodeURIComponent(g.k)}" title="Ouvrir la liste">${ico('liste', 13)}${esc(nomListe(g.k))}</a>` : '<span class="etiq">Sans liste</span>'}));
-  /* Par date : en retard, puis par jour, sans date en dernier (tri stable : l'ordre de priorité est gardé dans chaque jour) */
+  /* Par date : en retard, puis par jour, sans date en dernier (tri stable : dans un jour, l'heure puis l'ordre de création) */
   const auj = aujourdhui(), dem = decaleJour(1), cle = t => !t.date ? 'z' : t.date < auj ? '0' : t.date, m = new Map();
   triees.slice().sort((a, b) => cle(a).localeCompare(cle(b))).forEach(t => { const k = cle(t); if(!m.has(k)) m.set(k, []); m.get(k).push(t); });
   return [...m.entries()].map(([k, ts]) => ({taches:ts, date:k === '0', cls:k === '0' ? 'retard' : '',
@@ -3825,7 +3822,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v4.3 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v4.4 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -4199,7 +4196,6 @@ function formTache(t0 = {}, apres){
     {n:'nom', l:'Tâche', v:t0.nom},
     {n:'date', l:'Date', t:'date', effacable:true, v:ex ? ex.date : (t0.date ?? aujourdhui()), demi:true, aide:'vide = sans date'},
     {n:'heure', l:'Heure', t:'heure', v:t0.heure, demi:true, aide:'facultatif'},
-    {n:'priorite', l:'Priorité', t:'segment', v:t0.priorite || 'p2', o:[{v:'p1', t:'P1 · importante'}, {v:'p2', t:'P2 · normale'}, {v:'p3', t:'P3 · légère'}]},
     {n:'liste', l:'Liste', t:'select', o:optionsListes(t0.liste), v:t0.liste || '', demi:true, nouveau:'Nouvelle liste'},
     {n:'projet', l:'Projet', t:'select', o:optionsProjets(t0.projet), v:t0.projet || '', demi:true},
     {n:'estimation', l:'Durée estimée (min)', t:'nombre', v:t0.estimation ?? '', demi:true, aide:'facultatif'},
@@ -4210,7 +4206,7 @@ function formTache(t0 = {}, apres){
     if(v.liste === NOUVEAU && !propreNom(v.listeNouveau)) return 'Donne un nom à la nouvelle liste.';
     const cochees = new Set(ex ? ex.etapes.filter(e => e.ok).map(e => e.t) : []);   /* une étape gardée garde sa coche */
     const liste = v.liste === NOUVEAU ? assurerListe(v.listeNouveau).id : uneListe(v.liste) ? v.liste : null;
-    const d = {nom:v.nom, date:v.date, heure:v.heure, priorite:v.priorite || 'p2', estimation:v.estimation ? positif(Math.abs(Number(v.estimation.replace(',', '.'))), 100000) : null, projet:v.projet || null, liste, tags:nettoyerTags(v.tags),
+    const d = {nom:v.nom, date:v.date, heure:v.heure, estimation:v.estimation ? positif(Math.abs(Number(v.estimation.replace(',', '.'))), 100000) : null, projet:v.projet || null, liste, tags:nettoyerTags(v.tags),
       etapes:v.etapes.map(e => ({t:e, ok:cochees.has(e)})), modif:maintenant()};
     if(ex){ const avant = ex.projet; Object.assign(ex, d); toucherProjet(avant); toucherProjet(ex.projet); toast('Tâche modifiée'); }
     else { ajouter('taches', d); toucherProjet(d.projet); toast('Tâche créée'); }
@@ -4675,7 +4671,7 @@ const quandCapture = (date, heure) => (date === aujourdhui() ? 'Aujourd’hui' :
 function lireCapture(t, type = 'auto'){
   const a = analyserCapture(t), ty = type && type !== 'auto' ? type : a.type, q = lireQuand(norm(t)), date = q.date || aujourdhui(), ligne1 = t.split('\n')[0];
   if(ty === 'tache'){ const nom = (titreSansQuand(ligne1) || ligne1).slice(0, 200);
-    return {type:ty, liste:'taches', brut:{nom, date, heure:q.heure || '', priorite:'p2', modif:maintenant()}, titre:nom, puces:[quandCapture(date, q.heure), q.heure ? 'rappel à l’heure' : 'dans le résumé du matin'], modifier:formTache}; }
+    return {type:ty, liste:'taches', brut:{nom, date, heure:q.heure || '', modif:maintenant()}, titre:nom, puces:[quandCapture(date, q.heure), q.heure ? 'rappel à l’heure' : 'dans le résumé du matin'], modifier:formTache}; }
   if(ty === 'evenement'){ const titre = (a.type === 'evenement' ? a.titre : titreSansQuand(ligne1) || ligne1).slice(0, 120);
     return {type:ty, liste:'evenements', brut:{titre, date, heure:q.heure || '', note:t.includes('\n') ? t : ''}, titre, puces:[quandCapture(date, ''), q.heure || 'journée entière'], modifier:formEvenement}; }
   if(ty === 'depense'){ const brutNb = (t.match(/(\d+(?:[.,]\d{1,2})?)/) || [])[1];
@@ -4902,7 +4898,7 @@ const ACTIONS = {
   'notif-ignorer': () => { try { localStorage.setItem(CLE_NOTIF_IGNORE, '1'); } catch(e){} rendre(); },
   'robot-ignorer': () => { try { localStorage.setItem(CLE_ROBOT_IGNORE, aujourdhui()); } catch(e){} rendre(); },
   /* Depuis une liste ouverte : la tâche y est rangée, sans date (elle attend dans la liste) */
-  'tache-nouvelle': el => formTache({date:el.dataset.liste ? '' : el.dataset.date || aujourdhui(), projet:el.dataset.projet || projetFiltre('taches') || '', liste:el.dataset.liste || '', priorite:el.dataset.priorite || 'p2'}),
+  'tache-nouvelle': el => formTache({date:el.dataset.liste ? '' : el.dataset.date || aujourdhui(), projet:el.dataset.projet || projetFiltre('taches') || '', liste:el.dataset.liste || ''}),
   /* Listes de tâches (v4.3) */
   'vue-taches': el => { const v = el.dataset.v || 'date'; choisirVueTaches(v); FILTRES.taches = ''; limiteTaches = TACHES_PAR_PAGE; choisirDossier(); },
   'liste-nouvelle': () => formListe(),
@@ -5050,7 +5046,7 @@ const ACTIONS = {
   'renouveler-ans': el => { const i = $('#renouveler-date'); if(i){ i.value = el.dataset.iso; i.focus(); } },
   /* Une tâche proposée, jamais créée d'office */
   'document-tache': el => { const x = unDocument(el.dataset.id); if(!x) return; const {etat} = etatDocument(x);
-    formTache({nom:'Renouveler : ' + x.titre, date:aujourdhui(), projet:x.projet || '', priorite:etat === 'expire' ? 'p1' : 'p2', tags:x.tags}); },
+    formTache({nom:'Renouveler : ' + x.titre, date:aujourdhui(), projet:x.projet || '', tags:x.tags}); },
   'documents-deplier': () => toutDeplier('document-', documentsAffiches(), FILTRES.documents),
   'filtre-docs': el => { const v = el.dataset.v || ''; filtreDocs = filtreDocs === v ? '' : v; FILTRES.documents = ''; choisirDossier(); },
   'filtre-projet-retirer': () => { filtreProjet = null; rendre(); },
@@ -5291,7 +5287,7 @@ document.addEventListener('submit', e => {
   } else if(type === 'tache-liste'){   /* ajout rapide dans une liste (v4.3) : sans date, rattachée au projet filtré s'il y en a un */
     const l = uneListe(f.dataset.id), nom = f.elements.t.value.trim(); if(!l || !nom) return;
     const pj = projetFiltre('taches') && projet(projetFiltre('taches')) ? projetFiltre('taches') : null;
-    ajouter('taches', {nom, date:'', liste:l.id, projet:pj, priorite:'p2', modif:maintenant()}); toucherProjet(pj); sauver(); rendre();
+    ajouter('taches', {nom, date:'', liste:l.id, projet:pj, modif:maintenant()}); toucherProjet(pj); sauver(); rendre();
     const i = $('form[data-form="tache-liste"] input'); if(i) i.focus();
   } else if(type === 'etape'){
     const t = tache(f.dataset.id), x = f.elements.t.value.trim(); if(!t || !x) return;
@@ -5400,7 +5396,7 @@ function commandes(){
     {titre:'Données et réglages', sous:'Aller à la page', icone:'reglages', href:'#/donnees'},
     {titre:'Rechercher partout', sous:'Page de résultats complète', icone:'recherche', href:'#/recherche', touche:'/'},
     {titre:'Corbeille', sous:'Restaurer un élément supprimé (' + JOURS_CORBEILLE + ' jours)', icone:'corbeille', href:'#/corbeille'},
-    {titre:'Nouvelle tâche', sous:'Priorité, échéance, projet, liste', icone:'coche', action:'tache-nouvelle'},
+    {titre:'Nouvelle tâche', sous:'Échéance, projet, liste', icone:'coche', action:'tache-nouvelle'},
     {titre:'Nouvelle liste de tâches', sous:'Une liste à toi, sans créer de projet', icone:'liste', action:'liste-nouvelle'},
     ...listesTriees().map(l => ({titre:l.nom, sous:'Liste de tâches : ouvrir', icone:'liste', href:'#/taches?liste=' + encodeURIComponent(l.id)})),
     {titre:'Nouvel événement', sous:'Calendrier : date, heure, lieu, rappel', icone:'calendrier', action:'evt-nouveau'},
@@ -5410,7 +5406,7 @@ function commandes(){
     {titre:'Nouveau document', sous:'Un lien, une échéance à surveiller', icone:'document', action:'document-nouveau'},
     {titre:'Nouveau projet', sous:'Créer un dossier de travail', icone:'dossier', action:'projet-nouveau'},
     {titre:'Nouvelle fiche contact', sous:'Anniversaire, nouvelles, messages', icone:'personnes', action:'contact-nouveau'},
-    {titre:'Lancer un Focus de 25 min', sous:'Sur la tâche la plus importante', icone:'horloge', action:'focus-meilleur'},
+    {titre:'Lancer un Focus de 25 min', sous:'Sur la première tâche du jour', icone:'horloge', action:'focus-meilleur'},
     {titre:'Catégoriser les dépenses', sous:pluriel(sansCategorie().length, 'dépense') + ' sans catégorie', icone:'tag', action:'categoriser'},
     {titre:'Comptes et budgets', sous:'Renommer, cocher pour les statistiques, budgets', icone:'portefeuille', action:'comptes'},
     {titre:'Catégories de dépenses', sous:'Renommer, fusionner, supprimer', icone:'tag', action:'categories'},

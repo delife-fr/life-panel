@@ -1,4 +1,4 @@
-/* LIFE PANEL — service worker (v4.3)
+/* LIFE PANEL — service worker (v4.4)
    Permet d'installer LIFE PANEL comme une appli, de l'ouvrir sans réseau et d'afficher ses notifications.
    · La page (index.html) : le réseau d'abord, pour avoir toujours la dernière version ; sans réseau, ou si le
      réseau ne répond pas en 3 secondes (4G faible), la copie gardée — la copie est tout de même remise à jour
@@ -13,7 +13,7 @@
    · Notes vocales retirées (v4) : le modèle Whisper et son code, gardés par la v3.38 dans « transformers-cache » et
      « whisper-code » (≈ 270 Mo), sont effacés de l'appareil à l'activation.
    · Rien d'autre n'est touché : ni GitHub (tes données), ni aucun autre site. */
-const CACHE = 'lifepanel-v4.3';
+const CACHE = 'lifepanel-v4.4';
 const FICHIERS = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/badge-96.png', './icons/raccourci-inbox.png', './icons/raccourci-depense.png', './icons/favicon.svg', './icons/favicon-32.png'];
 const DELAI_RESEAU = 3000;
 
