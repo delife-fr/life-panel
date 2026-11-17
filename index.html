@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-in+WDg6M08Zc5S/fC8eLNCDQRbkE+Dc9q5zXK6zdXoM='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-3YM2vpf8YBcqLKgTAj+Klzrw0phdaTngTSAXktCIWVU='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v4.2
+  LIFE PANEL — v4.3
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -208,6 +208,12 @@
   v4.2 : horloge des rappels sur cron-job.org (toutes les 30 min, 6 h – 23 h 30, heure de Paris). L'appli lit notifications/envoyees.json :
   après 9 h, si le résumé du matin n'est pas noté pour cet appareil, l'accueil le signale (« Le résumé du matin n'est pas arrivé ») ;
   la carte Notifications donne le dernier envoi à cet appareil.
+  v4.3 : listes de tâches personnalisées (ex. « Voyage en Islande »), sans créer de projet. Page Tâches : colonne « Afficher » à gauche
+  (volet à droite sur téléphone et tablette) : Par date (la file d'avant), Par projet, Par liste, puis chaque liste. Une liste ouverte :
+  ajout rapide d'une tâche (une ligne, Entrée), ses tâches, Renommer, Supprimer (ses tâches gardées sans liste, ou mises à la corbeille avec elle).
+  Formulaire d'une tâche : champ « Liste » (et « ＋ Nouvelle liste… ») ; puce de la liste sur chaque ligne de tâche (un clic ouvre la liste).
+  Une tâche SANS DATE rangée dans une liste reste dans sa liste : elle n'apparaît plus dans « Tâches du jour » (datée, elle y apparaît
+  le jour venu, comme avant). Affichage choisi gardé sur chaque appareil. Recherche : le nom de la liste trouve ses tâches. Données VERSION 22.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -749,6 +755,22 @@ a.puce.tag:hover{filter:brightness(1.25)}
 .dossier-btn.etat-expire svg{color:var(--i-rose)} .dossier-btn.etat-preavis svg{color:var(--i-jaune)}
 .dossier-btn.etat-plus-tard svg{color:var(--i-vert)} .dossier-btn.etat-sans svg{color:var(--texte-faible)}
 .dossier-btn.etat-expire .nb{color:var(--i-rose)} .dossier-btn.etat-preavis .nb{color:var(--i-jaune)}
+/* v4.3 : listes de tâches — colonne « Afficher » de la page Tâches (en bleu, la couleur des tâches), puce d'une liste, ajout rapide */
+.cadre-taches .dossier-btn svg,.cadre-taches .dossier-actif svg,.cadre-taches .choix-dossier > svg:first-child{color:var(--i-bleu)}
+.cadre-taches .dossier-btn.actif{background:#3987e51f;box-shadow:inset 0 0 0 1px #3987e545}
+.cadre-taches .dossiers > .etiq{padding:12px 8px 6px}
+.cadre-taches .dossier-btn.nouvelle-liste,.cadre-taches .dossier-btn.nouvelle-liste svg{color:var(--texte-faible)}
+.cadre-taches .dossier-btn.nouvelle-liste:hover,.cadre-taches .dossier-btn.nouvelle-liste:hover svg{color:var(--texte)}
+.puce.liste{transition:border-color .15s,color .15s}
+.puce.liste svg{color:var(--i-bleu);flex-shrink:0}
+a.puce.liste:hover{border-color:#3987e560;color:var(--texte)}
+a.lien-liste{display:inline-flex;align-items:center;gap:5px;text-decoration:none;transition:color .15s}
+a.lien-liste svg{color:var(--i-bleu)}
+a.lien-liste:hover{color:var(--texte)}
+.groupe-titre > .puce.proj{font-size:var(--t1)}
+#liste-taches > .ajout-tache{column-span:all;margin:0 0 10px}
+#liste-taches > .ajout-tache svg{color:var(--i-bleu);flex-shrink:0}
+.actions-liste{flex-wrap:wrap}
 .md{font-size:var(--t5);line-height:1.65;max-width:78ch}
 .md > :first-child{margin-top:0}
 .md h1,.md h2,.md h3,.md h4,.md h5,.md h6{line-height:1.3;font-weight:650;color:var(--texte)}   /* # à ###### : six tailles */
@@ -1181,9 +1203,10 @@ td.act{text-align:right;white-space:nowrap;width:1%}
 }
 /* Pas de clavier (téléphone, tablette) : pas de raccourci clavier dans le pied de page */
 @media (hover:none){.raccourci-k{display:none}}
-/* Grand écran : la file des tâches en deux colonnes (titres et boutons proches, au lieu d'une ligne de 1 400 px) */
+/* Grand écran : la file des tâches en deux colonnes (titres et boutons proches, au lieu d'une ligne de 1 400 px) ;
+   v4.3 : une seule tant qu'il n'y a pas 2 × 380 px à côté de la colonne « Afficher » (noms de tâches lisibles) */
 @media (min-width:1100px){
-  #liste-taches{columns:2;column-gap:40px}
+  #liste-taches{columns:380px 2;column-gap:40px}
   #liste-taches .groupe-titre{break-after:avoid}
   #liste-taches li,#liste-taches .groupe-titre{break-inside:avoid}
   #liste-taches .liste > li{border-top:0;border-bottom:1px solid var(--trait-tache)}   /* trait sous chaque tâche : rien en haut d'une colonne */
@@ -1304,7 +1327,7 @@ body{padding-bottom:calc(62px + env(safe-area-inset-bottom))}
 /* ==========================================================================
    A. DONNÉES — un seul modèle, une seule clé
    ========================================================================== */
-const VERSION = 21;  /* 8 : archives et corbeille · 9 : module Documents, tags communs · 10 : liste des comptes (statistiques, budgets) · 11 : couleur de chaque catégorie · 12 : téléphone et adresse des contacts · 13 : autre téléphone des contacts · 14 : e-mail des contacts · 15 : dossier Drive des projets, versions remplacées par la synchro (corbeille) · 16 : date de modification des mouvements et de l'Inbox (fusion de la synchro) · 17 : note des mouvements · 18 : événements du calendrier · 19 : étapes des tâches · 20 : tags des événements (catégories d'événements retirées) · 21 : vocal d'un élément de l'Inbox (v3.38 ; fonction retirée en v4, le champ est seulement conservé) */
+const VERSION = 22;  /* 8 : archives et corbeille · 9 : module Documents, tags communs · 10 : liste des comptes (statistiques, budgets) · 11 : couleur de chaque catégorie · 12 : téléphone et adresse des contacts · 13 : autre téléphone des contacts · 14 : e-mail des contacts · 15 : dossier Drive des projets, versions remplacées par la synchro (corbeille) · 16 : date de modification des mouvements et de l'Inbox (fusion de la synchro) · 17 : note des mouvements · 18 : événements du calendrier · 19 : étapes des tâches · 20 : tags des événements (catégories d'événements retirées) · 21 : vocal d'un élément de l'Inbox (v3.38 ; fonction retirée en v4, le champ est seulement conservé) · 22 : listes de tâches personnalisées (« listes », « liste » d'une tâche) */
 const CLE = 'lifepanel';                   /* copie légère dans localStorage (voir « Stockage dans le navigateur ») */
 const CLE_SECOURS = 'lifepanel.secours';   /* ancienne place de la copie de secours (v3.3 à v3.8), reprise dans IndexedDB */
 const MIROIR_MAX = 2e6;                    /* au-delà de 2 millions de caractères, pas de copie dans localStorage */
@@ -1329,7 +1352,7 @@ const ANCIENNES_CATEGORIES = [[/^(courses|alimentation|supermarches?|nourriture)
   [/^(multimedia|high[ -]?tech|informatique|electronique)$/, 'High-tech et informatique'], [/^(loisirs?|culture|sports?)$/, 'Loisirs et culture'],
   [/^(voyages?|vacances)$/, 'Voyages et vacances'], [/^(cadeaux?|dons?)$/, 'Cadeaux et dons'], [/^(formations?|frais pro(fessionnels)?)$/, 'Frais professionnels'],
   [/^(dab|retraits?|especes|liquide|divers|autres?)$/, 'Divers']];
-const LISTES_DONNEES = ['projets','taches','notes','documents','mouvements','contacts','inbox','evenements'];
+const LISTES_DONNEES = ['projets','taches','notes','documents','mouvements','contacts','inbox','evenements','listes'];
 const JOURS_CORBEILLE = 30;
 const PREAVIS_DEFAUT = 30;   /* jours avant l'échéance d'un document où il passe « à renouveler » */
 const LIENS_PROJET = ['taches', 'notes', 'documents', 'mouvements', 'contacts', 'evenements'];   /* ce qu'un projet peut rassembler */
@@ -1338,7 +1361,7 @@ const aDesDonnees = d => !!d && (compter(d) > 0 || (Array.isArray(d.corbeille) &
 
 const DBVide = () => ({
   version: VERSION, prenom: '',
-  projets: [], taches: [], notes: [], documents: [], mouvements: [], contacts: [], inbox: [], evenements: [], corbeille: [],
+  projets: [], taches: [], notes: [], documents: [], mouvements: [], contacts: [], inbox: [], evenements: [], listes: [], corbeille: [],
   categories: CATEGORIES_DEFAUT.slice(),
   couleursCategories: [],   /* {nom, couleur} : couleur gardée par chaque catégorie (graphique « Par catégorie ») */
   comptes: [],   /* {nom, stats, budget, periode} : stats = pris en compte dans les statistiques ; budget par mois ou par an */
@@ -1402,7 +1425,10 @@ const FORMES = {
   taches:t => ({id:txt(t.id) || uid(), nom:txt(t.nom) || 'Sans titre', date:dateISO(t.date), heure:/^\d{2}:\d{2}$/.test(txt(t.heure)) ? txt(t.heure) : '',
     projet:t.projet || null, fait:!!t.fait, faitLe:t.fait ? txt(t.faitLe || t.modif) : '',
     priorite:['p1','p2','p3'].includes(t.priorite) ? t.priorite : 'p2', estimation:positif(t.estimation, 100000), tags:nettoyerTags(t.tags), etapes:itemsContact(t.etapes), modif:txt(t.modif) || maintenant(),   /* VERSION 19 : étapes (cases à cocher), vides pour les anciennes tâches */
+    liste:typeof t.liste === 'string' && t.liste ? t.liste : null,   /* VERSION 22 : liste personnalisée (id), null pour les anciennes tâches */
     ...archivage({...t, archive:t.archive && t.fait})}),   /* seule une tâche terminée peut être archivée */
+  /* Liste de tâches personnalisée (VERSION 22) : juste un nom. Ses tâches portent son id (champ « liste ») ; une tâche est dans une liste au plus */
+  listes:l => ({id:txt(l.id) || uid(), nom:propreNom(l.nom) || 'Sans nom', modif:txt(l.modif) || maintenant()}),
   notes:n => { const cree = txt(n.cree || n.modif) || maintenant();   /* une seule heure : une note neuve n'est pas « modifiée » */
     return {id:txt(n.id) || uid(), titre:txt(n.titre) || 'Sans titre', contenu:txt(n.contenu),
       projet:n.projet || null, tags:nettoyerTags(n.tags), cree, modif:txt(n.modif) || cree, ...archivage(n)}; },
@@ -1468,6 +1494,7 @@ function normaliser(brut){
     const element = e.type === 'documents' ? {...e.element, projet:e.element.projet || e.projet || null} : e.element;   /* ancien format : projet à côté */
     const entree = {id:txt(e.id) || uid(), type:e.type, supprimeLe:quand, element:FORMES[e.type](element)};
     if(e.remplacee === true) entree.remplacee = true;   /* version écartée par la synchronisation (même élément modifié sur deux appareils) */
+    if(e.type === 'listes') entree.liens = {taches:Array.isArray(e.liens && e.liens.taches) ? e.liens.taches.filter(v => typeof v === 'string') : []};   /* ses tâches, pour les lui rendre à la restauration */
     if(e.type === 'projets'){
       entree.liens = liensValides(e.liens);
       /* ancien projet supprimé avec ses documents dedans : chaque document devient une entrée à part, liée au projet */
@@ -1517,6 +1544,9 @@ function normaliser(brut){
   /* Plus de références fantômes vers un projet supprimé */
   const ids = new Set(d.projets.map(p => p.id));
   LIENS_PROJET.forEach(k => d[k].forEach(x => { if(x.projet && !ids.has(x.projet)) x.projet = null; }));
+  /* … ni vers une liste supprimée (une tâche ajoutée sur un appareil pendant que sa liste était supprimée sur un autre) */
+  const idsListes = new Set(d.listes.map(l => l.id));
+  d.taches.forEach(t => { if(t.liste && !idsListes.has(t.liste)) t.liste = null; });
   return d;
 }
 /* Couleur de chaque catégorie : gardée d'une fois sur l'autre, jamais recalculée d'après le classement.
@@ -1543,7 +1573,7 @@ function colorerCategories(categories, ancien, mouvements = []){
 const compter = d => d ? LISTES_DONNEES.reduce((n, k) => n + (Array.isArray(d[k]) ? d[k].length : 0), 0) : 0;
 function resume(d){
   const n = k => (d && Array.isArray(d[k])) ? d[k].length : 0;
-  return [[n('projets'),'projet'],[n('taches'),'tâche'],[n('notes'),'note'],[n('documents'),'document'],[n('mouvements'),'mouvement'],[n('contacts'),'contact'],[n('evenements'),'événement']]
+  return [[n('projets'),'projet'],[n('taches'),'tâche'],[n('listes'),'liste'],[n('notes'),'note'],[n('documents'),'document'],[n('mouvements'),'mouvement'],[n('contacts'),'contact'],[n('evenements'),'événement']]
     .filter(x => x[0]).map(x => pluriel(x[0], x[1])).join(', ') || 'aucune donnée';
 }
 function derniereModif(d){
@@ -1905,6 +1935,7 @@ const ICONES = {
   maison:'<path d="M3 10.6 12 3.4l9 7.2"/><path d="M5.6 9.4V20.6h12.8V9.4"/>',
   portefeuille:'<rect x="3" y="6" width="18" height="13" rx="2.6"/><path d="M3 10.2h18"/><circle cx="17" cy="14.8" r="1.1"/>',
   coche:'<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.2l2.8 2.8L16.4 9.4"/>',
+  liste:'<path d="M10.4 6.6h9.6M10.4 12h9.6M10.4 17.4h9.6"/><path d="M3.8 6.6l1.5 1.5 2.5-2.7M3.8 12l1.5 1.5 2.5-2.7M3.8 17.4l1.5 1.5 2.5-2.7"/>',
   cible:'<circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="4.2"/><circle cx="12" cy="12" r="1"/>',
   doc:'<path d="M14 3H7.4A1.4 1.4 0 0 0 6 4.4v15.2A1.4 1.4 0 0 0 7.4 21h9.2a1.4 1.4 0 0 0 1.4-1.4V7z"/><path d="M14 3v4.4h4M9 12.5h6M9 16h4"/>',
   dossierOuvert:'<path d="M3.4 17.8V7.2a1.8 1.8 0 0 1 1.8-1.8h3.6l2 2.4h6.6a1.8 1.8 0 0 1 1.8 1.8v1.2"/><path d="M3.4 17.8l2.3-6a1.6 1.6 0 0 1 1.5-1h12.7a1 1 0 0 1 .9 1.4l-2.2 5.6a1.6 1.6 0 0 1-1.5 1H5a1.6 1.6 0 0 1-1.6-1z"/>',
@@ -2006,6 +2037,7 @@ function progressionProjet(id){
 
 /* --- Tâches : UNE seule définition de « aujourd'hui » pour tout le site ---
    À faire aujourd'hui = non terminées, datées d'aujourd'hui, en retard ou sans date
+                         (v4.3 : sauf une tâche sans date rangée dans une liste : elle attend dans sa liste)
    Faites aujourd'hui  = terminées aujourd'hui                                    */
 const tache = id => DB.taches.find(t => t.id === id) || null;
 const note = id => DB.notes.find(n => n.id === id) || null;
@@ -2015,7 +2047,18 @@ const trierTaches = arr => arr.slice().sort((a, b) =>
   (a.fait - b.fait) || (rangPrio(a) - rangPrio(b)) ||
   (a.date || '9999-12-31').localeCompare(b.date || '9999-12-31') || (a.heure || '99:99').localeCompare(b.heure || '99:99'));
 const estEnRetard = t => !t.fait && !!t.date && t.date < aujourdhui();
-const tachesAFaire = () => trierTaches(DB.taches.filter(t => !t.fait && (!t.date || t.date <= aujourdhui())));
+const tachesAFaire = () => trierTaches(DB.taches.filter(t => !t.fait && (t.date ? t.date <= aujourdhui() : !t.liste)));
+/* --- Listes de tâches (v4.3) : un nom, rien d'autre ; dans l'ordre alphabétique partout --- */
+const uneListe = id => (id && DB.listes.find(l => l.id === id)) || null;
+const nomListe = id => { const l = uneListe(id); return l ? l.nom : ''; };
+const listesTriees = () => DB.listes.slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr', {sensitivity:'base', numeric:true}));
+/* Liste de ce nom (à la casse et aux espaces près), créée si besoin : « Voyage en Islande » et « voyage en islande » sont la même */
+function assurerListe(nom){
+  const k = cleNom(nom); if(!k) return null;
+  return DB.listes.find(l => cleNom(l.nom) === k) || ajouter('listes', {nom, modif:maintenant()});
+}
+/* Menu déroulant « Liste » d'une tâche (sa dernière option, « ＋ Nouvelle liste… », est ajoutée par le formulaire) */
+const optionsListes = () => [{v:'', t:'— aucune —'}].concat(listesTriees().map(l => ({v:l.id, t:l.nom})));
 const tachesFaitesAujourdhui = () => DB.taches.filter(t => t.fait && jourDe(t.faitLe) === aujourdhui());
 const tachesEnRetard = () => DB.taches.filter(estEnRetard);
 function cocherTache(t, fait){
@@ -2200,10 +2243,18 @@ function restaurer(e){
   if(DB[e.type].some(y => y.id === x.id)) x.id = uid();
   const projetEnCorbeille = x.projet && !projet(x.projet) ? DB.corbeille.find(c => c.type === 'projets' && c.element.id === x.projet) : null;
   if(x.projet && !projet(x.projet)) x.projet = null;
+  /* Tâche dont la liste est elle aussi à la corbeille : sans liste pour l'instant, elle la retrouvera quand la liste sera restaurée */
+  const listeEnCorbeille = e.type === 'taches' && x.liste && !uneListe(x.liste) ? DB.corbeille.find(c => c.type === 'listes' && c.element.id === x.liste) : null;
+  if(e.type === 'taches' && x.liste && !uneListe(x.liste)) x.liste = null;
   if(e.type === 'mouvements'){ x.compte = propreNom(x.compte) ? assurerCompte(x.compte) : ''; x.categorie = propreNom(x.categorie) ? assurerCategorie(x.categorie) : ''; }
   const el = ajouter(e.type, x);
   /* Son projet est aussi à la corbeille : il le retrouvera quand le projet sera restauré */
   if(projetEnCorbeille && LIENS_PROJET.includes(e.type)) projetEnCorbeille.liens[e.type].push(el.id);
+  if(listeEnCorbeille){ listeEnCorbeille.liens = listeEnCorbeille.liens || {taches:[]}; listeEnCorbeille.liens.taches.push(el.id); }
+  /* Une liste restaurée retrouve ses tâches (celles qui ne sont pas passées dans une autre liste), y compris celles encore à la corbeille */
+  if(e.type === 'listes'){ const ids = (e.liens && e.liens.taches) || [];
+    DB.taches.forEach(t => { if(ids.includes(t.id) && !t.liste) t.liste = el.id; });
+    DB.corbeille.forEach(c => { if(c.type === 'taches' && ids.includes(c.element.id) && (!c.element.liste || c.element.liste === e.element.id)) c.element.liste = el.id; }); }
   /* Un projet restauré retrouve ses tâches, notes, documents, dépenses et contacts (s'ils n'ont pas été rattachés
      ailleurs) — y compris ceux qui sont encore dans la corbeille : ils reviendront rattachés, dans n'importe quel ordre */
   if(e.type === 'projets') LIENS_PROJET.forEach(k => { const ids = (e.liens && e.liens[k]) || [];
@@ -2312,7 +2363,10 @@ const badgePrio = t => `<span class="priorite ${t.priorite}" title="Priorité ${
 /* Une ligne de tâche — la même partout (accueil, Tâches, projet, calendrier) */
 /* Durée estimée : « 45 min » sous une heure, puis « 1 h », « 1 h 30 », « 60 h » (minutes arrondies) */
 const dureeTexte = min => { const m = Math.round(Number(min) || 0); if(m < 60) return m + ' min'; const h = Math.floor(m / 60), r = m % 60; return h + ' h' + (r ? ' ' + pad(r) : ''); };
-function ligneTache(t, {date = true} = {}){
+/* Liste d'une tâche (v4.3) : un clic ouvre la liste dans la page Tâches */
+const puceListe = id => { const l = uneListe(id); return l ? `<a class="puce liste" href="#/taches?liste=${encodeURIComponent(l.id)}" title="Ouvrir la liste « ${esc(l.nom)} »">${ico('liste', 12)}${esc(l.nom)}</a>` : ''; };
+/* liste / projet : false là où les tâches sont déjà rangées par liste ou par projet (la puce y serait répétée sur chaque ligne) */
+function ligneTache(t, {date = true, liste = true, projet = true} = {}){
   const meta = [];
   if(t.heure) meta.push(esc(t.heure));
   if(estEnRetard(t)) meta.push(`<span class="retard">En retard · ${esc(labelJour(t.date))}</span>`);
@@ -2320,10 +2374,11 @@ function ligneTache(t, {date = true} = {}){
   if(t.estimation) meta.push(dureeTexte(t.estimation));
   if(t.fait && t.faitLe) meta.push('terminée ' + ilya(t.faitLe) + (t.archive ? ' · archivée' : ''));
   const enFocus = focusEnCours && focusEnCours.taskId === t.id;
-  return `<li class="tache${t.fait ? ' faite' : ''}" data-tache="${esc(t.id)}"${date ? '' : ' data-sans-date="1"'}>
+  return `<li class="tache${t.fait ? ' faite' : ''}" data-tache="${esc(t.id)}"${date ? '' : ' data-sans-date="1"'}${liste ? '' : ' data-sans-liste="1"'}${projet ? '' : ' data-sans-projet="1"'}>
     <input type="checkbox" class="case" data-coche="tache" data-id="${esc(t.id)}" ${t.fait ? 'checked' : ''} aria-label="${t.fait ? 'Rouvrir' : 'Terminer'} : ${esc(t.nom)}">
     <div class="corps"><div class="t"><span>${esc(t.nom)}</span>${(() => { const p = (t.fait ? '' : badgePrio(t)) + compteEtapes(t); return p ? ` <span class="pastilles-tache">${p}</span>` : ''; })()}</div>
-      ${meta.length || t.projet || t.tags.length ? `<div class="s">${meta.join(' · ')}${t.projet ? tagProjet(t.projet) : ''}${pucesTags(t.tags)}</div>` : ''}${listeEtapes(t)}</div>
+      ${(() => { const pl = liste && t.liste ? puceListe(t.liste) : '', pp = projet && t.projet ? tagProjet(t.projet) : '';
+        return meta.length || pp || pl || t.tags.length ? `<div class="s">${meta.join(' · ')}${pp}${pl}${pucesTags(t.tags)}</div>` : ''; })()}${listeEtapes(t)}</div>
     <div class="actions-ligne">
       <button class="icone-btn plus-actions" data-action="tache-actions" aria-expanded="false" title="Actions" aria-label="Actions : ${esc(t.nom)}">${ico('points', 17, 'currentColor', 2.4)}</button>
       ${t.fait ? '' : `<button class="icone-btn" data-action="focus" data-id="${esc(t.id)}" title="${enFocus ? 'Focus en cours' : 'Focus de 25 min'}" aria-label="Focus"${enFocus ? ' style="color:var(--i-bleu);opacity:1"' : ''}>${ico('horloge', 15)}</button>`}
@@ -2351,7 +2406,7 @@ function listeEtapes(t){
 /* Après un changement d'étapes : la page est redessinée ; une fenêtre ouverte (jour, calendrier) l'est ligne par ligne */
 function majEtapes(t, focus = null){
   t.modif = maintenant(); toucherProjet(t.projet); sauver(); rendre();
-  $$('#modale li[data-tache]').filter(li => li.dataset.tache === t.id).forEach(li => { li.outerHTML = ligneTache(t, {date:!li.dataset.sansDate}); });
+  $$('#modale li[data-tache]').filter(li => li.dataset.tache === t.id).forEach(li => { li.outerHTML = ligneTache(t, {date:!li.dataset.sansDate, liste:!li.dataset.sansListe, projet:!li.dataset.sansProjet}); });
   if(focus){ const f = $$(focus + ' form[data-form="etape"]').find(x => x.dataset.id === t.id); if(f) f.elements.t.focus(); }
 }
 
@@ -2847,35 +2902,138 @@ function pageInbox(){
 /* --- TÂCHES --- */
 const TACHES_PAR_PAGE = 20;   /* « File d'exécution » : les 20 premières tâches (ordre de la file), puis 20 de plus à la demande */
 let limiteTaches = TACHES_PAR_PAGE;
+/* v4.3 : la même file, affichée au choix (colonne « Afficher » à gauche ; volet à droite sur téléphone et tablette, comme les dossiers des Notes) :
+   par date (en retard, aujourd'hui, demain…, sans date), par projet, par liste, ou une seule liste personnalisée.
+   vueTaches : 'date' | 'projet' | 'liste' | 'l:<id de la liste>', gardée sur cet appareil (jamais dans les données synchronisées). */
+const CLE_VUE_TACHES = 'lifepanel.vueTaches';
+const VUES_TACHES = [['date', 'Par date', 'calendrier'], ['projet', 'Par projet', 'dossier'], ['liste', 'Par liste', 'liste']];
+let vueTaches = (() => { try { return localStorage.getItem(CLE_VUE_TACHES) || 'date'; } catch(e){ return 'date'; } })();
+function choisirVueTaches(v, garder = true){
+  vueTaches = v;
+  if(garder) try { localStorage.setItem(CLE_VUE_TACHES, v); } catch(e){ /* réglage de cette visite seulement */ }
+}
+const listeVue = () => vueTaches.startsWith('l:') ? uneListe(vueTaches.slice(2)) : null;
+/* Une vue qui n'existe plus (liste supprimée, ici ou sur un autre appareil) : retour à « Par date » */
+function verifierVueTaches(){ if(vueTaches.startsWith('l:') ? !listeVue() : !VUES_TACHES.some(([v]) => v === vueTaches)) vueTaches = 'date'; }
+/* Entrées de la colonne : les trois affichages, puis les listes avec leur nombre de tâches à faire (selon le filtre projet) */
+function vuesTaches(){
+  const fp = projetFiltre('taches'), aFaire = DB.taches.filter(t => !t.fait && (!fp || t.projet === fp));
+  return {vues:VUES_TACHES.map(([v, nom, icone]) => ({v, nom, icone, n:''})),
+    listes:listesTriees().map(l => ({v:'l:' + l.id, nom:l.nom, icone:'liste', n:aFaire.filter(t => t.liste === l.id).length}))};
+}
 function pageTaches(){
-  return titre('Tâches', 'Coche pour terminer, l’horloge lance un Focus de 25 min.', encartArchives('taches') + btnAction('tache-nouvelle', ico('plus', 14) + 'Nouvelle tâche', 'btn p')) + `
-    <section class="carte">${enteteCarte('cible', 'bleu', 'File d’exécution', puceFiltreProjet('taches') + champFiltre('taches', 'Filtrer…'))}<div id="liste-taches">${listeTaches()}</div></section>`;
+  verifierVueTaches();
+  const g = vuesTaches(), lv = listeVue(), actif = [...g.vues, ...g.listes].find(d => d.v === vueTaches) || g.vues[0];
+  const boutons = encartArchives('taches') + btnAction('liste-nouvelle', ico('liste', 14) + 'Nouvelle liste', 'btn') +
+    btnAction('tache-nouvelle', ico('plus', 14) + (lv ? 'Tâche dans « ' + esc(lv.nom) + ' »' : 'Nouvelle tâche'), 'btn p', lv ? `data-liste="${esc(lv.id)}"` : '');
+  const bouton = d => `<button class="dossier-btn${d.v === vueTaches ? ' actif' : ''}" data-action="vue-taches" data-v="${esc(d.v)}"${d.v === vueTaches ? ' aria-current="true"' : ''}>
+    ${ico(d.icone, 16)}<span class="nom-d">${esc(d.nom)}</span><span class="nb">${d.n}</span></button>`;
+  const d = lv ? `data-id="${esc(lv.id)}"` : '';
+  const tete = lv ? enteteCarte('liste', 'bleu', esc(lv.nom), `<button class="icone-btn" data-action="liste-modifier" ${d} title="Renommer la liste" aria-label="Renommer la liste">${ico('crayon', 15)}</button>
+      <button class="icone-btn danger" data-action="liste-supprimer" ${d} title="Supprimer la liste" aria-label="Supprimer la liste">${ico('corbeille', 15)}</button>`)
+    : enteteCarte('cible', 'bleu', 'File d’exécution');
+  return titre('Tâches', lv ? 'Ta liste : ajoute une tâche en une ligne, coche quand c’est fait. Sans date, elle reste ici ; datée, elle apparaît aussi le jour venu.'
+      : 'Coche pour terminer, l’horloge lance un Focus de 25 min. Affiche-les par date, par projet ou par liste.', boutons) + `<div class="notes-cadre cadre-taches">
+    <nav class="carte dossiers${dossiersOuverts ? ' ouvert' : ''}" id="dossiers" aria-label="Affichage des tâches">${teteDossiers('Afficher')}
+      ${g.vues.map(bouton).join('')}
+      <div class="etiq">Listes</div>${g.listes.map(bouton).join('')}
+      <button class="dossier-btn nouvelle-liste" data-action="liste-nouvelle">${ico('plus', 16)}<span class="nom-d">Nouvelle liste</span></button>
+    </nav>${voileDossiers()}
+    <div class="notes-contenu">
+      <div class="barre-outils">${champFiltre('taches', lv ? 'Filtrer la liste…' : 'Filtrer…')}<span class="dossier-actif">${ico(actif.icone, 15)}${esc(actif.nom)}</span>${boutonDossiers(actif.icone, actif, 'Afficher')}${puceFiltreProjet('taches')}</div>
+      <section class="carte">${tete}<div id="liste-taches">${listeTaches()}</div></section>
+    </div></div>`;
+}
+/* Ajout rapide dans une liste : un nom, Entrée, c'est enregistré (sans date) ; le curseur reste dans le champ pour la suivante */
+const ajoutDansListe = l => `<form class="ajout ajout-tache" data-form="tache-liste" data-id="${esc(l.id)}">${ico('plus', 15)}<input name="t" placeholder="Ajouter une tâche à « ${esc(l.nom)} »…" autocomplete="off" enterkeyhint="done" aria-label="Ajouter une tâche à la liste ${esc(l.nom)}"></form>`;
+/* Groupes de la file, dans l'ordre d'affichage : [{nom (HTML), cls, taches, date}] ; dans un groupe, priorité puis date et heure.
+   date : true si chaque ligne doit montrer sa date (inutile sous « Aujourd'hui » ou « Demain ») */
+function groupesTaches(ouvertes){
+  const triees = trierTaches(ouvertes), par = (cle, nom) => { const m = new Map(); triees.forEach(t => { const k = cle(t); if(!m.has(k)) m.set(k, []); m.get(k).push(t); });
+    return [...m.entries()].map(([k, ts]) => ({k, taches:ts})).sort((a, b) => (a.k === '' ? 1 : 0) - (b.k === '' ? 1 : 0) || nom(a.k).localeCompare(nom(b.k), 'fr', {sensitivity:'base', numeric:true})); };
+  if(listeVue()) return [{nom:'', taches:triees, date:true}];
+  if(vueTaches === 'projet') return par(t => t.projet || '', nomProjet).map(g => ({...g, date:true,
+    nom:g.k ? tagProjet(g.k) + (projet(g.k) && projet(g.k).archive ? '<span class="aide" style="margin:0">archivé</span>' : '') : '<span class="etiq">Sans projet</span>'}));
+  if(vueTaches === 'liste') return par(t => t.liste || '', nomListe).map(g => ({...g, date:true,
+    nom:g.k ? `<a class="etiq lien-liste" href="#/taches?liste=${encodeURIComponent(g.k)}" title="Ouvrir la liste">${ico('liste', 13)}${esc(nomListe(g.k))}</a>` : '<span class="etiq">Sans liste</span>'}));
+  /* Par date : en retard, puis par jour, sans date en dernier (tri stable : l'ordre de priorité est gardé dans chaque jour) */
+  const auj = aujourdhui(), dem = decaleJour(1), cle = t => !t.date ? 'z' : t.date < auj ? '0' : t.date, m = new Map();
+  triees.slice().sort((a, b) => cle(a).localeCompare(cle(b))).forEach(t => { const k = cle(t); if(!m.has(k)) m.set(k, []); m.get(k).push(t); });
+  return [...m.entries()].map(([k, ts]) => ({taches:ts, date:k === '0', cls:k === '0' ? 'retard' : '',
+    nom:`<span class="etiq">${k === '0' ? 'En retard' : k === 'z' ? 'Sans date' : k === auj ? 'Aujourd’hui' : k === dem ? 'Demain' : esc(labelJour(k))}</span>`}));
 }
 function listeTaches(){
-  const q = FILTRES.taches, auj = aujourdhui(), dem = decaleJour(1), fp = projetFiltre('taches');
-  const l = DB.taches.filter(t => (!fp || t.projet === fp) && correspondTags(q, t.tags, t.nom, t.date, labelJour(t.date), nomProjet(t.projet)));
-  if(!l.length) return q ? vide(`Aucune tâche ne correspond à « ${esc(q)} ».`) : vide('Aucune tâche pour l’instant.', btnAction('tache-nouvelle', 'Créer une tâche', 'btn p'));
-  const ouvertes = l.filter(t => !t.fait), groupes = new Map(), nbGroupe = new Map();
-  const cle = t => !t.date ? 'z' : t.date < auj ? '0' : t.date;
+  verifierVueTaches();
+  const q = FILTRES.taches, fp = projetFiltre('taches'), lv = listeVue();
+  const l = DB.taches.filter(t => (!fp || t.projet === fp) && (!lv || t.liste === lv.id) && correspondTags(q, t.tags, t.nom, t.date, labelJour(t.date), nomProjet(t.projet), nomListe(t.liste)));
+  const ajout = lv ? ajoutDansListe(lv) : '';
+  if(!l.length){
+    if(lv) return ajout + vide(q ? `Aucune tâche de cette liste ne correspond à « ${esc(q)} ».` : 'Cette liste est vide : écris sa première tâche juste au-dessus, puis Entrée.');
+    return q ? vide(`Aucune tâche ne correspond à « ${esc(q)} ».`) : vide('Aucune tâche pour l’instant.', btnAction('tache-nouvelle', 'Créer une tâche', 'btn p'));
+  }
+  const ouvertes = l.filter(t => !t.fait);
   const parFin = (a, b) => (b.faitLe || '').localeCompare(a.faitLe || '');
   const faites = l.filter(t => t.fait && !t.archive).sort(parFin);
-  /* Ordre de la file : en retard, puis par jour, sans date en dernier (dans un même jour : priorité, puis heure).
-     Seules les limiteTaches premières sont affichées ; chaque groupe garde son nombre total. Les terminées sont à part, repliées. */
-  const file = trierTaches(ouvertes).sort((a, b) => cle(a).localeCompare(cle(b)));
-  const total = file.length, visibles = new Set(file.slice(0, limiteTaches));
-  file.forEach(t => { const k = cle(t); nbGroupe.set(k, (nbGroupe.get(k) || 0) + 1); if(!visibles.has(t)) return; if(!groupes.has(k)) groupes.set(k, []); groupes.get(k).push(t); });
-  let html = '';
-  groupes.forEach((ts, k) => {
-    const nom = k === '0' ? 'En retard' : k === 'z' ? 'Sans date' : k === auj ? 'Aujourd’hui' : k === dem ? 'Demain' : labelJour(k);
-    html += `<div class="groupe-titre${k === '0' ? ' retard' : ''}"><span class="etiq">${nom}</span><span class="compte">${nbGroupe.get(k)}</span></div><ul class="liste">${ts.map(t => ligneTache(t, {date:k === '0'})).join('')}</ul>`;
-  });
+  /* Seules les limiteTaches premières de la file sont affichées ; chaque groupe garde son nombre total. Les terminées sont à part, repliées.
+     Pas de puce répétée : ni celle du projet quand on range par projet, ni celle de la liste quand on range par liste ou dans la liste. */
+  const groupes = groupesTaches(ouvertes), file = groupes.flatMap(g => g.taches);
+  const total = file.length, visibles = new Set(file.slice(0, limiteTaches)), options = {liste:!lv && vueTaches !== 'liste', projet:vueTaches !== 'projet'};
+  let html = ajout;
+  groupes.forEach(g => { const ts = g.taches.filter(t => visibles.has(t)); if(!ts.length) return;
+    html += (g.nom ? `<div class="groupe-titre${g.cls ? ' ' + g.cls : ''}">${g.nom}<span class="compte">${g.taches.length}</span></div>` : '') +
+      `<ul class="liste">${ts.map(t => ligneTache(t, {...options, date:g.date})).join('')}</ul>`; });
   const reste = total - limiteTaches;
   if(reste > 0) html += `<div class="plus-notes"><span class="aide">${limiteTaches} tâches affichées sur ${total}, dans l’ordre de la file</span>${btnAction('taches-plus', `Afficher ${Math.min(TACHES_PAR_PAGE, reste)} de plus`, 'btn')}</div>`;
-  if(!file.length && faites.length) html += vide('Toutes les tâches sont terminées.');
+  if(!file.length && faites.length) html += vide(lv ? 'Tout est fait dans cette liste.' : 'Toutes les tâches sont terminées.');
   /* Terminées (rayées) : repliées, dépliées d'office quand le filtre y trouve quelque chose ; elles partent aux archives le lendemain */
   if(faites.length) html += blocPliable('taches-terminees', `<span class="etiq">Terminées</span><span class="compte">${faites.length}</span><span class="aide" style="margin:0 0 0 4px">archivées automatiquement demain</span>`,
-    `<ul class="liste">${faites.map(t => ligneTache(t)).join('')}</ul>`, !!q.trim());
+    `<ul class="liste">${faites.map(t => ligneTache(t, options)).join('')}</ul>`, !!q.trim());
   return html || vide('Aucune tâche à faire.');
+}
+/* --- Listes : créer, renommer, supprimer --- */
+function formListe(l0 = {}){
+  const ex = l0.id ? uneListe(l0.id) : null;
+  formulaire({titre:ex ? 'Renommer la liste' : 'Nouvelle liste de tâches', icone:'liste', couleur:'bleu', ok:ex ? 'Renommer' : 'Créer la liste', champs:[
+    {n:'nom', l:'Nom de la liste', v:l0.nom, aide:ex ? '' : 'ex. Voyage en Islande, Courses, Déménagement'}
+  ], onOk:v => {
+    const nom = propreNom(v.nom); if(!nom) return 'Donne un nom à la liste.';
+    const meme = DB.listes.find(l => l !== ex && cleNom(l.nom) === cleNom(nom));
+    if(meme) return `La liste « ${meme.nom} » existe déjà.`;
+    if(ex){ ex.nom = nom; ex.modif = maintenant(); toast('Liste renommée'); return; }
+    const l = ajouter('listes', {nom, modif:maintenant()});
+    choisirVueTaches('l:' + l.id); FILTRES.taches = ''; limiteTaches = TACHES_PAR_PAGE;
+    if(lireRoute().nom !== 'taches') location.hash = '#/taches';
+    toast('Liste « ' + nom + ' » créée : ajoute ses tâches');
+  }, puis:ex ? null : () => { const i = $('form[data-form="tache-liste"] input'); if(i) i.focus(); }});
+}
+/* Supprimer une liste : ses tâches sont gardées (sans liste) ou mises à la corbeille avec elle ; Annuler = rien.
+   La liste garde la trace de ses tâches : restaurée, elle les retrouve (celles qui sont encore à la corbeille aussi, quand elles en sortiront). */
+function choixSuppressionListe(l, ts){
+  return new Promise(res => {
+    let reponse = null;
+    const nb = ts.length, aFaire = ts.filter(t => !t.fait).length, duJour = ts.filter(t => !t.fait && !t.date).length;
+    const ses = nb > 1 ? `ses ${nb} tâches` : 'sa tâche', les = nb > 1 ? 'les' : 'la';
+    const etat = !aFaire ? (nb > 1 ? ' (toutes faites)' : ' (faite)') : aFaire < nb ? ` (${aFaire} à faire)` : '';
+    /* Gardées sans liste, les tâches à faire sans date reviennent dans « Tâches du jour » : on le dit */
+    const jour = !duJour ? '' : nb === 1 ? ' (à faire et sans date, elle rejoint alors les tâches du jour)'
+      : duJour === 1 ? ' (celle qui est à faire et sans date rejoint alors les tâches du jour)' : ` (les ${duJour} à faire sans date rejoignent alors les tâches du jour)`;
+    ouvrirModale(teteModale('Supprimer cette liste ?', 'alerte', 'rose') + `<p class="texte">« ${esc(l.nom)} » sera mise à la corbeille. ${nb ? `Elle contient ${pluriel(nb, 'tâche')}${etat} : tu peux ${les} garder, sans liste${jour}, ou ${les} supprimer avec elle.` : 'Elle est vide.'}${RAPPEL_CORBEILLE}</p>
+      <div class="actions actions-liste"><button class="btn" data-action="fermer" autofocus>Annuler</button>${nb ? `<button class="btn" data-choix="garder">Garder ${ses}</button>
+        <button class="btn p danger" data-choix="tout">Supprimer aussi ${ses}</button>` : '<button class="btn p danger" data-choix="liste">Supprimer la liste</button>'}</div>`);
+    surFermeture = () => res(reponse);
+    $$('#modale [data-choix]').forEach(b => { b.onclick = () => { reponse = b.dataset.choix; fermerModale(); }; });
+  });
+}
+async function supprimerListe(id){
+  const l = uneListe(id); if(!l) return;
+  const ts = DB.taches.filter(t => t.liste === l.id), choix = await choixSuppressionListe(l, ts);
+  if(!choix || !uneListe(id)) return;
+  if(choix === 'tout') ts.forEach(t => { if(focusEnCours && focusEnCours.taskId === t.id) arreterFocus(); retirerVersCorbeille('taches', t); });
+  else ts.forEach(t => { t.liste = null; t.modif = maintenant(); });
+  retirerVersCorbeille('listes', l, {liens:{taches:ts.map(t => t.id)}});
+  if(vueTaches === 'l:' + l.id) choisirVueTaches('date');
+  sauver(); rendre();
+  toast(choix === 'tout' ? `Liste et ${pluriel(ts.length, 'tâche')} mises à la corbeille` : 'Liste mise à la corbeille' + (ts.length ? ' : ses tâches sont gardées, sans liste' : ''));
 }
 
 /* --- PROJETS --- */
@@ -3178,10 +3336,11 @@ function dossiersNotes(){
 }
 /* Téléphone et tablette : la colonne des dossiers devient un volet à droite (voir ouvrirDossiers), ouvert par ce bouton
    de la barre d'outils, qui montre le dossier choisi */
-const boutonDossiers = (icone, d) => `<button class="choix-dossier" data-action="dossiers-ouvrir" aria-controls="dossiers" aria-expanded="${dossiersOuverts}" title="Dossiers">
+const boutonDossiers = (icone, d, nom = 'Dossiers') => `<button class="choix-dossier" data-action="dossiers-ouvrir" aria-controls="dossiers" aria-expanded="${dossiersOuverts}" title="${nom}">
   ${ico(icone, 15)}<span class="nom-d">${esc(d.nom)}</span>${d.n !== '' ? `<span class="nb">${d.n}</span>` : ''}${ico('chevronG', 13)}</button>`;
-const teteDossiers = () => `<div class="dossiers-tete"><span class="etiq">Dossiers</span>
-  <button class="icone-btn fermer" data-action="dossiers-fermer" aria-label="Fermer les dossiers" title="Fermer (Échap)">${ico('croix', 16)}</button></div>`;
+/* nom : « Dossiers » (Notes, Documents) ou « Afficher » (Tâches, v4.3) */
+const teteDossiers = (nom = 'Dossiers') => `<div class="dossiers-tete"><span class="etiq">${nom}</span>
+  <button class="icone-btn fermer" data-action="dossiers-fermer" aria-label="${nom === 'Dossiers' ? 'Fermer les dossiers' : 'Fermer le volet ' + nom}" title="Fermer (Échap)">${ico('croix', 16)}</button></div>`;
 const voileDossiers = () => `<div class="voile-volet voile-dossiers${dossiersOuverts ? ' on' : ''}" id="voile-dossiers" data-action="dossiers-fermer"></div>`;
 const dansDossier = n => (!projetFiltre('notes') || n.projet === projetFiltre('notes')) &&
   !n.archive && (!filtreTag || (filtreTag === SANS_TAG ? !n.tags.length : aLeTag(n, filtreTag)));
@@ -3593,6 +3752,7 @@ function ficheEvenement(id, jour = ''){
 /* --- CORBEILLE : 30 jours pour changer d'avis --- */
 const TYPES_ELEMENTS = {
   taches:{nom:'Tâche', fem:true, icone:'coche', couleur:'bleu', titre:x => x.nom},
+  listes:{nom:'Liste de tâches', fem:true, icone:'liste', couleur:'bleu', titre:x => x.nom},
   notes:{nom:'Note', fem:true, icone:'doc', couleur:'orange', titre:x => x.titre},
   contacts:{nom:'Fiche contact', fem:true, icone:'personnes', couleur:'rose', titre:x => x.nom},
   mouvements:{nom:'Mouvement', icone:'euro', couleur:'vert', titre:x => (x.libelle || x.categorie || 'Mouvement') + ' · ' + eur(x.montant)},
@@ -3647,7 +3807,7 @@ function pageDonnees(){
           <p class="aide demi" style="margin:0;align-self:end">Les budgets se règlent pour chaque compte, par mois ou par an : bouton « Comptes et budgets ».</p>
           <div class="boutons"><button class="btn p" type="submit">Enregistrer</button>${btnAction('categories', ico('tag', 14) + `Catégories (${DB.categories.length})`)}${btnAction('comptes', ico('portefeuille', 14) + `Comptes et budgets (${DB.comptes.length})`)}</div></form></section>
       <section class="carte c6 etire">${enteteCarte('base', 'vert', 'Ce qu’il y a dedans')}
-        <table class="table-simple"><tbody>${[['Projets', DB.projets.length], ['Tâches', DB.taches.length], ['Notes', DB.notes.length], ['Documents', DB.documents.length], ['Mouvements', DB.mouvements.length], ['Comptes', DB.comptes.length], ['Contacts', DB.contacts.length], ['Événements', DB.evenements.length], ['Inbox (à trier)', inboxOuverte().length], ['Catégories', DB.categories.length],
+        <table class="table-simple"><tbody>${[['Projets', DB.projets.length], ['Tâches', DB.taches.length], ['Listes de tâches', DB.listes.length], ['Notes', DB.notes.length], ['Documents', DB.documents.length], ['Mouvements', DB.mouvements.length], ['Comptes', DB.comptes.length], ['Contacts', DB.contacts.length], ['Événements', DB.evenements.length], ['Inbox (à trier)', inboxOuverte().length], ['Catégories', DB.categories.length],
             ['dont archivés (tâches, notes, documents, contacts)', [DB.taches, DB.notes, DB.documents, DB.contacts].reduce((n, l) => n + l.filter(x => x.archive).length, 0)], ['Corbeille', DB.corbeille.length],
             ['Taille des données', tailleLisible(stockage.taille)]]
           .map(([l, n]) => `<tr><td>${l}</td><td class="num">${n}</td></tr>`).join('')}</tbody></table>
@@ -3665,7 +3825,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v4.2 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v4.3 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -3718,7 +3878,10 @@ function rendre(){
   if(FICHES[r.nom]){ fiche = r; history.replaceState(null, '', '#/' + FICHES[r.nom].page); r = lireRoute(); }
   /* Un lien « ?q=… » (recherche, rappels) pré-remplit le filtre de la page, puis l'adresse est nettoyée */
   const q = r.params.get('q');
-  if(q !== null && r.nom in FILTRES){ FILTRES[r.nom] = q; history.replaceState(null, '', '#/' + r.nom); }
+  if(q !== null && r.nom in FILTRES){ FILTRES[r.nom] = q; history.replaceState(null, '', '#/' + r.nom);
+    if(r.nom === 'taches' && vueTaches.startsWith('l:')) choisirVueTaches('date', false); }   /* un lien vers une tâche (recherche) cherche dans toutes les tâches, pas dans la liste ouverte */
+  const listeParam = r.params.get('liste');   /* « #/taches?liste=ID » (puce d'une tâche, commande) : ouvre cette liste */
+  if(r.nom === 'taches' && listeParam !== null){ if(uneListe(listeParam)) choisirVueTaches('l:' + listeParam); FILTRES.taches = ''; limiteTaches = TACHES_PAR_PAGE; history.replaceState(null, '', '#/taches'); }
   const dossierParam = r.params.get('dossier');   /* « #/notes?dossier=… » ou « #/documents?dossier=… » ouvre un dossier */
   if(dossierParam === ARCHIVES && (r.nom === 'notes' || r.nom === 'documents')){   /* anciens liens vers le dossier Archives : page Archives */
     const pj = r.params.get('projet'); history.replaceState(null, '', '#/archives?type=' + r.nom + (pj ? '&projet=' + encodeURIComponent(pj) : '')); return rendre(); }
@@ -4037,14 +4200,17 @@ function formTache(t0 = {}, apres){
     {n:'date', l:'Date', t:'date', effacable:true, v:ex ? ex.date : (t0.date ?? aujourdhui()), demi:true, aide:'vide = sans date'},
     {n:'heure', l:'Heure', t:'heure', v:t0.heure, demi:true, aide:'facultatif'},
     {n:'priorite', l:'Priorité', t:'segment', v:t0.priorite || 'p2', o:[{v:'p1', t:'P1 · importante'}, {v:'p2', t:'P2 · normale'}, {v:'p3', t:'P3 · légère'}]},
-    {n:'estimation', l:'Durée estimée (min)', t:'nombre', v:t0.estimation ?? '', demi:true, aide:'facultatif'},
+    {n:'liste', l:'Liste', t:'select', o:optionsListes(t0.liste), v:t0.liste || '', demi:true, nouveau:'Nouvelle liste'},
     {n:'projet', l:'Projet', t:'select', o:optionsProjets(t0.projet), v:t0.projet || '', demi:true},
+    {n:'estimation', l:'Durée estimée (min)', t:'nombre', v:t0.estimation ?? '', demi:true, aide:'facultatif'},
     {n:'tags', l:'Tags', t:'tags', v:t0.tags || [], aide:'facultatif, séparés par des virgules'},
     {n:'etapes', l:'Étapes', t:'liste', v:(t0.etapes || []).map(e => e.t), aide:'facultatif : une par ligne ; elles se cochent dans la liste des tâches', hauteur:110}
   ], onOk:v => {
     if(!v.nom) return 'Donne un nom à la tâche.';
+    if(v.liste === NOUVEAU && !propreNom(v.listeNouveau)) return 'Donne un nom à la nouvelle liste.';
     const cochees = new Set(ex ? ex.etapes.filter(e => e.ok).map(e => e.t) : []);   /* une étape gardée garde sa coche */
-    const d = {nom:v.nom, date:v.date, heure:v.heure, priorite:v.priorite || 'p2', estimation:v.estimation ? positif(Math.abs(Number(v.estimation.replace(',', '.'))), 100000) : null, projet:v.projet || null, tags:nettoyerTags(v.tags),
+    const liste = v.liste === NOUVEAU ? assurerListe(v.listeNouveau).id : uneListe(v.liste) ? v.liste : null;
+    const d = {nom:v.nom, date:v.date, heure:v.heure, priorite:v.priorite || 'p2', estimation:v.estimation ? positif(Math.abs(Number(v.estimation.replace(',', '.'))), 100000) : null, projet:v.projet || null, liste, tags:nettoyerTags(v.tags),
       etapes:v.etapes.map(e => ({t:e, ok:cochees.has(e)})), modif:maintenant()};
     if(ex){ const avant = ex.projet; Object.assign(ex, d); toucherProjet(avant); toucherProjet(ex.projet); toast('Tâche modifiée'); }
     else { ajouter('taches', d); toucherProjet(d.projet); toast('Tâche créée'); }
@@ -4735,7 +4901,13 @@ const ACTIONS = {
   'note-wiki': el => formNote({titre:el.dataset.titre || ''}),
   'notif-ignorer': () => { try { localStorage.setItem(CLE_NOTIF_IGNORE, '1'); } catch(e){} rendre(); },
   'robot-ignorer': () => { try { localStorage.setItem(CLE_ROBOT_IGNORE, aujourdhui()); } catch(e){} rendre(); },
-  'tache-nouvelle': el => formTache({date:el.dataset.date || aujourdhui(), projet:el.dataset.projet || projetFiltre('taches') || '', priorite:el.dataset.priorite || 'p2'}),
+  /* Depuis une liste ouverte : la tâche y est rangée, sans date (elle attend dans la liste) */
+  'tache-nouvelle': el => formTache({date:el.dataset.liste ? '' : el.dataset.date || aujourdhui(), projet:el.dataset.projet || projetFiltre('taches') || '', liste:el.dataset.liste || '', priorite:el.dataset.priorite || 'p2'}),
+  /* Listes de tâches (v4.3) */
+  'vue-taches': el => { const v = el.dataset.v || 'date'; choisirVueTaches(v); FILTRES.taches = ''; limiteTaches = TACHES_PAR_PAGE; choisirDossier(); },
+  'liste-nouvelle': () => formListe(),
+  'liste-modifier': el => { const l = uneListe(el.dataset.id); if(l) formListe(l); },
+  'liste-supprimer': el => supprimerListe(el.dataset.id),
   'tache-modifier': el => { const t = tache(el.dataset.id); if(t) formTache(t); },
   'tache-supprimer': async el => { const t = tache(el.dataset.id); if(!t) return;
     if(!await confirmerSuppression(t, {titre:'Supprimer cette tâche ?', texte:`« ${esc(t.nom)} » sera mise à la corbeille.`})) return;
@@ -5116,6 +5288,11 @@ document.addEventListener('submit', e => {
     const t = f.elements.texte.value.trim(); if(!t) return;
     ajouter('inbox', {text:t, created:maintenant()}); sauver(); rendre(); toast('Ajouté à l’Inbox');
     const i = $('form[data-form="inbox"] input'); if(i) i.focus();
+  } else if(type === 'tache-liste'){   /* ajout rapide dans une liste (v4.3) : sans date, rattachée au projet filtré s'il y en a un */
+    const l = uneListe(f.dataset.id), nom = f.elements.t.value.trim(); if(!l || !nom) return;
+    const pj = projetFiltre('taches') && projet(projetFiltre('taches')) ? projetFiltre('taches') : null;
+    ajouter('taches', {nom, date:'', liste:l.id, projet:pj, priorite:'p2', modif:maintenant()}); toucherProjet(pj); sauver(); rendre();
+    const i = $('form[data-form="tache-liste"] input'); if(i) i.focus();
   } else if(type === 'etape'){
     const t = tache(f.dataset.id), x = f.elements.t.value.trim(); if(!t || !x) return;
     t.etapes.push({t:x, ok:false}); etatDepliage['etapes-' + t.id] = true; majEtapes(t, f.closest('#modale') ? '#modale' : '#vue');
@@ -5223,7 +5400,9 @@ function commandes(){
     {titre:'Données et réglages', sous:'Aller à la page', icone:'reglages', href:'#/donnees'},
     {titre:'Rechercher partout', sous:'Page de résultats complète', icone:'recherche', href:'#/recherche', touche:'/'},
     {titre:'Corbeille', sous:'Restaurer un élément supprimé (' + JOURS_CORBEILLE + ' jours)', icone:'corbeille', href:'#/corbeille'},
-    {titre:'Nouvelle tâche', sous:'Priorité, échéance, projet', icone:'coche', action:'tache-nouvelle'},
+    {titre:'Nouvelle tâche', sous:'Priorité, échéance, projet, liste', icone:'coche', action:'tache-nouvelle'},
+    {titre:'Nouvelle liste de tâches', sous:'Une liste à toi, sans créer de projet', icone:'liste', action:'liste-nouvelle'},
+    ...listesTriees().map(l => ({titre:l.nom, sous:'Liste de tâches : ouvrir', icone:'liste', href:'#/taches?liste=' + encodeURIComponent(l.id)})),
     {titre:'Nouvel événement', sous:'Calendrier : date, heure, lieu, rappel', icone:'calendrier', action:'evt-nouveau'},
     {titre:'Capture rapide', sous:'Une pensée → tâche, événement, dépense ou note', icone:'ampoule', action:'capture', touche:'c'},
     {titre:'Nouvelle dépense', sous:'Enregistrer un mouvement', icone:'euro', action:'mvt-nouveau'},
@@ -5285,8 +5464,9 @@ function indexRecherche(){
   DB.documents.forEach(x => ajout('documents', {titre:x.titre, textes:[x.url, nomDe(x.projet)], long:x.note, h:x.url && !estDrive(x.url) ? x.url : href('document', x.id), externe:!!x.url && !estDrive(x.url),
     sous:[typeDocument(x.url).nom, x.echeance ? 'échéance ' + dateCourte(x.echeance) : '', nomDe(x.projet)].filter(Boolean).join(' · '), date:x.modif, archive:x.archive, tags:x.tags,
     projet:nomDe(x.projet), jour:x.echeance || jourDe(x.modif)}));
-  DB.taches.forEach(t => ajout('taches', {titre:t.nom, textes:[nomDe(t.projet), t.date ? labelJour(t.date) : '', t.etapes.map(e => e.t).join(' ')], h:'#/taches?q=' + encodeURIComponent(t.nom),
-    sous:[t.fait ? 'terminée ' + ilya(t.faitLe) : t.date ? labelJour(t.date) : 'sans date', nomDe(t.projet)].filter(Boolean).join(' · '), date:t.modif, archive:t.archive, tags:t.tags,
+  const listes = new Map(DB.listes.map(x => [x.id, x.nom])), listeDe = id => listes.get(id) || '';   /* v4.3 : le nom de sa liste trouve une tâche */
+  DB.taches.forEach(t => ajout('taches', {titre:t.nom, textes:[nomDe(t.projet), listeDe(t.liste), t.date ? labelJour(t.date) : '', t.etapes.map(e => e.t).join(' ')], h:'#/taches?q=' + encodeURIComponent(t.nom),
+    sous:[t.fait ? 'terminée ' + ilya(t.faitLe) : t.date ? labelJour(t.date) : 'sans date', nomDe(t.projet), listeDe(t.liste) ? 'liste ' + listeDe(t.liste) : ''].filter(Boolean).join(' · '), date:t.modif, archive:t.archive, tags:t.tags,
     projet:nomDe(t.projet), jour:t.date || jourDe(t.modif)}));
   DB.notes.forEach(n => ajout('notes', {titre:n.titre, textes:[nomDe(n.projet)], long:texteBrut(n.contenu), h:href('note', n.id),
     sous:['modifiée ' + ilya(n.modif), nomDe(n.projet)].filter(Boolean).join(' · '), date:n.modif, archive:n.archive, tags:n.tags, projet:nomDe(n.projet), jour:jourDe(n.modif)}));
