@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-DmOTFTzmGiNy/XIq3JVQsz4Qd66SFwkEDziRckR4RxA='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-78NWoFELirNWHDRXbEis7+DHC2/jhZbC4HOYqKbS08c='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v4.4
+  LIFE PANEL — v4.4.1
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -217,6 +217,13 @@
   v4.4 : plus de priorité des tâches (P1, P2, P3) : ni pastille, ni choix dans le formulaire, ni tri. La file suit la date et l'heure, puis
   l'ordre de création. Mêmes données (VERSION 22) : une nouvelle tâche n'a plus de champ « priorite » ; celui des anciennes est gardé tel quel,
   sans être affiché ni utilisé (une appli plus ancienne encore ouverte ailleurs le lit toujours).
+  v4.4.1 : démarrage réparé dans Brave (PC). Avant le premier affichage, le démarrage attendait sans limite que le navigateur dise si
+  l'accès au dossier Drive mémorisé était encore accordé ; Brave ne répondait jamais : page vide, liens sans effet, pas de synchro
+  GitHub, aucun message. Désormais : une question au navigateur sans réponse (IndexedDB, accès à un dossier) a un délai maximum
+  (1,5 s pour un dossier, 8 s pour les données) ; sans réponse sur le Drive, son accès est à redonner d'un clic. Chaque étape du
+  démarrage est isolée (un échec est annoncé, la suite a lieu), la navigation est posée avant toute attente, le message « Un problème
+  est survenu » est posé en tout premier, et un démarrage qui échoue le dit au centre de la page. Données du navigateur illisibles :
+  un bandeau le dit, et rien n'est enregistré ni synchronisé (jamais une base vide par-dessus tes données). Mêmes données (VERSION 22).
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -1322,6 +1329,29 @@ body{padding-bottom:calc(62px + env(safe-area-inset-bottom))}
 
 <script>
 'use strict';
+/* Filet de sécurité (v4.4.1 : posé en tout premier, avant tout le reste du script). Une erreur imprévue n'est jamais muette :
+   un message l'annonce (en bas de la page ; si le script n'est pas encore entièrement lu, au centre de la page).
+   Jusqu'à la v4.4, il n'était posé qu'à la fin du démarrage : un démarrage interrompu laissait une page vide, sans un mot. */
+function signaler(m){
+  try { console.error(m); } catch(e){}
+  const detail = (m && m.message) || String(m);
+  try { toast('Un problème est survenu : ' + detail + '. Recharge la page (F5) si quelque chose ne répond plus.'); }
+  catch(e){ messageUrgence('Un problème est survenu', detail); }
+}
+/* Message au centre de la page, sans rien utiliser du reste du script : il s'affiche même si l'appli n'a pas pu démarrer */
+function messageUrgence(titre, detail){
+  const vue = document.getElementById('vue'); if(!vue) return;
+  const cree = (balise, classe, texte) => { const x = document.createElement(balise); if(classe) x.className = classe; if(texte) x.textContent = texte; return x; };
+  const bandeau = cree('div', 'bandeau jaune'), txt = cree('div', 'txt'), boutons = cree('div', 'boutons'), r = cree('button', 'btn', 'Recharger');
+  bandeau.setAttribute('role', 'alert'); r.type = 'button'; r.onclick = () => location.reload();
+  txt.append(cree('strong', '', titre), cree('span', '', String(detail).replace(/\.$/, '') + '. Tes données ne sont pas touchées. Recharge la page (F5) ; si ça recommence, envoie ce message à Claude.'));
+  boutons.append(r); bandeau.append(txt, boutons); vue.prepend(bandeau);
+}
+/* demarrer() a son .catch : un démarrage qui échoue malgré tout le dit au centre de la page */
+function echecDemarrage(e){ try { console.error(e); } catch(x){} messageUrgence('LIFE PANEL n’a pas pu démarrer', (e && e.message) || String(e)); }
+window.addEventListener('error', e => signaler(e.error || e.message));
+window.addEventListener('unhandledrejection', e => signaler(e.reason));
+
 /* ==========================================================================
    A. DONNÉES — un seul modèle, une seule clé
    ========================================================================== */
@@ -1367,6 +1397,10 @@ const DBVide = () => ({
 });
 
 let DB = DBVide();
+/* v4.4.1 : où en est la lecture des données du navigateur. 'lecture' (démarrage), 'pretes', ou 'bloquees' : rien n'a pu être lu
+   (IndexedDB muet et pas de copie légère, ou lecture qui plante). Tant qu'elles ne sont pas 'pretes', rien n'est enregistré ni
+   synchronisé (sauver, ghSynchroniser) : ce serait écrire une base vide par-dessus tes données. blocageDonnees : la raison, affichée. */
+let etatDonnees = 'lecture', blocageDonnees = '';
 let versionDonnees = 0;         /* augmente à chaque enregistrement : sert à savoir quand recalculer (index de recherche) */
 let dossier = null;             /* dossier LIFE PANEL relié (Chrome, Edge, Opera) */
 let dossierMemorise = null;     /* dossier relié lors d'une session précédente */
@@ -1607,6 +1641,15 @@ function idb(){
 async function idbLire(k){ const db = await idb(); return new Promise((ok, ko) => { const q = db.transaction('poignees').objectStore('poignees').get(k); q.onsuccess = () => ok(q.result ?? null); q.onerror = () => ko(q.error); }); }
 async function idbEcrire(k, v){ const db = await idb(); return new Promise((ok, ko) => { const tx = db.transaction('poignees', 'readwrite'); tx.objectStore('poignees').put(v, k); tx.oncomplete = () => ok(); tx.onerror = tx.onabort = () => ko(tx.error); }); }
 async function idbSupprimer(k){ const db = await idb(); return new Promise((ok, ko) => { const tx = db.transaction('poignees', 'readwrite'); tx.objectStore('poignees').delete(k); tx.oncomplete = () => ok(); tx.onerror = tx.onabort = () => ko(tx.error); }); }
+/* Délai maximum (v4.4.1) : une question au navigateur qui reste sans réponse (IndexedDB, accès à un dossier) échoue au bout de ms,
+   avec DelaiDepasse, au lieu d'attendre sans fin. Dans Brave (PC), l'accès au dossier Drive mémorisé ne répondait jamais. */
+const DELAI_DOSSIER = 1500;   /* accès déjà accordé à un dossier (Drive, dossier LIFE PANEL) : d'habitude quelques millisecondes */
+const DELAI_DONNEES = 8000;   /* données gardées dans IndexedDB : d'habitude bien moins d'une seconde */
+class DelaiDepasse extends Error { constructor(quoi, ms){ super(`${quoi} : pas de réponse du navigateur après ${String(ms / 1000).replace('.', ',')} s`); this.name = 'DelaiDepasse'; } }
+function sousDelai(promesse, ms, quoi){
+  let t; const delai = new Promise((ok, ko) => { t = setTimeout(() => ko(new DelaiDepasse(quoi, ms)), ms); });
+  return Promise.race([promesse, delai]).finally(() => clearTimeout(t));
+}
 
 /* Écrit le texte JSON des données dans le navigateur (copie légère tout de suite, IndexedDB juste après) */
 function enregistrerNavigateur(texte){
@@ -1654,6 +1697,11 @@ async function chargerNavigateur(){
 
 /* Chaque modification : navigateur tout de suite, puis fichier donnees.json du dossier relié */
 function sauver({entretien = false} = {}){
+  if(etatDonnees !== 'pretes'){   /* v4.4.1 : données pas encore lues (démarrage) ou illisibles : rien n'est écrit par-dessus */
+    if(!entretien) toast(etatDonnees === 'lecture' ? 'Patiente un instant : tes données sont en cours de lecture. Rien n’a été enregistré.'
+      : 'Rien n’est enregistré : ' + blocageDonnees + ' Recharge la page (F5).');
+    return;
+  }
   if(!entretien) DB.reglages.maj = maintenant();
   DB.contacts.forEach(c => { const t = tagRepondre(c.tags, c.aRepondre); if(t.length !== c.tags.length || t.some((x, i) => x !== c.tags[i])) c.tags = t; });   /* l'entretien automatique n'est pas une modification de ta part */
   versionDonnees++;
@@ -2771,7 +2819,7 @@ function bandeauxEtat(){
     return `<div class="bandeau jaune">${pastille('ampoule', 'jaune')}<div class="txt"><strong>Mode démonstration</strong><span>Ces données viennent de demo-data.json. Rien n’est écrit dans ton dossier LIFE PANEL.</span></div>
       <div class="boutons">${s ? btnAction('secours-restaurer', 'Revenir à mes données', 'btn p') : ''}${btnAction('effacer', 'Effacer la démo', 'btn')}</div></div>`;
   }
-  if(!compter(DB)) return `<div class="bandeau bleu">${pastille('maison', 'bleu')}<div class="txt"><strong>Bienvenue ! Ton tableau est vide.</strong><span>Commence à saisir, ou reprends tes données depuis ton dossier LIFE PANEL ou une sauvegarde.</span></div>
+  if(!compter(DB) && etatDonnees === 'pretes') return `<div class="bandeau bleu">${pastille('maison', 'bleu')}<div class="txt"><strong>Bienvenue ! Ton tableau est vide.</strong><span>Commence à saisir, ou reprends tes données depuis ton dossier LIFE PANEL ou une sauvegarde.</span></div>
       <div class="boutons">${'showDirectoryPicker' in window ? btnAction('dossier-relier', 'Relier mon dossier', 'btn') : ''}${btnAction('importer', 'Importer une sauvegarde', 'btn')}</div></div>`;
   return '';
 }
@@ -3822,7 +3870,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v4.4 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v4.4.1 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -3897,7 +3945,7 @@ function rendre(){
     if(r.nom !== 'archives'){ ongletArchives = 'tout'; FILTRES.archives = ''; } }   /* Archives rouvertes depuis le volet : tous les types */   /* en revenant sur une page : de nouveau les plus récents d'abord, toutes catégories */
   const vue = $('#vue');
   vue.classList.remove('anim');
-  try { vue.innerHTML = sousOnglets(r.nom) + ROUTES[r.nom](r.id); ajusterGraphes(); }
+  try { vue.innerHTML = bandeauDonnees() + sousOnglets(r.nom) + ROUTES[r.nom](r.id); ajusterGraphes(); }
   catch(err){ console.error(err); vue.innerHTML = pageErreur(err); }
   const actif = PARENT[r.nom] || r.nom;
   $$('#volet a[data-route]').forEach(a => { const on = a.dataset.route === actif; a.classList.toggle('actif', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
@@ -3931,6 +3979,11 @@ function rafraichirListe(nom){ const c = $('#liste-' + nom); if(!c || !LISTES[no
 const pageErreur = err => `<div class="bandeau jaune">${pastille('alerte', 'jaune')}<div class="txt"><strong>Cette page n’a pas pu s’afficher</strong>
   <span>Tes données ne sont pas touchées. Recharge la page (F5) ; si ça recommence, envoie ce message à Claude : <code>${esc(err && err.message || err)}</code></span></div>
   <div class="boutons"><button class="btn" data-action="recharger">Recharger</button><a class="btn" href="#/accueil">Accueil</a></div></div>`;
+/* v4.4.1 : données du navigateur pas encore lues, ou illisibles : chaque page le dit, au lieu d'avoir l'air vide */
+const bandeauDonnees = () => etatDonnees === 'pretes' ? '' : `<div class="bandeau jaune" id="bandeau-donnees" role="alert">${pastille('alerte', 'jaune')}<div class="txt">${etatDonnees === 'lecture'
+    ? '<strong>Lecture de tes données…</strong><span>Le navigateur n’a pas encore répondu. Rien n’est enregistré tant qu’elles ne sont pas lues.</span>'
+    : `<strong>Tes données n’ont pas pu être lues</strong><span>${esc(blocageDonnees)} Elles ne sont pas touchées : rien n’est enregistré ni synchronisé tant que la page n’a pas été rechargée. Si ça recommence, envoie ce message à Claude.</span>`}</div>
+  <div class="boutons"><button class="btn" data-action="recharger">Recharger</button></div></div>`;
 /* Numéros du menu : en gris, le nombre d'éléments actifs ; en couleur, ce qui demande une action */
 function compteursMenu(){
   const auj = aujourdhui(), actifs = l => l.filter(x => !x.archive), aFaire = actifs(DB.taches).filter(t => !t.fait), docs = actifs(DB.documents), contacts = contactsActifs();
@@ -5356,6 +5409,14 @@ function demarrerFocus(id){
   lancerMinuteur(); rendre(); toast('Focus de 25 minutes lancé');
 }
 function lancerMinuteur(){ clearInterval(minuteurFocus); minuteurFocus = setInterval(tickFocus, 1000); }
+/* Démarrage : un focus lancé avant le rechargement continue (seulement avec les données lues : sinon sa tâche serait introuvable
+   et le focus effacé à tort) */
+function reprendreFocus(){
+  if(etatDonnees !== 'pretes') return;
+  const f = lireCle(CLE_FOCUS);
+  if(f && f.fin > Date.now() && tache(f.taskId)){ focusEnCours = f; lancerMinuteur(); }
+  else if(f){ try { localStorage.removeItem(CLE_FOCUS); } catch(e){} }
+}
 function tickFocus(){
   if(!focusEnCours) return;
   if(focusEnCours.fin <= Date.now()){ const t = tache(focusEnCours.taskId); arreterFocus(); if(t) ficheFinFocus(t); return; }
@@ -6188,12 +6249,17 @@ const fichierCache = nom => /^(desktop\.ini|thumbs\.db|icon\r)$/i.test(nom) || n
 /* État : indispo (navigateur sans accès aux dossiers) · aucun (rien de relié) · autoriser (un clic suffit)
    · choisir (Android : il faut rechoisir le dossier) · ok */
 const etatDrive = () => fsDispo() ? drive.etat : 'indispo';
+/* v4.4.1 : chaque question a un délai maximum. Dans Brave (PC), queryPermission sur la poignée gardée dans IndexedDB ne répondait
+   jamais : le démarrage, qui attend initDrive avant le premier affichage, restait bloqué (page vide, liens sans effet, pas de synchro).
+   Sans réponse, l'accès est à redonner d'un clic (« Accéder aux documents »), comme après un redémarrage du navigateur. */
 async function initDrive(){
   if(!fsDispo() || !stockage.idb) return;
-  let h = null; try { h = await idbLire('drive'); } catch(e){ h = null; }
+  let h = null; try { h = await sousDelai(idbLire('drive'), DELAI_DOSSIER, 'Lecture du dossier Drive mémorisé'); } catch(e){ if(e instanceof DelaiDepasse) console.warn(e.message); h = null; }
   if(!h){ drive.etat = 'aucun'; return; }
   drive.memo = h;
-  let p = 'prompt'; try { p = await h.queryPermission({mode:'read'}); } catch(e){ p = 'denied'; }
+  let p = 'prompt';
+  try { p = await sousDelai(h.queryPermission({mode:'read'}), DELAI_DOSSIER, 'Accès au dossier Drive'); }
+  catch(e){ if(e instanceof DelaiDepasse){ console.warn(e.message); p = 'prompt'; } else p = 'denied'; }
   if(p === 'granted'){ drive.racine = h; drive.etat = 'ok'; } else drive.etat = p === 'denied' ? 'choisir' : 'autoriser';
 }
 function brancherDrive(h){
@@ -6611,7 +6677,7 @@ function fusionner(base, moi, eux){
 
 /* --- Un cycle de synchronisation (jamais deux en même temps) --- */
 function ghSynchroniser(raison = 'manuel'){
-  if(!ghActif()) return Promise.resolve(false);
+  if(!ghActif() || etatDonnees !== 'pretes') return Promise.resolve(false);   /* v4.4.1 : jamais avec des données pas encore lues */
   clearTimeout(gh.t); gh.attente = false;
   if(gh.enCours){ gh.aRefaire = true; return gh.enCours; }
   gh.enCours = (async () => {
@@ -6705,7 +6771,8 @@ const TEXTES_GITHUB = {
 async function initGitHub(){
   if(!stockage.idb) return;
   let cfg = null, base = null;
-  try { cfg = await idbLire('github'); base = await idbLire('github-base'); } catch(e){ cfg = null; }
+  try { cfg = await sousDelai(idbLire('github'), DELAI_DONNEES, 'Lecture de la clé GitHub'); base = await sousDelai(idbLire('github-base'), DELAI_DONNEES, 'Lecture de la base de synchronisation'); }
+  catch(e){ if(e instanceof DelaiDepasse) throw e; cfg = null; }   /* v4.4.1 : navigateur muet → message (lancerGitHub), pas une synchro coupée en silence */
   if(!cfg || !cfg.jeton) return;
   gh.cfg = cfg; gh.etat = 'ok';
   if(base && base.depot === cleDepot(cfg) && typeof base.texte === 'string'){
@@ -6734,6 +6801,7 @@ async function ghConnecter(v){
   if(!/\.json$/i.test(cfg.chemin)) return 'Le fichier doit finir par .json (par exemple donnees.json).';
   if(!cfg.jeton) return 'Colle ta clé GitHub.';
   if(DB.reglages.demo) return 'Mode démo : reviens d’abord à tes données (bouton « Revenir à mes données »).';
+  if(etatDonnees !== 'pretes') return 'Tes données n’ont pas pu être lues dans ce navigateur : recharge d’abord la page (F5).';   /* v4.4.1 */
   let r;
   try { r = await ghAppel(ghDepot(cfg), {cfg}); } catch(e){ return e && e.name === 'HorsLigne' ? 'Pas de réponse de GitHub (réseau ?).' : 'Connexion impossible : ' + ((e && e.message) || e); }
   if(r.statut === 401) return 'GitHub refuse la clé : mal copiée ou expirée.';
@@ -7041,7 +7109,44 @@ function appliquerTheme(clair, garder = true){
   if(b){ b.innerHTML = ico(clair ? 'lune' : 'soleil', 17); b.title = t; b.setAttribute('aria-label', t); }
   if(garder) try { localStorage.setItem(CLE_THEME, clair ? 'clair' : 'sombre'); } catch(e){ /* navigation privée : thème de cette visite seulement */ }
 }
+/* --- Démarrage ---
+   v4.4.1 : une étape ne peut plus bloquer toute l'appli. De la v4.0 à la v4.4, dans Brave (PC), demarrer() attendait sans limite,
+   avant le premier affichage, la réponse du navigateur sur l'accès au dossier Drive mémorisé (initDrive) ; elle ne venait jamais :
+   pas de page, pas de navigation (écouteur hashchange jamais posé), pas de synchro GitHub, et aucun message. Désormais :
+   · le filet de sécurité est posé en tête du script (signaler), et demarrer() a son .catch (echecDemarrage) ;
+   · chaque étape est isolée (etape) : un échec est noté dans la console, annoncé à la fin du démarrage, et la suite a lieu ;
+   · ce qui attend le navigateur (IndexedDB, accès à un dossier) a un délai maximum (sousDelai) ;
+   · la navigation est posée avant toute attente ; l'affichage, la synchro, le service worker et les écouteurs ont toujours lieu ;
+   · données illisibles (etatDonnees 'bloquees') : un bandeau le dit, rien n'est écrit ni synchronisé. */
+const incidentsDemarrage = [];
+function etape(nom, f){
+  const noter = e => { console.error('Démarrage · ' + nom + ' :', e); incidentsDemarrage.push(nom + ' (' + ((e && e.message) || e) + ')'); };
+  try { const r = f(); return r && typeof r.then === 'function' ? r.catch(noter) : r; }
+  catch(e){ noter(e); }
+}
 async function demarrer(){
+  etape('cadre de la page', dessinerCadre);
+  etape('navigation', ecouterNavigation);   /* dès maintenant : les liens marchent même si une étape traîne */
+  const drivePret = etape('dossier Drive', initDrive);   /* dossier Drive relié sur cet appareil : accès déjà accordé ? (pendant la lecture des données) */
+  const choix = await etape('données du navigateur', chargerDonneesDemarrage);
+  etape('entretien', entretien);   /* tâches terminées d'hier → archives ; corbeille de plus de 30 jours → effacée */
+  etape('focus en cours', reprendreFocus);
+  await drivePret;
+  etape('affichage', rendre);
+  etape(choix ? 'choix des données' : 'ouverture depuis Android', () => choix ? ficheMigration(choix) : ouvertureDepuisAndroid());
+  etape('synchronisation GitHub', lancerGitHub);
+  etape('appli installable', installerAppli);
+  etape('dossier LIFE PANEL', reprendreDossier);
+  etape('écouteurs', ecouterPage);
+  etape('icône d’état', majIndicateur);
+  if(incidentsDemarrage.length){
+    const quoi = incidentsDemarrage.join(' · ');
+    try { toast('Démarrage incomplet : ' + quoi + '. Le reste fonctionne ; recharge la page (F5) et, si ça recommence, envoie ce message à Claude.'); }
+    catch(e){ messageUrgence('Démarrage incomplet', quoi); }
+  }
+}
+/* Cadre de la page : thème, icônes, menu (rien n'y attend le navigateur) */
+function dessinerCadre(){
   appliquerTheme(themeClair() || themeGarde(), false);   /* déjà posé par le script de <head> ; relu ici au cas où il n'aurait pas tourné */
   try { localStorage.removeItem('lifepanel-ia'); } catch(e){}   /* réglage de l'IA locale (retirée en v3.38) resté dans ce navigateur */
   $('#logo').innerHTML = ico('maison', 18, '#fff', 2);
@@ -7058,48 +7163,72 @@ async function demarrer(){
   $('#fab').innerHTML = ico('plus', 26); majVoletFixe();
   $('#menu').innerHTML = MENU.map(([r, n, i]) => `<a href="#/${r}" data-route="${r}" title="${n}">${ico(i, 16)}<span class="lib">${n}</span>${r === 'inbox' ? '<span class="badge" id="badge-inbox" hidden></span>' : `<span class="badges" id="badges-${r}"></span>`}</a>`).join('') +
     lienWikiApp('', `${ico('livre', 16)}<span class="lib">Wiki</span><span class="ext">${ico('externe', 13)}</span>`);
-
-  /* Données du navigateur (IndexedDB ou copie légère), sinon reprise des versions précédentes (jamais la démo toute seule) */
-  let actuel = null, choix = null;
-  try { actuel = await chargerNavigateur(); } catch(e){ actuel = lireCle(CLE); }
-  if(actuel) DB = normaliser(actuel);
-  else {
-    const a = anciennesVersions();
-    if(a.length === 1){ DB = normaliser(a[0].data); sauver(); setTimeout(() => toast('Données reprises de ' + a[0].nom + ' : ' + resume(DB) + '.'), 500); }
-    else if(a.length > 1) choix = a;
-  }
-  entretien();   /* tâches terminées d'hier → archives ; corbeille de plus de 30 jours → effacée */
-  const f = lireCle(CLE_FOCUS);
-  if(f && f.fin > Date.now() && tache(f.taskId)){ focusEnCours = f; lancerMinuteur(); }
-  else if(f){ try { localStorage.removeItem(CLE_FOCUS); } catch(e){} }
-  try { await initDrive(); } catch(e){}   /* dossier Drive relié sur cet appareil : accès déjà accordé ? */
-
-  rendre();
-  if(choix) ficheMigration(choix);
-  else ouvertureDepuisAndroid();
-  initGitHub().then(() => initNotif()).catch(() => {});   /* synchronisation GitHub, si elle a été activée sur cet appareil, puis notifications */
-  /* Appli installable (icône, plein écran, hors ligne) : seulement pour la version en ligne (https) */
-  if(location.protocol === 'https:' || location.hostname === 'localhost'){
-    if(!$('link[rel="manifest"]')){ const l = document.createElement('link'); l.rel = 'manifest'; l.href = 'manifest.webmanifest'; document.head.appendChild(l); }
-    if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('sw.js').catch(() => {});
-      /* Appui sur une notification alors que LIFE PANEL est déjà ouvert : le service worker demande d'aller à la bonne page */
-      navigator.serviceWorker.addEventListener('message', e => { const u = e.data && e.data.aller; if(typeof u === 'string' && /^#\/[\w/?=&%.-]*$/.test(u)) location.hash = u; });
+}
+/* Navigation : changement d'adresse (liens, menu, Retour) et taille de la fenêtre. Posée avant toute attente du démarrage */
+function ecouterNavigation(){
+  window.addEventListener('hashchange', () => { fermerModale({historique:false}); fermerVolet({historique:false}); fermerDossiers({historique:false}); fermerPalette(); rendre(); });
+  let tGraphes = null;   /* fenêtre redimensionnée ou téléphone tourné : graphiques redessinés à la nouvelle largeur */
+  window.addEventListener('resize', () => { clearTimeout(tGraphes); tGraphes = setTimeout(ajusterGraphes, 150); });
+}
+/* Données au démarrage : celles du navigateur (IndexedDB, avec un délai maximum ; sinon la copie légère), sinon reprise des versions
+   précédentes (jamais la démo toute seule). Renvoie les anciennes versions à proposer (fenêtre de choix), ou null.
+   v4.4.1 : rien de lisible (IndexedDB muet et pas de copie légère) ou lecture qui plante → etatDonnees 'bloquees' : ni reprise des
+   anciennes versions, ni écriture, ni synchro (elles mettraient une base vide ou ancienne par-dessus tes données). */
+async function chargerDonneesDemarrage(){
+  let actuel = null;
+  const lecture = chargerNavigateur();
+  try { actuel = await sousDelai(lecture, DELAI_DONNEES, 'Lecture des données du navigateur (IndexedDB)'); }
+  catch(e){
+    console.warn((e && e.message) || e);
+    actuel = lireCle(CLE);   /* copie légère : quand elle existe, elle n'est jamais plus ancienne qu'IndexedDB */
+    if(!actuel){
+      etatDonnees = 'bloquees';
+      blocageDonnees = e instanceof DelaiDepasse ? 'Le navigateur n’a pas donné tes données à temps.' : 'Lecture impossible (' + ((e && e.message) || e) + ').';
+      lecture.then(d => { if(d) toast('Tes données viennent d’être lues : recharge la page pour les retrouver.', [['Recharger', () => location.reload()]]); }).catch(() => {});
+      return null;
     }
   }
-
-  /* Dossier relié lors d'une session précédente : un clic suffit pour le reconnecter */
-  if(fsDispo() && 'indexedDB' in window){
-    idbLire('dossier').then(async h => {
-      if(!h) return;
-      dossierMemorise = h;
-      let autorise = false;
-      try { autorise = await h.queryPermission({mode:'readwrite'}) === 'granted'; } catch(e){}
-      if(autorise) await brancherDossier(h, {auto:true});
-      majIndicateur(); majPied(); if(lireRoute().nom === 'donnees') rendre();
-    }).catch(() => {});
+  if(actuel){
+    try { DB = normaliser(actuel); }
+    catch(e){ etatDonnees = 'bloquees'; blocageDonnees = 'Leur lecture a planté (' + ((e && e.message) || e) + ').'; throw e; }
+    etatDonnees = 'pretes';
+    return null;
   }
-  majIndicateur();
+  etatDonnees = 'pretes';   /* rien dans ce navigateur : première ouverture */
+  const a = anciennesVersions();
+  if(a.length === 1){ DB = normaliser(a[0].data); sauver(); setTimeout(() => toast('Données reprises de ' + a[0].nom + ' : ' + resume(DB) + '.'), 500); }
+  return a.length > 1 ? a : null;
+}
+/* Synchronisation GitHub, si elle a été activée sur cet appareil, puis notifications (jamais avec des données illisibles) */
+function lancerGitHub(){
+  if(etatDonnees !== 'pretes') return;
+  initGitHub().then(() => initNotif()).catch(e => { console.error(e); toast('La synchronisation GitHub n’a pas pu démarrer : ' + ((e && e.message) || e) + '. Recharge la page (F5).'); });
+}
+/* Appli installable (icône, plein écran, hors ligne) : seulement pour la version en ligne (https) */
+function installerAppli(){
+  if(location.protocol !== 'https:' && location.hostname !== 'localhost') return;
+  if(!$('link[rel="manifest"]')){ const l = document.createElement('link'); l.rel = 'manifest'; l.href = 'manifest.webmanifest'; document.head.appendChild(l); }
+  if('serviceWorker' in navigator){
+    /* Appui sur une notification alors que LIFE PANEL est déjà ouvert : le service worker demande d'aller à la bonne page */
+    navigator.serviceWorker.addEventListener('message', e => { const u = e.data && e.data.aller; if(typeof u === 'string' && /^#\/[\w/?=&%.-]*$/.test(u)) location.hash = u; });
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+}
+/* Dossier relié lors d'une session précédente : un clic suffit pour le reconnecter (jamais avec des données illisibles) */
+function reprendreDossier(){
+  if(etatDonnees !== 'pretes' || !fsDispo() || !('indexedDB' in window)) return;
+  sousDelai(idbLire('dossier'), DELAI_DOSSIER, 'Lecture du dossier LIFE PANEL mémorisé').then(async h => {
+    if(!h) return;
+    dossierMemorise = h;
+    let autorise = false;
+    try { autorise = await sousDelai(h.queryPermission({mode:'readwrite'}), DELAI_DOSSIER, 'Accès au dossier LIFE PANEL') === 'granted'; }
+    catch(e){ if(e instanceof DelaiDepasse) console.warn(e.message); }   /* sans réponse : « à reconnecter » (un clic) */
+    if(autorise) await brancherDossier(h, {auto:true});
+    majIndicateur(); majPied(); if(lireRoute().nom === 'donnees') rendre();
+  }).catch(e => console.warn((e && e.message) || e));
+}
+/* Écouteurs de la page : départ, retour sur l'onglet, réseau, autres onglets, minuit */
+function ecouterPage(){
   /* Quitter la page, fermer l'onglet ou le navigateur alors que donnees.json n'est pas à jour :
      le navigateur demande confirmation (son propre message, qu'une page ne peut pas modifier) */
   window.addEventListener('beforeunload', e => {
@@ -7123,15 +7252,8 @@ async function demarrer(){
   window.addEventListener('online', () => { if(ghActif()) ghSynchroniser('reseau'); });
   /* Vérification toutes les 30 s tant que la page est affichée (sauf si une synchro vient d'avoir lieu) */
   setInterval(() => { if(ghActif() && document.visibilityState === 'visible' && !gh.enCours && Date.now() - gh.controle > 25000) ghSynchroniser('periodique'); }, 30000);
-  window.addEventListener('hashchange', () => { fermerModale({historique:false}); fermerVolet({historique:false}); fermerDossiers({historique:false}); fermerPalette(); rendre(); });
-  let tGraphes = null;   /* fenêtre redimensionnée ou téléphone tourné : graphiques redessinés à la nouvelle largeur */
-  window.addEventListener('resize', () => { clearTimeout(tGraphes); tGraphes = setTimeout(ajusterGraphes, 150); });
-  /* Une erreur imprévue n'est plus silencieuse : un message l'annonce */
-  const signaler = m => { console.error(m); toast('Un problème est survenu : ' + (m && m.message || m) + '. Recharge la page (F5) si quelque chose ne répond plus.'); };
-  window.addEventListener('error', e => signaler(e.error || e.message));
-  window.addEventListener('unhandledrejection', e => signaler(e.reason));
-  /* Un autre onglet a modifié les données : on se met à jour (message de l'onglet, ou copie légère modifiée) */
-  const reprendre = d => { if(!d || (d.reglages && d.reglages.maj === DB.reglages.maj)) return; DB = normaliser(d); versionDonnees++;
+  /* Un autre onglet a modifié les données : on se met à jour (message de l'onglet, ou copie légère modifiée) ; pas avec des données illisibles ici */
+  const reprendre = d => { if(etatDonnees !== 'pretes' || !d || (d.reglages && d.reglages.maj === DB.reglages.maj)) return; DB = normaliser(d); versionDonnees++;
     /* Synchro GitHub : si l'autre onglet vient de synchroniser, sa base correspond à ces données → on la reprend */
     if(ghActif() && stockage.idb) idbLire('github-base').then(b => { if(b && gh.cfg && b.depot === cleDepot(gh.cfg) && b.texte === JSON.stringify(normaliser(DB))){ gh.sha = b.sha; gh.base = b.texte; } }).catch(() => {});
     if(!modaleOuverte()) rendre(); };
@@ -7144,7 +7266,7 @@ async function demarrer(){
   let jour = aujourdhui();
   setInterval(() => { if(aujourdhui() !== jour){ jour = aujourdhui(); moisCal = moisCourant(); entretien(); if(!modaleOuverte()) rendre(); } }, 60000);
 }
-demarrer();
+demarrer().catch(echecDemarrage);
 </script>
 </body>
 </html>
