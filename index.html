@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-78NWoFELirNWHDRXbEis7+DHC2/jhZbC4HOYqKbS08c='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-ajNUJPNgcNGX0hYbPbEOhrM3qb+n51QAkWjl8RxtVkU='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v4.4.1
+  LIFE PANEL — v4.5
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -224,6 +224,11 @@
   démarrage est isolée (un échec est annoncé, la suite a lieu), la navigation est posée avant toute attente, le message « Un problème
   est survenu » est posé en tout premier, et un démarrage qui échoue le dit au centre de la page. Données du navigateur illisibles :
   un bandeau le dit, et rien n'est enregistré ni synchronisé (jamais une base vide par-dessus tes données). Mêmes données (VERSION 22).
+  v4.5 : Tâches → « Par date » ne montre plus que les tâches libres, ni dans un projet ni dans une liste : une tâche d'un projet n'est
+  que dans « Par projet », une tâche d'une liste que dans sa liste (et « Par liste »). Une ligne dit combien sont rangées ailleurs (dont
+  en retard), avec « Par projet » et « Par liste ». Un projet filtré (« Tâches du projet ») montre toujours toutes ses tâches, et le
+  filtre de la page (comme un lien de la recherche générale) cherche dans toutes les tâches. Accueil (Tâches du jour), calendrier et
+  rappels : inchangés. Mêmes données (VERSION 22).
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -768,6 +773,10 @@ a.puce.tag:hover{filter:brightness(1.25)}
 .cadre-taches .dossier-btn.nouvelle-liste,.cadre-taches .dossier-btn.nouvelle-liste svg{color:var(--texte-faible)}
 .cadre-taches .dossier-btn.nouvelle-liste:hover,.cadre-taches .dossier-btn.nouvelle-liste:hover svg{color:var(--texte)}
 .puce.liste{transition:border-color .15s,color .15s}
+/* v4.5 : « Par date » : ligne qui dit combien de tâches d'un projet ou d'une liste sont rangées ailleurs */
+.note-ailleurs{margin:0 0 12px;gap:6px}
+.note-ailleurs .aide{margin:0 4px 0 0}
+#liste-taches > .note-ailleurs,#liste-taches > .vide{column-span:all}   /* sur toute la largeur quand les tâches sont en deux colonnes */
 .puce.liste svg{color:var(--i-bleu);flex-shrink:0}
 a.puce.liste:hover{border-color:#3987e560;color:var(--texte)}
 a.lien-liste{display:inline-flex;align-items:center;gap:5px;text-decoration:none;transition:color .15s}
@@ -2949,6 +2958,7 @@ const TACHES_PAR_PAGE = 20;   /* « File d'exécution » : les 20 premières tâ
 let limiteTaches = TACHES_PAR_PAGE;
 /* v4.3 : la même file, affichée au choix (colonne « Afficher » à gauche ; volet à droite sur téléphone et tablette, comme les dossiers des Notes) :
    par date (en retard, aujourd'hui, demain…, sans date), par projet, par liste, ou une seule liste personnalisée.
+   v4.5 : « par date » ne montre que les tâches libres, ni dans un projet ni dans une liste (voir tacheLibre).
    vueTaches : 'date' | 'projet' | 'liste' | 'l:<id de la liste>', gardée sur cet appareil (jamais dans les données synchronisées). */
 const CLE_VUE_TACHES = 'lifepanel.vueTaches';
 const VUES_TACHES = [['date', 'Par date', 'calendrier'], ['projet', 'Par projet', 'dossier'], ['liste', 'Par liste', 'liste']];
@@ -3007,13 +3017,28 @@ function groupesTaches(ouvertes){
   return [...m.entries()].map(([k, ts]) => ({taches:ts, date:k === '0', cls:k === '0' ? 'retard' : '',
     nom:`<span class="etiq">${k === '0' ? 'En retard' : k === 'z' ? 'Sans date' : k === auj ? 'Aujourd’hui' : k === dem ? 'Demain' : esc(labelJour(k))}</span>`}));
 }
+/* v4.5 : « Par date » ne montre que les tâches libres, ni dans un projet ni dans une liste : une tâche d'un projet n'est que dans
+   « Par projet », une tâche d'une liste que dans sa liste (et « Par liste »). Moins d'informations d'un coup. Exceptions : un projet
+   filtré (« Tâches du projet », lien « …?projet=ID ») montre toutes ses tâches, et un filtre (ou un lien de la recherche générale)
+   cherche dans toutes les tâches. Accueil (Tâches du jour), calendrier et rappels : inchangés. */
+const tacheLibre = t => !t.projet && !t.liste;
+/* Ce que « Par date » laisse de côté : combien de tâches à faire sont rangées ailleurs (dont en retard), et de quoi les voir */
+function noteAilleurs(){
+  const autres = DB.taches.filter(t => !t.fait && !tacheLibre(t)); if(!autres.length) return '';
+  const projets = autres.some(t => t.projet), listes = autres.some(t => t.liste), retard = autres.filter(estEnRetard).length, n = autres.length;
+  return `<div class="boutons note-ailleurs"><span class="aide">${pluriel(n, 'tâche')} ${projets && listes ? 'd’un projet ou d’une liste' : projets ? 'd’un projet' : 'd’une liste'}
+    ${n > 1 ? 'sont rangées' : 'est rangée'} ailleurs${retard ? ` (dont ${retard} en retard)` : ''} :</span>${projets ? btnAction('vue-taches', ico('dossier', 13) + 'Par projet', 'btn f compact', 'data-v="projet"') : ''}${
+    listes ? btnAction('vue-taches', ico('liste', 13) + 'Par liste', 'btn f compact', 'data-v="liste"') : ''}</div>`;
+}
 function listeTaches(){
   verifierVueTaches();
   const q = FILTRES.taches, fp = projetFiltre('taches'), lv = listeVue();
-  const l = DB.taches.filter(t => (!fp || t.projet === fp) && (!lv || t.liste === lv.id) && correspondTags(q, t.tags, t.nom, t.date, labelJour(t.date), nomProjet(t.projet), nomListe(t.liste)));
-  const ajout = lv ? ajoutDansListe(lv) : '';
+  const libres = vueTaches === 'date' && !lv && !fp && !q.trim();   /* v4.5 : « Par date » sans filtre ni projet filtré : les tâches libres seulement */
+  const l = DB.taches.filter(t => (!fp || t.projet === fp) && (!lv || t.liste === lv.id) && (!libres || tacheLibre(t)) && correspondTags(q, t.tags, t.nom, t.date, labelJour(t.date), nomProjet(t.projet), nomListe(t.liste)));
+  const ajout = lv ? ajoutDansListe(lv) : '', ailleurs = libres ? noteAilleurs() : '';
   if(!l.length){
     if(lv) return ajout + vide(q ? `Aucune tâche de cette liste ne correspond à « ${esc(q)} ».` : 'Cette liste est vide : écris sa première tâche juste au-dessus, puis Entrée.');
+    if(ailleurs) return ailleurs + vide('Aucune tâche hors projet et hors liste.', btnAction('tache-nouvelle', 'Créer une tâche', 'btn p'));
     return q ? vide(`Aucune tâche ne correspond à « ${esc(q)} ».`) : vide('Aucune tâche pour l’instant.', btnAction('tache-nouvelle', 'Créer une tâche', 'btn p'));
   }
   const ouvertes = l.filter(t => !t.fait);
@@ -3023,13 +3048,14 @@ function listeTaches(){
      Pas de puce répétée : ni celle du projet quand on range par projet, ni celle de la liste quand on range par liste ou dans la liste. */
   const groupes = groupesTaches(ouvertes), file = groupes.flatMap(g => g.taches);
   const total = file.length, visibles = new Set(file.slice(0, limiteTaches)), options = {liste:!lv && vueTaches !== 'liste', projet:vueTaches !== 'projet'};
-  let html = ajout;
+  let html = ajout + ailleurs;
   groupes.forEach(g => { const ts = g.taches.filter(t => visibles.has(t)); if(!ts.length) return;
     html += (g.nom ? `<div class="groupe-titre${g.cls ? ' ' + g.cls : ''}">${g.nom}<span class="compte">${g.taches.length}</span></div>` : '') +
       `<ul class="liste">${ts.map(t => ligneTache(t, {...options, date:g.date})).join('')}</ul>`; });
   const reste = total - limiteTaches;
   if(reste > 0) html += `<div class="plus-notes"><span class="aide">${limiteTaches} tâches affichées sur ${total}, dans l’ordre de la file</span>${btnAction('taches-plus', `Afficher ${Math.min(TACHES_PAR_PAGE, reste)} de plus`, 'btn')}</div>`;
-  if(!file.length && faites.length) html += vide(lv ? 'Tout est fait dans cette liste.' : 'Toutes les tâches sont terminées.');
+  if(!file.length && faites.length) html += vide(lv ? 'Tout est fait dans cette liste.' : ailleurs ? 'Plus rien à faire ici.' : 'Toutes les tâches sont terminées.');
+  else if(!file.length && ailleurs) html += vide('Aucune tâche hors projet et hors liste.', btnAction('tache-nouvelle', 'Créer une tâche', 'btn p'));   /* v4.5 : seulement des tâches archivées */
   /* Terminées (rayées) : repliées, dépliées d'office quand le filtre y trouve quelque chose ; elles partent aux archives le lendemain */
   if(faites.length) html += blocPliable('taches-terminees', `<span class="etiq">Terminées</span><span class="compte">${faites.length}</span><span class="aide" style="margin:0 0 0 4px">archivées automatiquement demain</span>`,
     `<ul class="liste">${faites.map(t => ligneTache(t, options)).join('')}</ul>`, !!q.trim());
@@ -3870,7 +3896,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v4.4.1 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v4.5 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
