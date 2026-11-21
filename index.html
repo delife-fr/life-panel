@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-RWnD3SlrF1JlBF67tk1M8wbGm16rYw/S90G5JtV0mLA='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-SObI3TFzFPxGzhiBkayitRPaXB4DpHfDQica9BCoY+0='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v4.6
+  LIFE PANEL — v4.7
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -234,6 +234,13 @@
   projet », ou « Il n'y a aucune liste personnalisée » (« Aucune tâche dans tes listes personnalisées » s'il y a des listes) avec
   un bouton « Nouvelle liste ». Plus de titre « File d'exécution » ; les tâches sont les unes sous les autres à toutes les largeurs
   (plus de deux colonnes sur grand écran). Mêmes exceptions qu'en v4.5 (projet filtré, filtre, recherche). Mêmes données (VERSION 22).
+  v4.7 : fenêtre « Tags », ouverte de partout : bouton étiquette de la barre du haut, touche t, Ctrl+K « Tags », roue crantée au-dessus
+  des tags de Notes et Documents. Tous les tags par ordre alphabétique, avec où ils servent (« 3 notes · 1 tâche ») ; le champ du haut
+  cherche dans la liste et ajoute un tag sans le mettre sur rien (gardé, proposé dans les formulaires) ; renommer (partout ; même nom
+  qu'un autre tag : les deux sont fusionnés) ; supprimer (retiré de tous les éléments, après confirmation s'il sert). « Annuler » dans le
+  message. #répondre, tenu à jour tout seul sur les contacts, n'y est ni renommé ni supprimé. Les éléments gardent leur date de
+  modification. Notes et Documents : la rubrique « Tags » de la colonne des dossiers se replie et se déplie (repliée au départ, seul le
+  tag choisi reste alors visible ; choix gardé sur chaque appareil). Données VERSION 23 : « tags », les tags créés dans la fenêtre.
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -252,7 +259,7 @@
       en « mode démo » (rien n'est écrit ni synchronisé) jusqu'à « Revenir à mes
       données » ou « Effacer la démo ».
 
-  RACCOURCIS : « / » rechercher · « c » capture rapide · Ctrl+K commandes · Échap fermer
+  RACCOURCIS : « / » rechercher · « c » capture rapide · « t » tags · Ctrl+K commandes · Échap fermer
   ============================================================================
 -->
 <style>
@@ -633,12 +640,22 @@ a.puce.lien-tel:hover{border-color:var(--i-bleu)}
 .dossiers .etiq{padding:2px 8px 8px}
 .dossier-btn{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;text-align:left;padding:8px 9px;border-radius:var(--r4);font-size:var(--t4);color:var(--texte-doux);transition:background .15s,color .15s}
 .dossier-btn svg{color:var(--i-jaune);flex-shrink:0}
-.dossier-btn:first-of-type svg{color:var(--texte-faible)}
+.dossiers > .dossier-btn:first-of-type svg{color:var(--texte-faible)}
 .dossier-btn:hover{background:rgb(var(--sur) / 0.043);color:var(--texte)}
 .dossier-btn.actif{background:#c985001f;color:var(--texte);box-shadow:inset 0 0 0 1px #c9850045}
 .dossier-btn .nom-d{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dossier-btn .nb{font-variant-numeric:tabular-nums;font-size:var(--t1);color:var(--texte-faible)}
 .dossier-btn.archives{margin-top:8px}
+/* Rubrique « Tags » de Notes et Documents, repliable (v4.7) : en-tête cliquable (chevron, nombre de tags), roue crantée → fenêtre « Tags » */
+.tete-tags{display:flex;align-items:center;gap:2px;margin-top:8px}
+.deplier-tags{flex:1;min-width:0;display:flex;align-items:center;gap:7px;border:0;background:transparent;padding:6px 8px;border-radius:var(--r3);color:var(--texte-faible);text-align:left;transition:background .15s,color .15s}
+.deplier-tags:hover{background:rgb(var(--sur) / 0.043);color:var(--texte)}
+.dossiers .deplier-tags .etiq{padding:0;color:inherit}
+.deplier-tags svg{flex-shrink:0;transition:transform .15s}
+.deplier-tags[aria-expanded="true"] svg{transform:rotate(90deg)}
+.deplier-tags .nb{font-size:var(--t1);font-variant-numeric:tabular-nums}
+.tags-rubrique{display:flex;flex-direction:column;gap:2px}
+.tags-rubrique.replie > .dossier-btn:not(.actif){display:none}
 .dossier-btn.archives svg{color:var(--texte-faible)}
 .dossier-actif{display:inline-flex;align-items:center;gap:6px;font-size:var(--t3);color:var(--texte-doux)}
 .dossier-actif svg{color:var(--i-jaune)}
@@ -765,6 +782,20 @@ a.puce.tag:hover{filter:brightness(1.25)}
 .tags-dispo{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px;max-height:88px;overflow:auto}
 .tags-dispo .puce{cursor:pointer}
 .tags-dispo .puce.actif{color:var(--i-violet);border-color:#9085e970;background:#9085e926}
+/* Fenêtre « Tags » (v4.7) : champ (ajouter ou chercher), puis une ligne par tag (usage, renommer, supprimer) */
+.tags-ajout{display:flex;gap:8px;margin:0 0 10px}
+.tags-ajout .saisie{flex:1;min-width:0}
+.tags-compte{margin:0 0 4px}
+.tags-gestion{max-height:min(52vh,440px);overflow:auto;margin:0 -6px 4px;padding:0 6px;overscroll-behavior:contain}
+.ligne-tag{min-height:46px}
+.ligne-tag > .puce.tag{flex-shrink:1;min-width:0;max-width:60%;overflow:hidden;text-overflow:ellipsis}
+.ligne-tag .usage{flex:1;min-width:0;font-size:var(--t2);color:var(--texte-faible);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ligne-tag .outils{display:flex;align-items:center;gap:4px;margin-left:auto;flex-shrink:0}
+.ligne-tag.edition .saisie{flex:1;min-width:0;padding:6px 10px}
+.ligne-tag.confirmer{flex-wrap:wrap}
+.ligne-tag .question{flex:1 1 220px;font-size:var(--t3);color:var(--texte-doux)}
+.ligne-tag .question b{color:var(--i-violet)}
+.liste > li.vide-tags{color:var(--texte-faible);font-size:var(--t3)}
 .filtre-projet{display:inline-flex;align-items:center;gap:6px;font-size:var(--t3);color:var(--texte-doux);border:1px solid #9085e955;background:#9085e914;border-radius:99px;padding:1px 2px 1px 10px}
 .filtre-projet .icone-btn{width:24px;height:24px}
 .dossiers-docs .etiq{padding:12px 8px 6px}
@@ -1305,6 +1336,7 @@ body{padding-bottom:calc(62px + env(safe-area-inset-bottom))}
     </label>
     <div class="resultats" id="resultats-globaux" hidden></div>
   </div>
+  <button class="rond" id="btn-tags" data-action="tags" title="Tags (touche t)" aria-label="Tags : ajouter, renommer, supprimer"></button>
   <button class="rond" id="btn-theme" data-action="theme" title="Passer au thème clair" aria-label="Passer au thème clair"></button>
   <button class="rond plus" id="btn-ajouter" data-action="capture" title="Capture rapide (touche c)" aria-label="Capture rapide"></button>
   <button class="rond ecriture" id="etat-ecriture" data-action="etat-ecriture" aria-live="polite" title="Écriture des données"></button>
@@ -1359,7 +1391,7 @@ window.addEventListener('unhandledrejection', e => signaler(e.reason));
 /* ==========================================================================
    A. DONNÉES — un seul modèle, une seule clé
    ========================================================================== */
-const VERSION = 22;  /* 8 : archives et corbeille · 9 : module Documents, tags communs · 10 : liste des comptes (statistiques, budgets) · 11 : couleur de chaque catégorie · 12 : téléphone et adresse des contacts · 13 : autre téléphone des contacts · 14 : e-mail des contacts · 15 : dossier Drive des projets, versions remplacées par la synchro (corbeille) · 16 : date de modification des mouvements et de l'Inbox (fusion de la synchro) · 17 : note des mouvements · 18 : événements du calendrier · 19 : étapes des tâches · 20 : tags des événements (catégories d'événements retirées) · 21 : vocal d'un élément de l'Inbox (v3.38 ; fonction retirée en v4, le champ est seulement conservé) · 22 : listes de tâches personnalisées (« listes », « liste » d'une tâche) */
+const VERSION = 23;  /* 8 : archives et corbeille · 9 : module Documents, tags communs · 10 : liste des comptes (statistiques, budgets) · 11 : couleur de chaque catégorie · 12 : téléphone et adresse des contacts · 13 : autre téléphone des contacts · 14 : e-mail des contacts · 15 : dossier Drive des projets, versions remplacées par la synchro (corbeille) · 16 : date de modification des mouvements et de l'Inbox (fusion de la synchro) · 17 : note des mouvements · 18 : événements du calendrier · 19 : étapes des tâches · 20 : tags des événements (catégories d'événements retirées) · 21 : vocal d'un élément de l'Inbox (v3.38 ; fonction retirée en v4, le champ est seulement conservé) · 22 : listes de tâches personnalisées (« listes », « liste » d'une tâche) · 23 : tags créés à la main, gardés même sans élément (« tags », fenêtre « Tags ») */
 const CLE = 'lifepanel';                   /* copie légère dans localStorage (voir « Stockage dans le navigateur ») */
 const CLE_SECOURS = 'lifepanel.secours';   /* ancienne place de la copie de secours (v3.3 à v3.8), reprise dans IndexedDB */
 const MIROIR_MAX = 2e6;                    /* au-delà de 2 millions de caractères, pas de copie dans localStorage */
@@ -1395,6 +1427,7 @@ const DBVide = () => ({
   version: VERSION, prenom: '',
   projets: [], taches: [], notes: [], documents: [], mouvements: [], contacts: [], inbox: [], evenements: [], listes: [], corbeille: [],
   categories: CATEGORIES_DEFAUT.slice(),
+  tags: [],   /* VERSION 23 : tags ajoutés dans la fenêtre « Tags », gardés même quand aucun élément ne les porte (les autres n'existent que sur les éléments) */
   couleursCategories: [],   /* {nom, couleur} : couleur gardée par chaque catégorie (graphique « Par catégorie ») */
   comptes: [],   /* {nom, stats, budget, periode} : stats = pris en compte dans les statistiques ; budget par mois ou par an */
   reglages: {demo: false, maj: null, sansCompteStats: true}
@@ -1548,6 +1581,7 @@ function normaliser(brut){
     if(!vusC.has(k)){ vusC.set(k, nom); d.categories.push(nom); } return vusC.get(k); };
   (Array.isArray(brut.categories) ? brut.categories : []).forEach(categorie);
   if(!d.categories.length) CATEGORIES_DEFAUT.forEach(categorie);
+  d.tags = nettoyerTags(Array.isArray(brut.tags) ? brut.tags.filter(t => typeof t === 'string') : []);   /* VERSION 23 : vide pour les anciennes données */
   d.mouvements.forEach(m => { m.categorie = m.categorie ? categorie(m.categorie) : ''; });
   d.couleursCategories = colorerCategories(d.categories, Array.isArray(brut.couleursCategories) && brut.couleursCategories.length ? brut.couleursCategories
     : Object.entries(couleursReference()).map(([nom, couleur]) => ({nom, couleur})), d.mouvements);   /* sans couleurs : celles de la liste de référence */
@@ -3439,7 +3473,7 @@ function pageNotes(){
   return tete + `<div class="notes-cadre">
     <nav class="carte dossiers${dossiersOuverts ? ' ouvert' : ''}" id="dossiers" aria-label="Dossiers de notes">${teteDossiers()}
       ${bouton(dossiers[0])}${fsDispo() ? bouton(driveNotes()) : ''}
-      ${dossiers.length > 1 ? `<div class="etiq">Tags</div>${dossiers.slice(1).map(bouton).join('')}` : ''}
+      ${dossiers.length > 1 ? rubriqueTags('notes', dossiers.slice(1).map(bouton).join(''), dossiers.slice(1).filter(d => d.v !== SANS_TAG).length) : ''}
     </nav>${voileDossiers()}
     <div class="notes-contenu">${vueDrive ? `<div class="barre-outils barre-dossier">${boutonDossiers(icone(actif), actif)}</div><section class="carte">${explorateurDrive('explo-notes', {base:'', mode:'notes'})}</section>` : `
       <div class="barre-outils">${champFiltre('notes', 'Rechercher…')}<span class="dossier-actif">${ico(icone(actif), 15)}${esc(actif.nom)}</span>${boutonDossiers(icone(actif), actif)}${puceFiltreProjet('notes')}</div>
@@ -3509,7 +3543,7 @@ function pageDocuments(){
   return tete + `<div class="notes-cadre">
     <nav class="carte dossiers dossiers-docs${dossiersOuverts ? ' ouvert' : ''}" id="dossiers" aria-label="Dossiers de documents">${teteDossiers()}${bouton(g.tous)}${fsDispo() ? bouton(drv) : ''}
       <div class="etiq">Échéances</div>${g.echeances.map(bouton).join('')}
-      ${g.tags.length ? `<div class="etiq">Tags</div>${g.tags.map(bouton).join('')}` : ''}
+      ${g.tags.length ? rubriqueTags('documents', g.tags.map(bouton).join(''), g.tags.length) : ''}
     </nav>${voileDossiers()}
     <div class="notes-contenu">${vueDrive ? `<div class="barre-outils barre-dossier">${choix}</div><section class="carte">${explorateurDrive('explo-drive', {base:'', mode:'parcourir'})}</section>` : `
       <div class="barre-outils">${champFiltre('documents', 'Rechercher…')}<span class="dossier-actif">${ico(actif.icone, 15)}${esc(actif.nom)}</span>${choix}${puceFiltreProjet('documents')}</div>
@@ -3899,8 +3933,8 @@ function pageDonnees(){
         <p class="aide">Toujours présentes dans ce navigateur, jamais effacées. Tu peux les reprendre à tout moment (tes données actuelles passent en copie de secours).</p>
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
-        <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v4.6 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>t</kbd> tags</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
+        <p class="aide" style="margin:12px 0 0">Life Panel v4.7 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -4223,10 +4257,12 @@ function champHTML(c){
 const champDate = (attributs, v, libelle) => `<span class="champ-date"><input ${attributs} type="date" value="${esc(v)}"><button type="button" class="icone-btn" data-action="date-effacer" title="Effacer la date" aria-label="Effacer : ${esc(libelle)}">${ico('croix', 14)}</button></span>`;
 /* Saisie des tags (commune à tous les modules) : champ texte + tags déjà utilisés, cliquables.
    Les suggestions suivent la frappe : le morceau en cours (après la dernière virgule) filtre la liste,
-   les tags les plus utilisés d'abord ; Entrée ou un clic remplace ce morceau par le tag choisi. */
+   les tags les plus utilisés d'abord ; Entrée ou un clic remplace ce morceau par le tag choisi.
+   v4.7 : les tags créés dans la fenêtre « Tags » sont proposés aussi, après les autres tant qu'ils ne servent nulle part. */
 function tagsParUsage(){
   const n = new Map(), nom = new Map();
   LISTES_TAGS.forEach(k => DB[k].forEach(x => x.tags.forEach(t => { const c = norm(t); if(!nom.has(c)) nom.set(c, t); n.set(c, (n.get(c) || 0) + 1); })));
+  DB.tags.forEach(t => { const c = norm(t); if(!nom.has(c)){ nom.set(c, t); n.set(c, 0); } });
   return [...nom.keys()].sort((a, b) => n.get(b) - n.get(a) || nom.get(a).localeCompare(nom.get(b), 'fr')).map(c => nom.get(c));
 }
 const morceauTag = v => { const i = v.lastIndexOf(','); return norm(v.slice(i + 1).trim().replace(/^#+/, '').replace(/\s+/g, '-')); };
@@ -4239,7 +4275,7 @@ function suggestionsTags(v){
 function champTags(attributs, v){
   const val = Array.isArray(v) ? v.join(', ') : v || '';
   return `<input ${attributs} data-tags-saisie value="${esc(val)}" autocomplete="off" enterkeyhint="done" placeholder="ex. santé, voiture, permis-de-conduire" aria-label="Tags, séparés par des virgules (un espace devient un tiret)">
-    ${DB && LISTES_TAGS.some(k => DB[k].some(x => x.tags.length)) ? `<div class="tags-dispo" aria-label="Tags déjà utilisés">${suggestionsTags(val)}</div>` : ''}`;
+    ${DB && (DB.tags.length || LISTES_TAGS.some(k => DB[k].some(x => x.tags.length))) ? `<div class="tags-dispo" aria-label="Tags déjà utilisés">${suggestionsTags(val)}</div>` : ''}`;
 }
 /* Choisit un tag : il remplace le morceau en cours de frappe s'il le complète, sinon il est ajouté (ou retiré s'il y est déjà) */
 function choisirTag(i, tag){
@@ -4251,6 +4287,143 @@ function choisirTag(i, tag){
   i.value = l.join(', ') + (l.length ? ', ' : '');
   const d = i.parentElement.querySelector('.tags-dispo'); if(d) d.innerHTML = suggestionsTags(i.value);
   i.dispatchEvent(new Event('change', {bubbles:true}));
+}
+
+/* --- Fenêtre « Tags » (v4.7) : tous les tags, ouverte de partout (bouton étiquette de la barre du haut, touche t, Ctrl+K,
+   roue crantée au-dessus des tags de Notes et Documents). On y ajoute un tag sans le mettre sur rien (gardé dans DB.tags et
+   proposé dans les formulaires), on le renomme (partout ; renommé comme un autre tag, les deux sont fusionnés) ou on le supprime
+   (retiré de tous les éléments, « Annuler » dans le message). Les changements sont enregistrés tout de suite.
+   La date de modification des éléments ne bouge pas : des notes ne remontent pas en tête de liste parce qu'un tag a changé de nom. --- */
+const estTagAuto = t => norm(t) === norm(TAG_REPONDRE);   /* tenu à jour par l'appli (contacts à qui répondre) : ni renommé, ni supprimé, ni créé à la main */
+/* Éléments qui portent des tags ; avec la corbeille : un élément restauré plus tard aura le nouveau nom (ou plus le tag supprimé) */
+function elementsTags(avecCorbeille = false){
+  const l = LISTES_TAGS.flatMap(k => DB[k].map(x => ({k, x})));
+  if(avecCorbeille) DB.corbeille.forEach(e => { if(LISTES_TAGS.includes(e.type) && e.element && Array.isArray(e.element.tags)) l.push({k:e.type, x:e.element, corb:e.id}); });
+  return l;
+}
+/* Tous les tags (éléments archivés compris, corbeille non comptée), par ordre alphabétique : {nom, n, par:{notes:2…}, libre} */
+function inventaireTags(){
+  const m = new Map();
+  const voir = t => { const c = norm(t); if(!m.has(c)) m.set(c, {nom:t, n:0, par:{}, libre:false}); return m.get(c); };
+  elementsTags().forEach(({k, x}) => x.tags.forEach(t => { const e = voir(t); e.n++; e.par[k] = (e.par[k] || 0) + 1; }));
+  DB.tags.forEach(t => { voir(t).libre = true; });
+  return [...m.values()].sort((a, b) => a.nom.localeCompare(b.nom, 'fr', {sensitivity:'base'}));
+}
+const NOMS_TAGS = {taches:'tâche', notes:'note', documents:'document', contacts:'contact', evenements:'événement'};
+const usageTag = x => x.n ? LISTES_TAGS.filter(k => x.par[k]).map(k => pluriel(x.par[k], NOMS_TAGS[k])).join(' · ') : 'aucun élément';
+/* Remplace le tag « ancien » par « nouveau » sur chaque élément qui le porte (nouveau = '' : le retire), et dans DB.tags.
+   Renvoie le nombre d'éléments touchés (hors corbeille) et de quoi tout remettre comme avant. */
+function changerTag(ancien, nouveau){
+  const c = norm(ancien), avant = [], libres = DB.tags.slice();
+  const changer = l => nettoyerTags(nouveau ? l.map(t => norm(t) === c ? nouveau : t) : l.filter(t => norm(t) !== c));
+  let n = 0;
+  elementsTags(true).forEach(({k, x, corb}) => {
+    if(!x.tags.some(t => norm(t) === c)) return;
+    avant.push({k, id:x.id, corb, tags:x.tags.slice()});
+    x.tags = changer(x.tags);
+    if(!corb) n++;
+  });
+  if(DB.tags.some(t => norm(t) === c)) DB.tags = changer(DB.tags);
+  const annuler = () => {   /* retrouvé par son identifiant : DB a pu être remplacée entre-temps (synchronisation) */
+    avant.forEach(({k, id, corb, tags}) => { const e = corb ? DB.corbeille.find(y => y.id === corb) : null, x = corb ? e && e.element : DB[k].find(y => y.id === id);
+      if(x) x.tags = tags; });
+    DB.tags = libres;
+  };
+  return {n, annuler};
+}
+let tagEnCours = null;   /* fenêtre « Tags » : {nom, mode:'renommer'|'supprimer'} pour la ligne en cours de changement */
+function ficheTags(){
+  tagEnCours = null;
+  ouvrirModale(teteModale('Tags', 'tag', 'violet') +
+    `<p class="texte">Communs à tes tâches, notes, documents, contacts et événements. Un tag ajouté ici est proposé dans les formulaires, même s’il ne sert encore nulle part.</p>
+    <form class="tags-ajout" id="form-tags" novalidate>
+      <input class="saisie" id="tags-nom" autocomplete="off" enterkeyhint="done" placeholder="Nouveau tag, ou chercher…" aria-label="Nouveau tag, ou chercher dans la liste" aria-controls="tags-liste">
+      <button class="btn p" type="submit">${ico('plus', 14)}Ajouter</button></form>
+    <p class="erreur" id="tags-erreur" role="alert" hidden></p>
+    <p class="aide tags-compte" id="tags-compte" aria-live="polite"></p>
+    <ul class="liste tags-gestion" id="tags-liste"></ul>
+    <div class="actions"><button type="button" class="btn" data-action="fermer">Fermer</button></div>`,
+    {saisie:!matchMedia('(pointer:coarse)').matches});   /* écran tactile : pas de clavier qui cache la liste à l'ouverture */
+  $('#form-tags').onsubmit = e => { e.preventDefault(); ajouterTagsLibres(); };
+  majFicheTags();
+}
+const saisieTags = () => { const i = $('#tags-nom'); return i ? i.value : ''; };
+const erreurTags = (t = '') => { const p = $('#tags-erreur'); if(p){ p.textContent = t; p.hidden = !t; } };
+function ligneTag(x){
+  const v = `data-v="${esc(x.nom)}"`, auto = estTagAuto(x.nom), enCours = tagEnCours && norm(tagEnCours.nom) === norm(x.nom) ? tagEnCours.mode : '';
+  if(enCours === 'renommer') return `<li class="ligne-tag edition" ${v}>
+    <input class="saisie" data-tag-renommer="${esc(x.nom)}" value="${esc(x.nom)}" autocomplete="off" enterkeyhint="done" aria-label="Nouveau nom de #${esc(x.nom)}">
+    <span class="outils">${btnAction('tag-annuler', 'Annuler', 'btn compact')}${btnAction('tag-renommer-ok', 'Renommer', 'btn p compact', v)}</span></li>`;
+  if(enCours === 'supprimer') return `<li class="ligne-tag confirmer" ${v}>
+    <span class="question">Retirer <b>#${esc(x.nom)}</b> de ${esc(usageTag(x))} ?</span>
+    <span class="outils">${btnAction('tag-annuler', 'Annuler', 'btn compact')}${btnAction('tag-supprimer-ok', 'Supprimer', 'btn p danger compact', v)}</span></li>`;
+  return `<li class="ligne-tag" ${v}>${puceTag(x.nom)}<span class="usage">${auto ? 'automatique : contacts à qui répondre' : esc(usageTag(x))}</span>
+    ${auto ? '' : `<span class="outils"><button type="button" class="icone-btn" data-action="tag-renommer" ${v} title="Renommer" aria-label="Renommer #${esc(x.nom)}">${ico('crayon', 15)}</button>
+      <button type="button" class="icone-btn danger" data-action="tag-supprimer" ${v} title="Supprimer" aria-label="Supprimer #${esc(x.nom)}">${ico('corbeille', 15)}</button></span>`}</li>`;
+}
+/* Liste de la fenêtre, filtrée par ce qui est tapé dans le champ du haut */
+function majFicheTags(){
+  const ul = $('#tags-liste'); if(!ul) return;
+  const brut = saisieTags().trim(), q = norm(brut.replace(/^#+/, '').trim().replace(/\s+/g, '-'));
+  const tous = inventaireTags(), l = q ? tous.filter(x => norm(x.nom).includes(q)) : tous;
+  if(tagEnCours && !l.some(x => norm(x.nom) === norm(tagEnCours.nom))) tagEnCours = null;
+  ul.innerHTML = l.map(ligneTag).join('') || `<li class="vide-tags">${q ? `Aucun tag ne contient « ${esc(brut)} ». « Ajouter » le crée.` : 'Aucun tag pour l’instant : écris-en un ci-dessus.'}</li>`;
+  $('#tags-compte').textContent = q ? `${l.length} sur ${pluriel(tous.length, 'tag')}` : pluriel(tous.length, 'tag');
+}
+/* Après un changement : enregistré ; la page est redessinée tout de suite, ou à la fermeture de la fenêtre si elle est ouverte */
+function tagsChanges(){ sauver(); if(modaleOuverte()) rendreApresModale = true; else rendre(); majFicheTags(); }
+function ajouterTagsLibres(){
+  const l = nettoyerTags(saisieTags());
+  if(!l.length) return erreurTags('Écris le nom du tag à ajouter (plusieurs : sépare-les par des virgules).');
+  if(l.some(estTagAuto)) return erreurTags(`#${TAG_REPONDRE} est mis et retiré tout seul sur les contacts à qui répondre : il ne se crée pas à la main.`);
+  const connus = new Set(inventaireTags().map(x => norm(x.nom))), nouveaux = l.filter(t => !connus.has(norm(t)));
+  erreurTags();
+  if(!nouveaux.length){ toast(l.length > 1 ? 'Ces tags existent déjà' : `#${l[0]} existe déjà`); return; }
+  DB.tags = nettoyerTags([...DB.tags, ...nouveaux]);
+  $('#tags-nom').value = '';
+  tagsChanges();
+  toast(nouveaux.length > 1 ? `${nouveaux.length} tags ajoutés : ${nouveaux.map(t => '#' + t).join(', ')}` : `Tag #${nouveaux[0]} ajouté`);
+  $('#tags-nom').focus();
+}
+function renommerTag(ancien){
+  const i = $(`#tags-liste [data-tag-renommer]`), l = nettoyerTags(i ? i.value : '');
+  if(!l.length) return erreurTags('Le nouveau nom est vide. Pour retirer ce tag de partout : « Annuler », puis l’icône Supprimer.');
+  if(l.length > 1) return erreurTags('Un seul nom, sans virgule.');
+  const nouveau = l[0];
+  if(estTagAuto(nouveau)) return erreurTags(`#${TAG_REPONDRE} est réservé aux contacts à qui répondre.`);
+  erreurTags(); tagEnCours = null;
+  if(nouveau === ancien){ majFicheTags(); return; }
+  const autre = inventaireTags().find(x => norm(x.nom) === norm(nouveau) && norm(x.nom) !== norm(ancien));
+  const {n, annuler} = changerTag(ancien, autre ? autre.nom : nouveau);
+  tagsChanges();
+  const msg = autre ? `#${ancien} fusionné avec #${autre.nom}` : `#${ancien} renommé en #${nouveau}`;
+  toast(msg + (n ? ` (${pluriel(n, 'élément')})` : ''), [['Annuler', () => { annuler(); tagsChanges(); toast('Nom rétabli : #' + ancien); }]]);
+  const b = $(`#tags-liste [data-action="tag-renommer"][data-v="${CSS.escape(autre ? autre.nom : nouveau)}"]`); if(b) b.focus();
+}
+function supprimerTag(nom){
+  tagEnCours = null;
+  const {n, annuler} = changerTag(nom, '');
+  tagsChanges();
+  toast(`Tag #${nom} supprimé` + (n ? ` (retiré de ${pluriel(n, 'élément')})` : ''), [['Annuler', () => { annuler(); tagsChanges(); toast('Tag #' + nom + ' rétabli'); }]]);
+  $('#tags-nom').focus();
+}
+/* Notes et Documents (v4.7) : la rubrique « Tags » de la colonne des dossiers se replie et se déplie (repliée au départ : avec
+   beaucoup de tags, la colonne défilait). Repliée, seul le tag choisi reste visible. Choix gardé sur cet appareil, page par page. */
+const CLE_TAGS_OUVERTS = 'lifepanel.tagsOuverts';
+const tagsOuverts = (() => { try { const v = JSON.parse(localStorage.getItem(CLE_TAGS_OUVERTS)); return new Set(Array.isArray(v) ? v : []); } catch(e){ return new Set(); } })();
+function rubriqueTags(page, boutons, nb){
+  const ouvert = tagsOuverts.has(page);
+  return `<div class="tete-tags"><button type="button" class="deplier-tags" data-action="tags-deplier" data-page="${page}" aria-expanded="${ouvert}" aria-controls="tags-${page}" title="${ouvert ? 'Replier les tags' : 'Déplier les tags'}">
+      ${ico('chevronD', 13)}<span class="etiq">Tags</span><span class="nb">${nb}</span></button>
+    <button type="button" class="icone-btn" data-action="tags" title="Gérer les tags : ajouter, renommer, supprimer" aria-label="Gérer les tags">${ico('reglages', 15)}</button></div>
+    <div class="tags-rubrique${ouvert ? '' : ' replie'}" id="tags-${page}">${boutons}</div>`;
+}
+function basculerTags(b){
+  const page = b.dataset.page, ouvert = !tagsOuverts.has(page);
+  ouvert ? tagsOuverts.add(page) : tagsOuverts.delete(page);
+  try { localStorage.setItem(CLE_TAGS_OUVERTS, JSON.stringify([...tagsOuverts])); } catch(e){ /* réglage de cette visite seulement */ }
+  b.setAttribute('aria-expanded', String(ouvert)); b.title = ouvert ? 'Replier les tags' : 'Déplier les tags';
+  const r = document.getElementById('tags-' + page); if(r) r.classList.toggle('replie', !ouvert);
 }
 
 /* onOk renvoie un texte d'erreur pour garder la fenêtre ouverte (plus de fermeture silencieuse).
@@ -5135,6 +5308,19 @@ const ACTIONS = {
   'filtre-projet-retirer': () => { filtreProjet = null; rendre(); },
   /* Tags : un clic sur un tag existant l'ajoute au champ (ou le retire) */
   'tag-basculer': el => { const champ = el.closest('.champ'), i = champ && $('[data-tags-saisie]', champ); if(i) choisirTag(i, el.dataset.v); },
+  /* Fenêtre « Tags » et rubrique « Tags » repliable de Notes et Documents (v4.7) */
+  tags: () => ficheTags(),
+  'tags-deplier': el => basculerTags(el),
+  'tag-renommer': el => { tagEnCours = {nom:el.dataset.v, mode:'renommer'}; erreurTags(); majFicheTags();
+    const i = $('#tags-liste [data-tag-renommer]'); if(i){ i.focus(); i.select(); } },
+  'tag-renommer-ok': el => renommerTag(el.dataset.v),
+  'tag-supprimer': el => { const x = inventaireTags().find(t => norm(t.nom) === norm(el.dataset.v)); if(!x) return; erreurTags();
+    if(!x.n) return supprimerTag(x.nom);   /* créé à la main et sur aucun élément : rien à confirmer (« Annuler » dans le message) */
+    tagEnCours = {nom:x.nom, mode:'supprimer'}; majFicheTags();
+    const b = $('#tags-liste .confirmer [data-action="tag-annuler"]'); if(b) b.focus(); },
+  'tag-supprimer-ok': el => supprimerTag(el.dataset.v),
+  'tag-annuler': () => { const nom = tagEnCours && tagEnCours.nom; tagEnCours = null; erreurTags(); majFicheTags();
+    const b = nom && $(`#tags-liste [data-action="tag-renommer"][data-v="${CSS.escape(nom)}"]`); if(b) b.focus(); },
 
   /* Corbeille */
   'corbeille-restaurer': el => { const e = DB.corbeille.find(x => x.id === el.dataset.id); if(!e) return;
@@ -5350,6 +5536,7 @@ document.addEventListener('focusout', e => {
 });
 /* Filtres de page : seule la liste est redessinée, le champ garde le curseur */
 document.addEventListener('input', e => {
+  if(e.target.id === 'tags-nom'){ erreurTags(); majFicheTags(); return; }
   if(e.target.matches && e.target.matches('[data-tags-saisie]')){ const d = e.target.parentElement.querySelector('.tags-dispo'); if(d) d.innerHTML = suggestionsTags(e.target.value); return; }
   if(e.target.id === 'recherche-page'){ limiteRecherche = PAR_PAGE; majRecherchePageDifferee(e.target.value); return; }
   const nom = e.target.dataset && e.target.dataset.filtre;
@@ -5395,6 +5582,10 @@ document.addEventListener('submit', e => {
 });
 /* Clavier : un seul gestionnaire */
 document.addEventListener('keydown', e => {
+  if(e.target.matches && e.target.matches('[data-tag-renommer]') && !e.isComposing){   /* fenêtre « Tags » : Entrée renomme, Échap annule (sans fermer la fenêtre) */
+    if(e.key === 'Enter'){ e.preventDefault(); renommerTag(e.target.dataset.tagRenommer); return; }
+    if(e.key === 'Escape'){ e.preventDefault(); ACTIONS['tag-annuler'](); return; }
+  }
   if(e.key === 'Enter' && !e.isComposing && e.target.matches && e.target.matches('[data-tags-saisie]')){   /* Entrée : la première suggestion complète le tag en cours */
     const m = morceauTag(e.target.value), b = m && e.target.parentElement.querySelector('.tags-dispo [data-v]');
     if(b && norm(b.dataset.v).includes(m)){ e.preventDefault(); choisirTag(e.target, b.dataset.v); return; }
@@ -5414,6 +5605,7 @@ document.addEventListener('keydown', e => {
   if(e.key === '/'){ e.preventDefault(); const s = $('#recherche-globale'); s.focus(); s.select(); }
   else if(e.key === 'c' || e.key === 'C'){ e.preventDefault(); ficheCapture(); }
   else if(e.key === 'm' || e.key === 'M'){ e.preventDefault(); voletOuvert() ? fermerVolet() : ouvrirVolet(); }
+  else if(e.key === 't' || e.key === 'T'){ e.preventDefault(); ficheTags(); }
 });
 $('#voile').addEventListener('mousedown', e => { if(e.target.id === 'voile') fermerModale(); });
 /* Survol de l'anneau / de la légende : la part s'affiche au centre */
@@ -5501,6 +5693,7 @@ function commandes(){
     {titre:'Catégoriser les dépenses', sous:pluriel(sansCategorie().length, 'dépense') + ' sans catégorie', icone:'tag', action:'categoriser'},
     {titre:'Comptes et budgets', sous:'Renommer, cocher pour les statistiques, budgets', icone:'portefeuille', action:'comptes'},
     {titre:'Catégories de dépenses', sous:'Renommer, fusionner, supprimer', icone:'tag', action:'categories'},
+    {titre:'Tags', sous:'Ajouter, renommer, supprimer (tâches, notes, documents, contacts, événements)', icone:'tag', action:'tags', touche:'t'},
     {titre:'Importer un relevé bancaire', sous:'Fichier CSV de ta banque, dans un compte', icone:'importer', action:'import-csv'},
     {titre:'Importer des contacts', sous:'Fichier vCard (.vcf) du téléphone', icone:'personnes', action:'import-vcard'},
     {titre:'Exporter une sauvegarde', sous:'Tout, dans un fichier JSON daté', icone:'telecharger', action:'exporter'}
@@ -6694,6 +6887,7 @@ function fusionner(base, moi, eux){
   LISTES_DONNEES.forEach(k => { r[k] = liste(b[k], moi[k], eux[k], x => x.id, k); });
   r.corbeille = liste(b.corbeille, moi.corbeille, eux.corbeille, x => x.id, null);
   r.categories = valeur(b.categories, moi.categories, eux.categories, global, 'categories', info);
+  r.tags = valeur(b.tags, moi.tags, eux.tags, global, 'tags', info);   /* liste simple : ajouts et retraits des deux côtés gardés */
   r.couleursCategories = liste(b.couleursCategories, moi.couleursCategories, eux.couleursCategories, x => cleNom(x.nom), null);
   r.comptes = liste(b.comptes, moi.comptes, eux.comptes, x => cleNom(x.nom), null);
   r.reglages = objet(estObjet(b.reglages) ? b.reglages : {}, moi.reglages, eux.reglages, global, info);
@@ -7182,6 +7376,7 @@ function dessinerCadre(){
   $('#logo').innerHTML = ico('maison', 18, '#fff', 2);
   $('#ic-recherche').innerHTML = ico('recherche', 14);
   $('#btn-ajouter').innerHTML = ico('plus', 17);
+  $('#btn-tags').innerHTML = ico('tag', 17);
   $('#btn-volet').innerHTML = ico('menu', 18);
   $('#logo-volet').innerHTML = ico('maison', 18, '#fff', 2);
   $('#volet-fermer').innerHTML = ico('croix', 16);
