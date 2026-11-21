@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-SObI3TFzFPxGzhiBkayitRPaXB4DpHfDQica9BCoY+0='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-Bjubay3GQr/+jzSLcXRIc19jh0jqM+mU4B3NFcbYMBI='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v4.7
+  LIFE PANEL — v4.7.1
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -241,6 +241,8 @@
   message. #répondre, tenu à jour tout seul sur les contacts, n'y est ni renommé ni supprimé. Les éléments gardent leur date de
   modification. Notes et Documents : la rubrique « Tags » de la colonne des dossiers se replie et se déplie (repliée au départ, seul le
   tag choisi reste alors visible ; choix gardé sur chaque appareil). Données VERSION 23 : « tags », les tags créés dans la fenêtre.
+  v4.7.1 : sur PC (à partir de 1 100 px), les suggestions de la recherche du haut partent du bord gauche du champ : accrochées à son
+  bord droit, elles s'étendaient vers la gauche et le volet en cachait le début. Téléphone et tablette : inchangés. Mêmes données (VERSION 23).
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -1288,6 +1290,9 @@ body{padding-bottom:calc(62px + env(safe-area-inset-bottom))}
   #btn-volet,.volet-tete .fermer,.barre .marque{display:none}
   .barre{justify-content:flex-end}
   .barre .recherche-wrap{margin-right:auto}
+  /* v4.7.1 : la recherche est à gauche de la barre, juste à côté du volet : ses suggestions partent du bord gauche du champ
+     (accrochées à droite, elles s'étendaient vers la gauche et passaient sous le volet) */
+  .resultats{left:0;right:auto}
   .barre .rond.plus{display:inline-flex;align-items:center;width:auto;padding:0 14px 0 10px;gap:6px;border-radius:99px}
   .barre .rond.plus::after{content:"Capturer";font-size:var(--t3);font-weight:600}
   .toast,.focus-flottant{bottom:26px}
@@ -3934,7 +3939,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>t</kbd> tags</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v4.7 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v4.7.1 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
