@@ -32,9 +32,9 @@ sur « Chargement… ».
 | Section | Dossier | Couleur | Téléphone | Sous-menu |
 | --- | --- | --- | --- | --- |
 | Aujourd'hui | `aujourdhui` | bleu | onglet | — |
-| Idées (l'Inbox de la v4.9, avec À trier) | `idees` | jaune | Plus (+ icône en haut) | À ranger · Archivées |
+| Idées (l'Inbox de la v4.9, avec À trier) | `idees` | jaune | Plus (+ icône en haut) | — (on range ou on supprime, pas d'archives) |
 | Calendrier | `calendrier` | violet | onglet | 2 semaines · Mois · Agenda |
-| Tâches | `taches` | vert | onglet | Par date · Listes |
+| Tâches | `taches` | vert | onglet | — (toutes les tâches ; les listes en puces qui filtrent) |
 | Dossiers (les « projets » des données) | `dossiers` | orange | Plus | Ouverts · Fermés ; dans un dossier : ‹ Dossiers · Tâches · Rendez-vous · Notes · Documents · Dépenses · Contacts · Journal |
 | Finance | `finance` | herbe | onglet | Mois · Année · Mouvements · Comptes · Catégories |
 | Carnet | `carnet` | rose | Plus | Notes · Journal · Documents |
@@ -42,7 +42,8 @@ sur « Chargement… ».
 | Réglages (icône en haut à droite) | `reglages` | gris | Plus (+ icône en haut) | Données · Corbeille |
 
 - **PC (à partir de 1 100 px)** : les sections en haut, le sous-menu de la section ouverte juste en dessous ; la barre prend
-  la couleur de la section. À droite : Chercher (Ctrl K), Noter, l'icône jour/nuit, Réglages.
+  la couleur de la section. À droite : Chercher (Ctrl K), Noter, Tags (T), Aide « ? », l'icône jour/nuit, Réglages
+  (sous 1 600 px, Chercher et Noter en icônes).
 - **Téléphone et tablette** : le titre de la section en haut, le sous-menu qui défile, 4 onglets en bas + « Plus », le bouton +.
 - **Thème** : nuit par défaut ou jour, seulement par l'icône en haut à droite (pas de thème automatique, rien dans Réglages).
 
@@ -55,16 +56,26 @@ sur « Chargement… ».
 - **Chemin des dossiers** (23/11, 2e retour) : Perso, Aviation, Maison, Santé… ne sont **pas des dossiers**, seulement un
   chemin (champ `chemin`, ex. ['Perso', 'Maison'] ; attention, le champ `dossier` des projets est le chemin Drive de la
   v3.13, et `parent` n'est plus utilisé). Les vrais dossiers sont au bout du chemin, l'utilisateur choisit leur chemin
-  (fiche « Chemin », ou glisser le dossier sur une puce de chemin). Page Dossiers : les chemins en puces pour naviguer,
-  le tableau des dossiers de ce chemin. Un dossier ouvert : le sous-menu passe aux types, chacun le même tableau que dans
+  (fiche « Chemin » : une liste déroulante de l'arbre ; ou glisser le dossier sur un chemin de l'arbre). Page Dossiers :
+  l'arbre des chemins à gauche (où créer, où ranger ; « Nouveau chemin… »), le tableau des dossiers de ce chemin. L'arbre de
+  départ est la hiérarchie du document de la refonte, sans les dossiers du bout (CHEMINS_DEPART, calculs.js) ; dès qu'on
+  ajoute un chemin il est recopié dans les données (`DB.chemins`). Dans un dossier, le sous-menu compte chaque type. Un dossier ouvert : le sous-menu passe aux types, chacun le même tableau que dans
   sa section. Un dossier dont on n'a plus besoin est **fermé** (drapeau `archive`) et reste visible dans « Fermés ».
-- **Idées** = l'Inbox : ni tags, ni dossier ; une idée ne va nulle part, elle devient une tâche, une note, une dépense…
+- **Idées** = l'Inbox : ni tags, ni dossier, ni archives ; une idée ne va nulle part, elle devient une tâche, une note,
+  une dépense… ou elle est supprimée.
 - **Tags** : la fenêtre Tags s'ouvre en haut à droite (étiquette) ou par la touche T, pas dans Réglages. Supprimer un tag
   le retire des éléments, les éléments restent.
 - **Toutes les colonnes partout** : `noyau/colonnes.js` donne les colonnes de chaque type, les mêmes dans la section et dans
-  la page d'un dossier (étapes, lien, montant, attributs…). La puce d'un dossier est en couleur.
-- **Finance** : le grand tableau des mouvements se plie (flèche) ; Comptes : « Dans les totaux : oui / non » (la case de
-  la v4.9 qui exclut un compte, ex. l'épargne, des totaux) ; la couleur d'une catégorie se choisit sur des pastilles.
+  la page d'un dossier (étapes, lien, montant, attributs…). Le dossier d'un élément = **un petit carré de couleur et son
+  nom**, partout (pas de pastille autour) ; dans une fiche, le dossier se choisit dans une liste déroulante avec ces carrés.
+- **Cases à cocher carrées** (comme le prototype). **Aide « ? »** en haut à droite (modules/aide) : raccourcis et gestes,
+  à tenir à jour quand un geste arrive. **Tags d'une fiche** : après une virgule, les tags existants sont proposés.
+- **Aujourd'hui** : une tuile Finance (dépensé ce mois-ci, comptes pointés, anneau par catégorie), comme la v4.9.
+- **Couleurs** des catégories et des dossiers : 14 teintes (les 9 de la v4.9 + cyan, brun, olive, indigo, gris) et 13
+  rayées (TEINTES, COULEURS_CAT dans donnees.js).
+- **Finance** : le tableau des mouvements, « Par catégorie » et « Mois par mois » se plient (flèche) ; Comptes : colonne
+  « Pointé : oui / non » (la case de la v4.9 qui laisse un compte, ex. l'épargne, hors des totaux) ; la couleur d'une
+  catégorie se choisit sur des pastilles. Les calculs et l'anneau sont dans noyau/finance.js (Finance et Aujourd'hui).
 - **Plus tard, dans une autre session** (ne rien faire avant) : un sous-menu « Google Drive » dans Documents ; ce jour-là,
   déplacer tous les documents à la racine du Drive, l'utilisateur les renomme et les range ensuite selon ses chemins.
 - **Plus d'archives** (23/11) : pas de page Archives. Une tâche faite reste visible, barrée, en bas du tableau ; notes,
@@ -89,8 +100,9 @@ sur « Chargement… ».
 - **Ne rien ajouter qui n'a pas été demandé** (23/11) : pas de raccourcis « Aujourd'hui, Demain, Samedi », pas de bande
   de dépôt, pas de texte d'aide en plus. La date d'une tâche se donne dans sa fiche ou en la glissant sur le Calendrier.
 - **Tâches au plus simple** : un tableau, une colonne Date (un tiret sans date), aucun regroupement par jour, ni statut,
-  ni notation. « Par date » montre les tâches sauf celles d'une liste sans date (elles restent dans leur liste, comme en
-  v4.9 ; la recherche les trouve) ; une tâche faite reste barrée en bas. Listes en puces (chacune reçoit les tâches glissées). Étapes dans la fiche (« 1/3 » dans le tableau).
+  ni notation, **sans sous-menu** : toutes les tâches, celles des listes comprises (colonne Liste triable) ; une tâche
+  faite reste barrée en bas. Les listes en puces au-dessus : un clic filtre (`#/taches?liste=ID`, l'adresse de la v4.9),
+  « Nouvelle liste… » en une ligne ; chaque puce reçoit les tâches glissées. Étapes dans la fiche (« 1/3 » dans le tableau).
 - **Sélection sur PC** (composant tableau, `selection`) : Ctrl + clic, Maj + clic, Échap ; une barre flottante en bas
   propose les actions ; glisser une ligne choisie emporte toute la sélection.
 - **Fiches au centre** : une grande tuile au milieu de l'écran, le site en arrière-plan (comme la modale de la v4.9) ;
@@ -123,7 +135,8 @@ noyau/
                       champAjout() (ligne « ajouter vite »), thème, clics, clavier
   tableau.js          le tableau commun (recherche, tri, colonnes vides cachées, attributs en colonnes, paquets de 50,
                       sélection Ctrl + clic, cartes sur téléphone)
-  affichage.js        puce de dossier, tags, lien de document (Drive compris), téléphone, e-mail
+  affichage.js        dossier (carré de couleur + nom), tags, lien de document (Drive compris), téléphone, e-mail
+  finance.js          comptes pointés, dépenses d'une période, l'anneau par catégorie (Finance et Aujourd'hui)
   colonnes.js         les colonnes de chaque type d'élément et le texte où chercher, communs à tous les tableaux
   glisser.js          le glisser-déposer (souris et doigt) : glisserType(type, {depot}), [data-glisser], [data-depot]
   fiches.js           la fiche de chaque type d'élément (TYPES_ELEMENT), avec dossier, tags et attributs libres
@@ -135,8 +148,8 @@ noyau/
   polices/            Inter, Barlow Condensed (licence SIL OFL)
 modules/
   liste.js            les sections actives
-  <section>/          module.js (+ <section>.css si styles:true) ; recherche/ (Ctrl K, résultats) et tags/ (la fenêtre Tags)
-                      ne sont pas des sections ; reglages/exemples.js = les données fictives
+  <section>/          module.js (+ <section>.css si styles:true) ; recherche/ (Ctrl K, résultats), tags/ (la fenêtre Tags) et
+                      aide/ (« ? ») ne sont pas des sections ; reglages/exemples.js = les données fictives
 sw.js, manifest.webmanifest   ceux de la v4.9, pas encore branchés : refaits au lot 1
 ```
 

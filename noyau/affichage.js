@@ -6,8 +6,9 @@ import {nomDossier, couleurDossier, cheminDossier} from './calculs.js';
 import {ico} from './icones.js';
 import {lien} from './adresses.js';
 
-/* La puce d'un dossier (le « super tag ») : un clic ouvre le dossier */
-export const puceDossier = id => id && nomDossier(id) ? `<a class="puce dossier" href="${lien('dossiers', id)}" style="--c:var(--c-${couleurDossier(id)})" title="Ouvrir ${esc(cheminDossier(id).join(' › '))}">${esc(nomDossier(id))}</a>` : '';
+/* Le dossier d'un élément (le « super tag ») : son petit carré de couleur et son nom ; un clic ouvre le dossier */
+export const carreDossier = id => `<i class="carre" style="--c:var(--c-${couleurDossier(id)})" aria-hidden="true"></i>`;
+export const puceDossier = id => id && nomDossier(id) ? `<a class="lien-dossier" href="${lien('dossiers', id)}" title="Ouvrir ${esc(cheminDossier(id).join(' › '))}">${carreDossier(id)}${esc(nomDossier(id))}</a>` : '';
 export const puceTags = tags => (tags || []).map(t => `<span class="puce">#${esc(t)}</span>`).join('');
 
 /* Un lien de document : une adresse web telle quelle ; « drive:PERSO/Assurance.pdf » (chemin dans Google Drive, v3.13)

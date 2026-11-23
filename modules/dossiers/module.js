@@ -1,17 +1,18 @@
 /* LIFE PANEL v5 · modules/dossiers — les dossiers (les « projets » des données, champ « projet » sur chaque élément).
    Un élément est dans un seul dossier : le dossier est son « super tag ».
-   - Les dossiers sont rangés par un **chemin** (Perso › Maison, Aviation…) : de simples noms pour s'y retrouver, pas des
-     dossiers ; seul le dossier au bout du chemin contient des éléments. On navigue de chemin en chemin (les puces du haut),
-     le tableau montre les dossiers de ce chemin et de ceux qui sont en dessous. Glisser un dossier sur une puce de chemin
-     l'y range (aussi dans sa fiche : « Chemin »).
+   - Les dossiers sont rangés par un **chemin** (Perso › Logement, Aviation › Formations…) : de simples noms pour s'y
+     retrouver, pas des dossiers ; seul le dossier au bout du chemin contient des éléments. L'arbre des chemins est à gauche :
+     un clic montre les dossiers de ce chemin (et en dessous), la ligne d'ajout y crée le dossier ; glisser un dossier sur un
+     chemin l'y range (ou sa fiche : « Chemin », une liste déroulante de l'arbre). « Nouveau chemin… » ajoute une branche.
+   - Dans un dossier, le sous-menu donne le nombre d'éléments de chaque type.
    - Ouverts / Fermés : un dossier dont on n'a plus besoin est fermé et reste visible dans « Fermés ».
    - Un dossier ouvert : comme dans Ontoplano, le sous-menu passe aux types (Tâches, Rendez-vous, Notes…) ; chacun est le même
      tableau que dans sa section (toutes les colonnes), avec sa ligne pour y ajouter. Les idées ne vont pas dans un dossier. */
 import {esc, aujourdhui, dateCourte, jourDe, maintenant, propreNom, cleNom} from '../../noyau/outils.js';
 import {ico} from '../../noyau/icones.js';
 import {DB, ajouter, modifie, couleurLibre} from '../../noyau/donnees.js';
-import {dossier, cheminDe, couleurDossier, nomDossier, toucherDossier} from '../../noyau/calculs.js';
-import {puceTags} from '../../noyau/affichage.js';
+import {dossier, cheminDe, couleurDossier, nomDossier, toucherDossier, arbreChemins, ajouterChemin} from '../../noyau/calculs.js';
+import {puceTags, carreDossier} from '../../noyau/affichage.js';
 import {entete, champAjout, toast, bouton} from '../../noyau/interface.js';
 import {lien, aller} from '../../noyau/adresses.js';
 import {tableau} from '../../noyau/tableau.js';
@@ -30,26 +31,27 @@ const nbElements = id => TYPES.reduce((n, [l]) => n + DB[l].filter(x => x.projet
 const commencePar = (c, debut) => debut.every((n, i) => cleNom(c[i]) === cleNom(n));
 const lienChemin = (c, fermes) => lien('dossiers', fermes ? 'fermes' : '', c.length ? {chemin:c.join('/')} : null);
 
-/* --- Ouverts / Fermés, de chemin en chemin --- */
+/* --- Ouverts / Fermés : l'arbre des chemins à gauche (où créer, où ranger), le tableau des dossiers de ce chemin --- */
 function pageListe(fermes, ctx){
-  const ici = (ctx.params.get('chemin') || '').split('/').map(propreNom).filter(Boolean);
-  const l = DB.projets.filter(p => !!p.archive === fermes && commencePar(cheminDe(p), ici));
-  const suite = [...new Set(l.map(p => cheminDe(p)[ici.length]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
-  const puce = (c, texte, actif = false) => `<a class="puce-choix${actif ? ' actif' : ''}" href="${lienChemin(c, fermes)}" data-depot="dossier" data-chemin="${esc(c.join('/'))}">${texte}</a>`;
-  const fil = `<nav class="chemins" aria-label="Chemin">${puce([], 'Tous', !ici.length)}${ici.map((n, i) => `<span class="sep">›</span>${puce(ici.slice(0, i + 1), esc(n), i === ici.length - 1)}`).join('')}
-    ${suite.length ? `<span class="sep">›</span>${suite.map(n => puce([...ici, n], ico('dossier', 14) + ' ' + esc(n))).join('')}` : ''}</nav>`;
-  return entete(fermes ? 'Dossiers fermés' : 'Dossiers') + `<div class="page-dossiers">${fil}
+  const ici = (ctx.params.get('chemin') || '').split('/').map(propreNom).filter(Boolean), k = ici.map(cleNom).join('/');
+  const tous = DB.projets.filter(p => !!p.archive === fermes), l = tous.filter(p => commencePar(cheminDe(p), ici));
+  const noeud = (c, texte) => { const on = c.map(cleNom).join('/') === k, n = tous.filter(p => commencePar(cheminDe(p), c)).length;
+    return `<a class="noeud${on ? ' actif' : ''}" href="${lienChemin(c, fermes)}" data-depot="dossier" data-chemin="${esc(c.join('/'))}" style="--retrait:${c.length}"${on ? ' aria-current="true"' : ''}>
+      <span>${esc(texte)}</span>${n ? `<span class="n">${n}</span>` : ''}</a>`; };
+  const arbre = `<nav class="arbre-chemins" aria-label="Chemins">${noeud([], 'Tous les dossiers')}${arbreChemins().map(c => noeud(c, c[c.length - 1])).join('')}
+    ${fermes ? '' : champAjout('chemin-ajouter', ici.length ? 'Nouveau chemin dans ' + ici[ici.length - 1] + '…' : 'Nouveau chemin…', {donnees:{chemin:ici.join('/')}})}</nav>`;
+  return entete(fermes ? 'Dossiers fermés' : 'Dossiers', ici.length ? {sur:esc(ici.join(' › '))} : {}) + `<div class="page-dossiers avec-arbre">${arbre}<div class="contenu-dossiers">
     ${fermes ? '' : champAjout('dossier-ajouter', 'Nouveau dossier' + (ici.length ? ' dans ' + ici.join(' › ') : '') + ' : son nom, puis Entrée…', {donnees:{chemin:ici.join('/')}})}
     ${tableau({id:fermes ? 'dossiers-fermes' : 'dossiers', lignes:l, cle:p => p.id, ouvrir:'dossier-ouvrir', glisser:'dossier', tri:{col:'chemin', sens:1},
     recherche:p => [p.nom, cheminDe(p).join(' '), p.resume], tags:p => p.tags || [], texteRecherche:'Chercher un dossier',
     vide:fermes ? 'Aucun dossier fermé ici.' : 'Aucun dossier ici. Crée-le juste au-dessus.', colonnes:[
-      {id:'nom', titre:'Dossier', tel:'titre', valeur:p => p.nom, html:p => `<span class="puce dossier" style="--c:var(--c-${couleurDossier(p.id)})">${esc(p.nom)}</span>`},
+      {id:'nom', titre:'Dossier', tel:'titre', valeur:p => p.nom, html:p => `<span class="lien-dossier">${carreDossier(p.id)}${esc(p.nom)}</span>`},
       {id:'chemin', titre:'Chemin', valeur:p => [...cheminDe(p), p.nom].join(' › '), html:p => esc(cheminDe(p).slice(ici.length).join(' › ')) || '—'},
       {id:'resume', titre:'Pour quoi faire', html:p => esc(p.resume) || '—'},
       {id:'n', titre:'Éléments', num:true, valeur:p => nbElements(p.id), html:p => String(nbElements(p.id))},
       {id:'tags', titre:'Tags', html:p => puceTags(p.tags) || '—'},
       {id:'modif', titre:'Modifié', tel:'droite', valeur:p => p.modif, html:p => p.modif ? esc(dateCourte(p.modif) + annee(jourDe(p.modif))) : '—'}
-    ]})}</div>`;
+    ]})}</div></div>`;
 }
 
 /* --- Un dossier : le tableau d'un type (les mêmes colonnes que dans sa section) --- */
@@ -70,7 +72,7 @@ function pageDossier(ctx){
 function sousMenu(ctx){
   const id = (ctx.arg || '').split('/')[0];
   if(!id || id === 'fermes' || !dossier(id)) return [['', 'Ouverts'], ['fermes', 'Fermés']];
-  return [['', '‹ Dossiers'], ...TYPES.map(([l, nom], i) => [i ? id + '/' + l : id, nom])];
+  return [['', '‹ Dossiers'], ...TYPES.map(([l, nom], i) => [i ? id + '/' + l : id, nom, DB[l].filter(x => x.projet === id).length])];
 }
 
 /* Glisser un dossier sur une puce de chemin : il y est rangé */
@@ -93,6 +95,9 @@ export default {
       const p = ajouter('projets', {nom, chemin:((f && f.dataset.chemin) || '').split('/').filter(Boolean), couleur:couleurLibre(DB.projets), modif:maintenant()}); modifie('ajout');
       toast('Dossier créé : ' + p.nom, [['Ouvrir', () => aller('dossiers', p.id)], ['Annuler', () => { DB.projets = DB.projets.filter(x => x !== p); modifie('annuler'); }]]); },
     'dossier-ouvrir':tr => aller('dossiers', tr.dataset.id),
+    'chemin-ajouter':(texte, f) => { const nom = propreNom(texte.replace(/[›\/>]/g, ' ')); if(!nom) return false;
+      const c = [...((f && f.dataset.chemin) || '').split('/').filter(Boolean), nom]; ajouterChemin(c); modifie('chemin');
+      toast('Chemin créé : ' + c.join(' › '), [['Y aller', () => aller('dossiers', '', {chemin:c.join('/')})]]); },
     'dossier-modifier':el => ouvrirElement('projets', el.dataset.id),
     'dossier-element':tr => { const l = (tr.dataset.tableauLigne || '').replace(/^dossier-/, ''); ouvrirElement(l, tr.dataset.id); },
     'dossier-noter':(texte, f) => { const id = f && f.dataset.dossier; if(!dossier(id)) return false;

@@ -25,3 +25,5 @@
 .liste-venir li.preavis svg{color:var(--attention)}
 .liste-venir li.expire svg{color:var(--critique)}
 .liste-venir b{color:var(--texte);font-weight:600}
+.gros-chiffre{margin:0 0 12px;color:var(--texte-2)}
+.gros-chiffre b{font-size:24px;color:var(--texte);margin-right:6px;font-variant-numeric:tabular-nums}

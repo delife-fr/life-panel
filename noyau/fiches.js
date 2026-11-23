@@ -6,8 +6,8 @@
    Les sections enrichiront leur fiche dans leur lot ; celle-ci sert partout dès maintenant (capture, Idées, Aujourd'hui). */
 import {esc, dateISO, maintenant, aujourdhui, propreNom, cleNom, dateCourte} from './outils.js';
 import {ico} from './icones.js';
-import {DB, FORMES, ajouter, modifie, retirer, assurerCategorie, assurerCompte, COULEURS} from './donnees.js';
-import {dossiersActifs, cheminDossier, cheminDe, chemins, lireChemin, couleurDossier, listesTriees, categoriesFrequentes, compteParDefaut, toucherDossier, cocherTache} from './calculs.js';
+import {DB, FORMES, ajouter, modifie, retirer, assurerCategorie, assurerCompte, TEINTES} from './donnees.js';
+import {dossiersActifs, cheminDossier, cheminDe, arbreChemins, lireChemin, couleurDossier, tousLesTags, listesTriees, categoriesFrequentes, compteParDefaut, toucherDossier, cocherTache} from './calculs.js';
 import {ouvrirFiche, fermerFiche, toast} from './interface.js';
 import {actionNoyau} from './modules.js';
 
@@ -46,23 +46,53 @@ export const nomDe = (liste, x) => liste === 'mouvements' && x && x.type === 're
 
 /* --- Les champs --- */
 const idChamp = (f, c) => `f-${f}-${c}`;
-/* Choisir un dossier : ses puces en couleur, rangées par chemin (un clic choisit, un clic sur « aucun » retire) */
-function choixDossier(id, courant){
-  const l = dossiersActifs().concat(DB.projets.filter(p => p.archive && p.id === courant)), groupes = new Map();
-  l.forEach(p => { const c = cheminDe(p).join(' › '); if(!groupes.has(c)) groupes.set(c, []); groupes.get(c).push(p); });
-  const puce = p => `<button type="button" class="puce dossier${p.id === courant ? ' choisie' : ''}" data-dossier-choix="${esc(p.id)}" style="--c:var(--c-${couleurDossier(p.id)})" aria-pressed="${p.id === courant}">${esc(p.nom)}</button>`;
-  return `<div class="choix-dossiers" id="${id}" data-valeur="${esc(courant || '')}"><button type="button" class="puce${courant ? '' : ' choisie'}" data-dossier-choix="" aria-pressed="${!courant}">aucun</button>
-    ${[...groupes.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr')).map(([c, ps]) => `<div class="groupe-dossiers">${c ? `<span class="chemin">${esc(c)}</span>` : ''}${ps.sort((a, b) => a.nom.localeCompare(b.nom, 'fr')).map(puce).join('')}</div>`).join('')}</div>`;
+/* Une liste déroulante qui montre aussi une couleur (le carré d'un dossier) ou un retrait (l'arbre des chemins).
+   options : [{v, texte, couleur, groupe, retrait}] ; la valeur choisie est dans data-valeur. */
+export function deroulant(id, options, valeur, {vide = '— aucun —'} = {}){
+  const lab = o => `${o.couleur ? `<i class="carre" style="--c:var(--c-${esc(o.couleur)})"></i>` : ''}<span>${esc(o.texte)}</span>`;
+  let groupe = null;
+  const items = [{v:'', texte:vide}, ...options].map(o => { let h = '';
+    if(o.groupe !== undefined && o.groupe !== groupe){ groupe = o.groupe; if(groupe) h = `<li class="deroulant-groupe" role="presentation">${esc(groupe)}</li>`; }
+    return h + `<li role="option" tabindex="-1" data-deroulant-v="${esc(o.v)}" aria-selected="${o.v === (valeur || '')}"${o.retrait ? ` style="padding-left:${10 + o.retrait * 18}px"` : ''}>${lab(o)}</li>`; }).join('');
+  const cur = options.find(o => o.v === valeur);
+  return `<div class="deroulant" id="${id}" data-valeur="${esc(valeur || '')}"><button type="button" class="deroulant-bouton" aria-haspopup="listbox" aria-expanded="false">${cur ? lab(cur) : `<span class="faible">${esc(vide)}</span>`}${ico('bas', 14)}</button>
+    <ul class="deroulant-liste" role="listbox" hidden>${items}</ul></div>`;
 }
+const optionsDossiers = courant => dossiersActifs().concat(DB.projets.filter(p => p.archive && p.id === courant))
+  .map(p => ({v:p.id, texte:p.nom + (p.archive ? ' (fermé)' : ''), couleur:couleurDossier(p.id), groupe:cheminDe(p).join(' › ')}))
+  .sort((a, b) => a.groupe.localeCompare(b.groupe, 'fr') || a.texte.localeCompare(b.texte, 'fr'));
+const optionsChemins = () => arbreChemins().map(c => ({v:c.join('/'), texte:c[c.length - 1], retrait:c.length - 1}));
+function fermerDeroulants(sauf = null){ document.querySelectorAll('.deroulant-liste:not([hidden])').forEach(l => { if(l.parentElement !== sauf){ l.hidden = true; l.previousElementSibling.setAttribute('aria-expanded', 'false'); } }); }
+function choisirDans(li){
+  const boite = li.closest('.deroulant'); boite.dataset.valeur = li.dataset.deroulantV;
+  boite.querySelectorAll('[role="option"]').forEach(x => x.setAttribute('aria-selected', x === li));
+  const b = boite.querySelector('.deroulant-bouton'); b.innerHTML = (li.dataset.deroulantV ? li.innerHTML : `<span class="faible">${li.textContent}</span>`) + ico('bas', 14);
+  fermerDeroulants(); b.focus(); boite.dispatchEvent(new Event('change', {bubbles:true}));
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('.deroulant-bouton');
+  if(b){ const l = b.nextElementSibling, ouvrir = l.hidden; fermerDeroulants(); l.hidden = !ouvrir; b.setAttribute('aria-expanded', ouvrir);
+    if(ouvrir){ const sel = l.querySelector('[aria-selected="true"]') || l.querySelector('[role="option"]'); if(sel){ sel.focus(); sel.scrollIntoView({block:'nearest'}); } } return; }
+  const li = e.target.closest && e.target.closest('[data-deroulant-v]'); if(li){ choisirDans(li); return; }
+  if(!(e.target.closest && e.target.closest('.deroulant'))) fermerDeroulants();
+});
+/* Clavier dans la liste ouverte : flèches, Entrée, Échap (Échap ferme la liste, pas la fiche) */
+document.addEventListener('keydown', e => {
+  const li = e.target.closest && e.target.closest('[data-deroulant-v]'); if(!li) return;
+  const tous = [...li.parentElement.querySelectorAll('[role="option"]')], i = tous.indexOf(li);
+  if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault(); const n = tous[Math.max(0, Math.min(tous.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]; n.focus(); }
+  else if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); choisirDans(li); }
+  else if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); const b = li.closest('.deroulant').querySelector('.deroulant-bouton'); fermerDeroulants(); b.focus(); }
+}, true);
 /* Choisir une couleur : les pastilles elles-mêmes (rayées pour les couleurs « -r » des catégories) */
 export const nuancier = (id, couleurs, courant) => `<div class="nuancier" id="${id}" data-valeur="${esc(courant || '')}">${couleurs.map(c =>
   `<button type="button" class="pastille-choix${/-r$/.test(c) ? ' raye' : ''}${c === courant ? ' choisie' : ''}" data-couleur="${esc(c)}" style="--c:var(--c-${esc(c.replace(/-r$/, ''))})" aria-label="${esc(c)}" aria-pressed="${c === courant}"></button>`).join('')}</div>`;
-/* Un clic dans ces deux choix : la valeur change, le formulaire l'apprend (enregistrement automatique) */
+/* Un clic sur une pastille : la valeur change, le formulaire l'apprend (enregistrement automatique) */
 document.addEventListener('click', e => {
-  const b = e.target.closest && e.target.closest('[data-dossier-choix], [data-couleur]'); if(!b) return;
-  const boite = b.closest('.choix-dossiers, .nuancier'); if(!boite) return;
-  boite.dataset.valeur = b.dataset.dossierChoix ?? b.dataset.couleur;
-  boite.querySelectorAll('[data-dossier-choix], [data-couleur]').forEach(x => { const on = x === b; x.classList.toggle('choisie', on); x.setAttribute('aria-pressed', on); });
+  const b = e.target.closest && e.target.closest('[data-couleur]'); if(!b) return;
+  const boite = b.closest('.nuancier'); if(!boite) return;
+  boite.dataset.valeur = b.dataset.couleur;
+  boite.querySelectorAll('[data-couleur]').forEach(x => { const on = x === b; x.classList.toggle('choisie', on); x.setAttribute('aria-pressed', on); });
   boite.dispatchEvent(new Event('change', {bubbles:true}));
 });
 const select = (id, options, v) => `<select id="${id}">${options.map(([o, t]) => `<option value="${esc(o)}"${String(v ?? '') === String(o) ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
@@ -80,13 +110,14 @@ function champ(f, d, x, liste){
     case 'url': html = `<input type="url" ${attrs} value="${esc(v || '')}" placeholder="https://…">`; break;
     case 'case': return `<label class="champ-case"><input type="checkbox" ${attrs}${v ? ' checked' : ''}> ${esc(d.t)}</label>`;
     case 'choix': html = select(id, d.options, v); break;
-    case 'dossier': html = choixDossier(id, v || ''); break;
-    case 'couleur': html = nuancier(id, COULEURS, v || ''); break;
-    case 'chemin': html = `<input type="text" ${attrs} value="${esc((v || []).join(' › '))}" list="${id}-l" placeholder="vide = à la racine"><datalist id="${id}-l">${chemins().map(c => `<option value="${esc(c)}">`).join('')}</datalist>`; break;
+    case 'dossier': html = deroulant(id, optionsDossiers(v || ''), v || ''); break;
+    case 'couleur': html = nuancier(id, TEINTES, v || ''); break;
+    case 'chemin': html = deroulant(id, optionsChemins(), (v || []).join('/'), {vide:'— à la racine —'}); break;
     case 'liste': html = select(id, [['', '— aucune —'], ...listesTriees().map(l => [l.id, l.nom])], v || ''); break;
     case 'categorie': html = `<input type="text" ${attrs} value="${esc(v || '')}" list="${id}-l" placeholder="— sans catégorie —"><datalist id="${id}-l">${categoriesFrequentes().map(c => `<option value="${esc(c)}">`).join('')}</datalist>`; break;
     case 'compte': html = `<input type="text" ${attrs} value="${esc(v || '')}" list="${id}-l"><datalist id="${id}-l">${DB.comptes.map(c => `<option value="${esc(c.nom)}">`).join('')}</datalist>`; break;
-    case 'tags': html = `<input type="text" ${attrs} value="${esc((v || []).join(', '))}" placeholder="séparés par des virgules">`; break;
+    case 'tags': html = `<div class="avec-suggestions"><input type="text" ${attrs} data-suggerer-tags value="${esc((v || []).join(', '))}" placeholder="séparés par des virgules" autocomplete="off">
+      <ul class="suggestions" role="listbox" hidden></ul></div>`; break;
     case 'journal': { const l = x.id ? DB.journal.filter(j => j.contacts.includes(x.id)).sort((a, b) => (b.date + b.cree).localeCompare(a.date + a.cree)) : [];
       return `<div class="champ"><span class="etiquette">${esc(d.t)}</span>${l.length ? `<ul class="journal-fiche">${l.map(j => `<li><b>${esc(dateCourte(j.date))}</b> ${esc(j.texte)}</li>`).join('')}</ul>`
         : '<p class="faible">Rien pour l’instant : écris une ligne avec @' + esc(x.nom || 'son nom') + ' dans Carnet › Journal.</p>'}</div>`; }
@@ -119,7 +150,7 @@ function lire(f, liste, x){
       case 'nombre': r[d.c] = e.value === '' ? null : Number(e.value); break;
       case 'dossier': r[d.c] = e.dataset.valeur || null; break;
       case 'couleur': r[d.c] = e.dataset.valeur || ''; break;
-      case 'chemin': r[d.c] = lireChemin(e.value); break;
+      case 'chemin': r[d.c] = lireChemin(e.dataset.valeur); break;
       case 'liste': r[d.c] = e.value || null; break;
       case 'categorie': r[d.c] = propreNom(e.value) ? assurerCategorie(e.value) : ''; break;
       case 'compte': r[d.c] = propreNom(e.value) ? assurerCompte(e.value) : ''; break;
@@ -211,3 +242,30 @@ function brancher(boite, f, liste, x, {nouveau, apresAjout}){
 actionNoyau('ouvrir-element', el => ouvrirElement(el.dataset.liste, el.dataset.id));
 /* Cocher ou décocher une tâche, de partout (Aujourd'hui, Tâches, page d'un dossier…) */
 actionNoyau('tache-cocher', el => { const t = DB.taches.find(x => x.id === el.dataset.id); if(!t) return; cocherTache(t, !t.fait); modifie('cocher'); });
+
+/* --- Les tags proposés pendant la frappe, après chaque virgule (comme la v4.9) --- */
+let propositions = [], choisie = 0;
+const morceau = champ => { const avant = champ.value.slice(0, champ.selectionStart), i = avant.lastIndexOf(','); return {debut:i + 1, texte:avant.slice(i + 1).trim().replace(/^#/, '')}; };
+function proposer(champ){
+  const boite = champ.nextElementSibling, m = morceau(champ), deja = new Set(champ.value.split(',').map(t => t.trim().toLowerCase()));
+  propositions = m.texte ? tousLesTags().filter(t => t.toLowerCase().startsWith(m.texte.toLowerCase()) && !deja.has(t.toLowerCase())).slice(0, 6) : [];
+  choisie = 0; boite.hidden = !propositions.length;
+  boite.innerHTML = propositions.map((t, i) => `<li role="option" data-tag-propose="${i}"${i ? '' : ' class="active"'}>#${esc(t)}</li>`).join('');
+}
+function inserer(champ, i){
+  const m = morceau(champ), t = propositions[i]; if(t === undefined) return;
+  const apres = champ.value.slice(champ.selectionStart).replace(/^[^,]*/, '');
+  champ.value = champ.value.slice(0, m.debut) + (m.debut ? ' ' : '') + t + ', ' + apres.replace(/^,\s*/, '');
+  const pos = champ.value.length - apres.replace(/^,\s*/, '').length; champ.setSelectionRange(pos, pos); champ.focus();
+  propositions = []; champ.nextElementSibling.hidden = true;
+}
+document.addEventListener('input', e => { if(e.target.matches && e.target.matches('[data-suggerer-tags]')) proposer(e.target); });
+document.addEventListener('keydown', e => {
+  if(!(e.target.matches && e.target.matches('[data-suggerer-tags]')) || !propositions.length) return;
+  const boite = e.target.nextElementSibling;
+  if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault(); choisie = (choisie + (e.key === 'ArrowDown' ? 1 : -1) + propositions.length) % propositions.length;
+    boite.querySelectorAll('li').forEach((li, i) => li.classList.toggle('active', i === choisie)); }
+  else if(e.key === 'Enter' || e.key === 'Tab'){ e.preventDefault(); inserer(e.target, choisie); }
+  else if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); propositions = []; boite.hidden = true; }
+}, true);
+document.addEventListener('mousedown', e => { const li = e.target.closest && e.target.closest('[data-tag-propose]'); if(!li) return; e.preventDefault(); inserer(li.closest('.avec-suggestions').querySelector('input'), Number(li.dataset.tagPropose)); });

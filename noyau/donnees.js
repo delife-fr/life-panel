@@ -25,7 +25,9 @@ const UNIES_REFERENCE = ['Logement', 'Courses alimentaires', 'Transports et véh
 /* Couleurs : projets (6 teintes), catégories (9 teintes unies puis les mêmes rayées « -r ») */
 export const COULEURS = ['bleu', 'vert', 'jaune', 'rose', 'violet', 'orange'];
 export const TEINTES_CAT = ['bleu', 'orange', 'vert', 'jaune', 'rose', 'herbe', 'violet', 'rouge', 'prune'];
-export const COULEURS_CAT = [...TEINTES_CAT, ...TEINTES_CAT.map(c => c + '-r')];
+/* v5 : quatre teintes de plus et le gris, au choix (la v4.9 n'en distribue que 9, unies ou rayées) */
+export const TEINTES = [...TEINTES_CAT, 'cyan', 'brun', 'olive', 'indigo', 'gris'];
+export const COULEURS_CAT = [...TEINTES, ...TEINTES.filter(c => c !== 'gris').map(c => c + '-r')];
 const rayeeCat = c => /-r$/.test(String(c));
 
 /* --- Petites vérifications partagées --- */
@@ -80,7 +82,7 @@ const sans = (x, ...cles) => { cles.forEach(k => { delete x[k]; }); return x; };
 export const FORMES = {
   projets:p => sans({...p, id:txt(p.id) || uid(), nom:txt(p.nom) || 'Sans nom', resume:txt(p.resume),
     budget:positif(p.budget, MAX_BUDGET), prochaineAction:txt(p.prochaineAction), echeance:dateISO(p.echeance),   /* plus affichées depuis la v3.34 : gardées */
-    couleur:COULEURS.includes(p.couleur) ? p.couleur : '', dossier:cheminDrive(p.dossier), archive:!!p.archive, modif:txt(p.modif) || maintenant()},
+    couleur:TEINTES.includes(p.couleur) ? p.couleur : '', dossier:cheminDrive(p.dossier), archive:!!p.archive, modif:txt(p.modif) || maintenant()},
     'documents'),   /* v3.4 à v3.7 : documents rangés dans leur projet, repris dans la liste « documents » par normaliser */
   taches:t => { const x = {...t, id:txt(t.id) || uid(), nom:txt(t.nom) || 'Sans titre', date:dateISO(t.date), heure:/^\d{2}:\d{2}$/.test(txt(t.heure)) ? txt(t.heure) : '',
     projet:t.projet || null, fait:!!t.fait, faitLe:t.fait ? txt(t.faitLe || t.modif) : '',

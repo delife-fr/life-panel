@@ -10,64 +10,24 @@ import {ico} from '../../noyau/icones.js';
 import {DB, modifie, assurerCategorie, assurerCompte, COULEURS_CAT} from '../../noyau/donnees.js';
 import {couleurCategorie, nomDossier} from '../../noyau/calculs.js';
 import {puceDossier, puceTags} from '../../noyau/affichage.js';
-import {entete, champAjout, toast, ouvrirFiche, fermerFiche, confirmer, rendre} from '../../noyau/interface.js';
+import {entete, champAjout, toast, ouvrirFiche, fermerFiche, confirmer, rendre, blocPliable} from '../../noyau/interface.js';
 import {lien} from '../../noyau/adresses.js';
 import {tableau} from '../../noyau/tableau.js';
 import {colonnes, recherche} from '../../noyau/colonnes.js';
 import {nuancier} from '../../noyau/fiches.js';
 import {enregistrerCapture} from '../../noyau/capture.js';
 import {ouvrirElement} from '../../noyau/fiches.js';
-import {pref, changerPref} from '../../noyau/preferences.js';
+import {somme, unCompte, dansStats, depenses, revenus, dans, teinte, parCategorie, basculerRetiree} from '../../noyau/finance.js';
 
 const SOUS = [['', 'Mois'], ['annee', 'Année'], ['mouvements', 'Mouvements'], ['comptes', 'Comptes'], ['categories', 'Catégories']];
-const somme = l => l.reduce((s, m) => s + (Number(m.montant) || 0), 0);
-const unCompte = nom => DB.comptes.find(c => c.nom === nom) || null;
-/* Les statistiques ne regardent que les comptes cochés (v4.9) ; « sans compte » a sa propre case */
-const dansStats = m => m.compte ? (unCompte(m.compte) || {stats:true}).stats : DB.reglages.sansCompteStats !== false;
-const depenses = f => DB.mouvements.filter(m => m.type !== 'revenu' && dansStats(m) && f(m));
-const revenus = f => DB.mouvements.filter(m => m.type === 'revenu' && dansStats(m) && f(m));
-const dans = periode => m => (m.date || '').startsWith(periode);
-const teinte = c => 'var(--c-' + String(c).replace(/-r$/, '') + ')';
 const ajout = () => champAjout('finance-ajouter', 'Ajouter une dépense (ex. essence 45)…');
 
-/* --- Catégories retirées du calcul de l'anneau : par période (« 2026-11 » ou « 2026 »), gardées sur cet appareil --- */
-const retirees = periode => new Set((pref('finance.retirees', {}) || {})[periode] || []);
-function basculerRetiree(periode, cat){
-  const toutes = {...(pref('finance.retirees', {}) || {})}, s = retirees(periode);
-  s.has(cat) ? s.delete(cat) : s.add(cat);
-  if(s.size) toutes[periode] = [...s]; else delete toutes[periode];
-  changerPref('finance.retirees', toutes);
-}
-
-/* --- L'anneau par catégorie et sa légende (un clic sur une ligne la retire du calcul) --- */
-function parCategorie(liste, periode){
-  const t = new Map();
-  liste.forEach(m => { const c = m.categorie || ''; t.set(c, (t.get(c) || 0) + (Number(m.montant) || 0)); });
-  const parts = [...t.entries()].filter(([, v]) => v > 0).map(([nom, val]) => ({nom, val, couleur:nom ? couleurCategorie(nom) : 'gris'}))
-    .sort((a, b) => (a.nom ? 0 : 1) - (b.nom ? 0 : 1) || b.val - a.val);
-  if(!parts.length) return `<div class="vide">Aucune dépense ${periode.length === 4 ? 'cette année-là' : 'ce mois-ci'}.</div>`;
-  const hors = retirees(periode), comptees = parts.filter(p => !hors.has(p.nom)), total = somme(comptees.map(p => ({montant:p.val})));
-  const R = 70, C = 2 * Math.PI * R, rayures = [...new Set(comptees.map(p => p.couleur).filter(c => /-r$/.test(c)))];
-  let deja = 0;
-  const arcs = comptees.map(p => { const l = total ? p.val / total * C : 0, a = `<circle r="${R}" cx="90" cy="90" fill="none" stroke-width="26" stroke="${/-r$/.test(p.couleur) ? `url(#raye-${p.couleur})` : teinte(p.couleur)}"
-    stroke-dasharray="${l.toFixed(2)} ${(C - l).toFixed(2)}" stroke-dashoffset="${(-deja).toFixed(2)}" transform="rotate(-90 90 90)"><title>${esc((p.nom || 'À catégoriser') + ' · ' + eur(p.val))}</title></circle>`; deja += l; return a; }).join('');
-  const motifs = rayures.map(c => `<pattern id="raye-${c}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="${teinte(c)}"/><rect width="2.2" height="6" fill="var(--panneau)" opacity=".55"/></pattern>`).join('');
-  const svg = `<svg class="anneau" viewBox="0 0 180 180" role="img" aria-label="Dépenses par catégorie, total ${esc(eur(total))}"><defs>${motifs}</defs>
-    <circle r="${R}" cx="90" cy="90" fill="none" stroke="var(--panneau-2)" stroke-width="26"/>${arcs}
-    <text x="90" y="86" text-anchor="middle" class="anneau-total">${esc(eur(total))}</text><text x="90" y="106" text-anchor="middle" class="anneau-sous">${hors.size ? 'sans ' + pluriel(hors.size, 'catégorie') : 'dépensé'}</text></svg>`;
-  const ligne = p => { const out = hors.has(p.nom);
-    return `<li class="${out ? 'retiree' : ''}" data-action="finance-retirer" data-periode="${esc(periode)}" data-cat="${esc(p.nom)}" tabindex="0" title="${out ? 'Remettre dans le calcul' : 'Retirer du calcul'}">
-      <span class="pastille-cat${/-r$/.test(p.couleur) ? ' raye' : ''}" style="--c:${teinte(p.couleur)}"></span><span class="nom">${esc(p.nom || 'À catégoriser')}</span>
-      <span class="part">${out || !total ? '—' : Math.round(p.val / total * 100) + ' %'}</span><span class="val">${esc(eur(p.val))}</span></li>`; };
-  return `<div class="par-categorie">${svg}<ul class="legende">${parts.map(ligne).join('')}</ul></div>`;
-}
-
-/* --- Les comptes comptés dans les statistiques (cases, comme en v4.9) --- */
+/* --- Les comptes pointés : ceux que les totaux regardent (cases, comme en v4.9) --- */
 function casesComptes(){
   const sans = DB.mouvements.some(m => !m.compte);
   if(DB.comptes.length + (sans ? 1 : 0) < 2) return '';
-  const puce = (nom, on, attr) => `<button type="button" class="puce-choix case-compte${on ? ' actif' : ''}" data-action="compte-stats" ${attr} aria-pressed="${on}" title="${on ? 'Compté dans les totaux : un clic pour l’enlever' : 'Pas compté dans les totaux : un clic pour l’ajouter'}">${on ? ico('check', 13, 2.4) : ''}${esc(nom)}</button>`;
-  return `<div class="cases-comptes" role="group" aria-label="Comptes comptés dans les totaux"><span class="faible">Comptés dans les totaux :</span>${DB.comptes.map(c => puce(c.nom, c.stats, `data-nom="${esc(c.nom)}"`)).join('')}
+  const puce = (nom, on, attr) => `<button type="button" class="puce-choix case-compte${on ? ' actif' : ''}" data-action="compte-stats" ${attr} aria-pressed="${on}" title="${on ? 'Pointé : compté dans les totaux (un clic pour l’enlever)' : 'Pas pointé : hors des totaux (un clic pour l’ajouter)'}">${on ? ico('check', 13, 2.4) : ''}${esc(nom)}</button>`;
+  return `<div class="cases-comptes" role="group" aria-label="Comptes pointés"><span class="faible">Comptes pointés :</span>${DB.comptes.map(c => puce(c.nom, c.stats, `data-nom="${esc(c.nom)}"`)).join('')}
     ${sans ? puce('Sans compte', DB.reglages.sansCompteStats !== false, 'data-sans="1"') : ''}</div>`;
 }
 const chiffre = (titre, valeur, note = '', cls = '') => `<div class="chiffre"><span class="titre">${esc(titre)}</span><b class="${cls}">${esc(valeur)}</b>${note ? `<small>${esc(note)}</small>` : ''}</div>`;
@@ -91,7 +51,7 @@ function pageMois(ctx){
     ${casesComptes()}
     <div class="chiffres">${chiffre('Dépensé', eur(t))}${chiffre('Entrées', eur(r), 'solde ' + (r - t >= 0 ? '+' : '−') + eur(Math.abs(r - t)), r - t >= 0 ? 'bien' : '')}
       ${troisieme}${chiffre(an === cour.slice(0, 4) ? 'Cette année' : 'Année ' + an, eur(ta), 'depuis le 1er janvier')}</div>
-    <section class="bloc"><div class="bloc-tete"><h2>Par catégorie</h2></div>${parCategorie(depenses(dans(ym)), ym)}</section>
+    ${blocPliable('finance-categories', 'Par catégorie', parCategorie(depenses(dans(ym)), ym))}
     ${tableMouvements('finance-mois', DB.mouvements.filter(m => dans(ym)(m) && dansStats(m)), {vide:'Aucun mouvement ce mois-ci.', pliable:'Mouvements'})}</div>`;
 }
 
@@ -109,8 +69,8 @@ function pageAnnee(ctx){
     ${casesComptes()}
     <div class="chiffres">${chiffre('Dépensé en ' + an, eur(ta))}${chiffre('Entrées', eur(ra), 'solde ' + (ra - ta >= 0 ? '+' : '−') + eur(Math.abs(ra - ta)), ra - ta >= 0 ? 'bien' : '')}
       ${chiffre('Moyenne par mois', moisFaits ? eur(ta / moisFaits) : '—')}${chiffre('Mois le plus dépensier', ta ? eur(max) : '—', ta ? nomMois(an + '-' + pad(iMax + 1)) : '')}</div>
-    <section class="bloc"><div class="bloc-tete"><h2>Mois par mois</h2></div><div class="barres-mois">${barres}</div></section>
-    <section class="bloc"><div class="bloc-tete"><h2>Par catégorie</h2></div>${parCategorie(dep, an)}</section>
+    ${blocPliable('finance-mois-par-mois', 'Mois par mois', `<div class="barres-mois">${barres}</div>`)}
+    ${blocPliable('finance-categories', 'Par catégorie', parCategorie(dep, an))}
     ${tableMouvements('finance-annee', DB.mouvements.filter(m => dans(an)(m) && dansStats(m)), {vide:'Aucun mouvement cette année-là.', pliable:'Mouvements'})}</div>`;
 }
 
@@ -122,7 +82,7 @@ function pageComptes(){
   return entete('Comptes', {sur:'Finance'}) + `<div class="page-finance">${champAjout('compte-ajouter', 'Ajouter un compte…')}${tableau({id:'comptes', lignes:DB.comptes, cle:c => c.nom, ouvrir:'compte-ouvrir',
     tri:{col:'nom', sens:1}, vide:'Aucun compte.', colonnes:[
       {id:'nom', titre:'Compte', tel:'titre', valeur:c => c.nom, html:c => esc(c.nom)},
-      {id:'stats', titre:'Dans les totaux', html:c => `<button type="button" class="puce-choix case-compte${c.stats ? ' actif' : ''}" data-action="compte-stats" data-nom="${esc(c.nom)}" aria-pressed="${c.stats}" title="Un clic pour changer">${c.stats ? ico('check', 13, 2.4) + 'oui' : 'non'}</button>`},
+      {id:'stats', titre:'Pointé', html:c => `<button type="button" class="puce-choix case-compte${c.stats ? ' actif' : ''}" data-action="compte-stats" data-nom="${esc(c.nom)}" aria-pressed="${c.stats}" title="Un clic pour changer">${c.stats ? ico('check', 13, 2.4) + 'oui' : 'non'}</button>`},
       {id:'n', titre:'Mouvements', num:true, valeur:c => DB.mouvements.filter(m => m.compte === c.nom).length, html:c => String(DB.mouvements.filter(m => m.compte === c.nom).length)},
       {id:'mois', titre:'Dépensé ce mois-ci', num:true, valeur:c => somme(DB.mouvements.filter(m => m.compte === c.nom && m.type !== 'revenu' && dans(mois)(m))),
         html:c => esc(eur(somme(DB.mouvements.filter(m => m.compte === c.nom && m.type !== 'revenu' && dans(mois)(m)))))},

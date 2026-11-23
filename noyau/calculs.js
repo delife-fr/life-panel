@@ -17,9 +17,28 @@ export const dossiersActifs = () => DB.projets.filter(p => !p.archive);
 export const cheminDe = p => (p && Array.isArray(p.chemin) ? p.chemin : []);
 export const cheminDossier = id => { const p = dossier(id); return p ? [...cheminDe(p), p.nom] : []; };
 export const lireChemin = t => String(t || '').split(/\s*(?:›|>|\/)\s*/).map(propreNom).filter(Boolean);
-/* Tous les chemins utilisés, et leurs débuts (« Perso », « Perso › Maison ») */
-export function chemins(){
-  const s = new Set(); DB.projets.forEach(p => cheminDe(p).forEach((_, i, a) => s.add(a.slice(0, i + 1).join(' › '))));
+/* L'arbre des chemins : ceux qu'on a créés (DB.chemins, « Perso/Finances/Assurances »), ceux des dossiers et leurs débuts.
+   Tant que l'utilisateur n'a rien créé, l'arbre de départ est sa hiérarchie (document de la refonte, sans les dossiers du bout). */
+export const CHEMINS_DEPART = ['Aviation/Licences', 'Aviation/Formations', 'Aviation/Employeurs', 'Aviation/Candidatures', 'Aviation/Documentation',
+  'Perso/Administratif', 'Perso/Finances/Assurances', 'Perso/Logement', 'Perso/Quotidien', 'Perso/Transports', 'Perso/Santé', 'Perso/Famille',
+  'Perso/Numérique', 'Perso/Loisirs', 'Perso/Voyages'];
+export function arbreChemins(){
+  const vus = new Map(), mettre = l => l.forEach((_, i) => { const c = l.slice(0, i + 1); vus.set(c.map(cleNom).join('/'), c); });
+  (Array.isArray(DB.chemins) ? DB.chemins : CHEMINS_DEPART).forEach(t => mettre(lireChemin(t)));
+  DB.projets.forEach(p => mettre(cheminDe(p)));
+  return [...vus.values()].sort((a, b) => a.join('/').localeCompare(b.join('/'), 'fr', {sensitivity:'base'}));
+}
+export const chemins = () => arbreChemins().map(c => c.join(' › '));
+/* Ajouter un chemin à l'arbre (le premier ajout recopie l'arbre de départ dans les données) */
+export function ajouterChemin(l){
+  if(!l.length) return;
+  if(!Array.isArray(DB.chemins)) DB.chemins = CHEMINS_DEPART.slice();
+  if(!DB.chemins.some(t => lireChemin(t).map(cleNom).join('/') === l.map(cleNom).join('/'))) DB.chemins.push(l.join('/'));
+}
+/* Tous les tags (ceux créés dans la fenêtre Tags et ceux portés par un élément) */
+export function tousLesTags(){
+  const s = new Set(DB.tags || []);
+  ['taches', 'notes', 'documents', 'contacts', 'evenements', 'journal', 'mouvements', 'projets'].forEach(k => (DB[k] || []).forEach(x => (x.tags || []).forEach(t => s.add(t))));
   return [...s].sort((a, b) => a.localeCompare(b, 'fr', {sensitivity:'base'}));
 }
 export const couleurDossier = id => { const p = dossier(id); return (p && p.couleur) || 'gris'; };
@@ -100,7 +119,7 @@ export function texteEcheance(jours){
 }
 
 /* --- Idées (l'Inbox) --- */
-export const ideesOuvertes = () => DB.inbox.filter(x => x.status !== 'archived');
+export const ideesOuvertes = () => DB.inbox;   /* v5 : plus d'idées archivées : on range ou on supprime */
 export const ideesArchivees = () => DB.inbox.filter(x => x.status === 'archived');
 
 /* --- Finance : catégories --- */

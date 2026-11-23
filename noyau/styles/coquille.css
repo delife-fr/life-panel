@@ -31,7 +31,7 @@
   border:1px solid var(--bord);color:var(--texte-3);font-size:13.5px}
 .recherche:hover{border-color:var(--bord-fort);color:var(--texte-2)}
 .recherche span{min-width:90px;text-align:left}
-@media (min-width:1400px) and (max-width:1599px){ .recherche kbd{display:none} .recherche span{min-width:0} }
+@media (min-width:1100px) and (max-width:1599px){ .recherche span,.recherche kbd{display:none} .recherche{width:36px;padding:0;justify-content:center} .barre-droite .btn.plein{width:38px;padding:0} .barre-droite .btn.plein span{display:none} }
 kbd{font:500 11px/1 var(--sans);padding:4px 6px;border-radius:4px;border:1px solid var(--bord-fort);color:var(--texte-3)}
 .barre .icone-btn.actif{color:var(--texte);background:color-mix(in srgb, var(--section) 22%, transparent)}
 .seul-tel{display:none!important}

@@ -2,8 +2,9 @@
    1. Aujourd'hui : les rendez-vous du jour, puis les tâches du jour (datées d'aujourd'hui, en retard, ou sans date hors liste :
       la définition de la v4.9), à cocher ; celles cochées aujourd'hui restent visibles, barrées. Une ligne pour ajouter vite.
    2. À ranger : ce qui attend dans Idées (idées et dépenses sans catégorie), en une ligne.
-   3. À venir : les anniversaires des 30 prochains jours et les documents à renouveler. */
-import {esc, aujourdhui, jourEtMois, jourCourt, heureTexte, pluriel, ecartJours, jourDe, maintenant} from '../../noyau/outils.js';
+   3. À venir : les anniversaires des 30 prochains jours et les documents à renouveler.
+   4. Finance : le total dépensé ce mois-ci et l'anneau par catégorie (comptes pointés). */
+import {esc, eur, aujourdhui, jourEtMois, jourCourt, heureTexte, pluriel, ecartJours, jourDe, maintenant} from '../../noyau/outils.js';
 import {ico} from '../../noyau/icones.js';
 import {DB, ajouter, modifie} from '../../noyau/donnees.js';
 import {tachesDuJour, evenementsDuJour, anniversaires, ageFete, documentsARenouveler, texteEcheance, ideesOuvertes, sansCategorie,
@@ -14,6 +15,7 @@ import {lireCapture} from '../../noyau/capture.js';
 import '../../noyau/fiches.js';
 
 import {puceDossier, puceTags} from '../../noyau/affichage.js';
+import {depenses, dans, somme, parCategorie} from '../../noyau/finance.js';
 
 function ligneRdv(ev){
   const passe = ev.heure && (ev.fin || ev.heure) < new Date().toTimeString().slice(0, 5);
@@ -51,7 +53,11 @@ function page(){
     ${docs.map(({x, etat, jours}) => `<li class="${etat}" data-action="ouvrir-element" data-liste="documents" data-id="${esc(x.id)}" tabindex="0">${ico('papier', 16)}<span><b>${esc(x.titre)}</b> · ${esc(texteEcheance(jours))}</span></li>`).join('')}
   </ul></section>` : '';
 
-  return entete(jourEtMois(aujourdhui())) + `<div class="grille-jour"><div class="col-principale">${jour}</div><div class="col-cote">${ranger}${venir}</div></div>`;
+  /* Finance : ce qui a été dépensé ce mois-ci (comptes pointés), par catégorie, comme sur l'accueil de la v4.9 */
+  const ym = j.slice(0, 7), dep = depenses(dans(ym)), t = somme(dep);
+  const finance = `<section class="bloc finance-jour"><div class="bloc-tete"><h2>Finance</h2><a href="${lien('finance')}">Ouvrir Finance ${ico('fleche', 14)}</a></div>
+    <p class="gros-chiffre"><b>${esc(eur(t))}</b> dépensés ce mois-ci</p>${t ? parCategorie(dep, ym, {cliquable:false, max:6}) : ''}</section>`;
+  return entete(jourEtMois(aujourdhui())) + `<div class="grille-jour"><div class="col-principale">${jour}${finance}</div><div class="col-cote">${ranger}${venir}</div></div>`;
 }
 
 export default {

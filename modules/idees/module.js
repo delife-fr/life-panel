@@ -6,7 +6,7 @@
      ses tags, son dossier et ses attributs la suivent ;
    - les dépenses sans catégorie : la catégorie proposée en un clic (d'après les anciennes dépenses du même libellé, puis les
      mots-clés), une autre dans la liste, ou glisser la dépense sur une catégorie ; « Accepter les propositions » pour toutes.
-   Archivées : les idées mises de côté, à sortir des archives ou à supprimer. Chaque décision a son « Annuler ». */
+   Pas d'archives (23/11) : une idée se range ou se supprime. Chaque décision a son « Annuler ». */
 import {esc, ilya, maintenant, eur, dateCourte, pluriel} from '../../noyau/outils.js';
 import {ico} from '../../noyau/icones.js';
 import {DB, ajouter, modifie, retirer} from '../../noyau/donnees.js';
@@ -17,7 +17,6 @@ import {glisserType} from '../../noyau/glisser.js';
 import {lireCapture, enregistrerCapture, TYPES_CAPTURE} from '../../noyau/capture.js';
 import {ouvrirElement} from '../../noyau/fiches.js';
 
-const SOUS = [['', 'À ranger'], ['archivees', 'Archivées']];
 /* La section où l'on dépose une idée → le type qu'elle devient */
 const PAR_SECTION = {taches:'tache', calendrier:'evenement', finance:'depense', carnet:'note', contacts:'contact'};
 const COULEUR_TYPE = {tache:'vert', evenement:'violet', depense:'herbe', note:'rose', contact:'prune', document:'rose', idee:'jaune'};
@@ -40,7 +39,6 @@ function pageARanger(){
       {id:'actions', titre:'', tel:'actions', html:x => { const {c, nom} = lecture(x), d = `data-id="${esc(x.id)}"`;
         return `<div class="actions-ligne"><button type="button" class="btn plein compact" data-action="idee-ranger" ${d}>${ico('check', 14, 2)}<span>${esc(nom)}</span></button>
           <button type="button" class="btn compact" data-action="idee-autre" ${d}>Autre…</button>
-          <button type="button" class="icone-btn petit" data-action="idee-archiver" ${d} title="Archiver" aria-label="Archiver">${ico('archive', 16)}</button>
           <button type="button" class="icone-btn petit" data-action="idee-supprimer" ${d} title="Supprimer" aria-label="Supprimer">${ico('corbeille', 16)}</button></div>`; }}]});
 
   const deps = sansCategorie(), props = deps.filter(m => categorieProposee(m));
@@ -65,15 +63,6 @@ function pageARanger(){
     ${l.length ? '<p class="aide masque-tel">Glisse une idée sur une section en haut pour la ranger.</p>' : ''}${idees}${blocDepenses}</div>`;
 }
 
-function pageArchivees(){
-  return entete('Idées archivées') + tableau({id:'idees-archivees', lignes:ideesArchivees(), cle:x => x.id, ouvrir:'idee-ouvrir', tri:{col:'archivee', sens:-1},
-    recherche:x => [x.text], tags:x => x.tags || [], texteRecherche:'Chercher dans les archives', vide:'Aucune idée archivée.',
-    colonnes:[
-      {id:'idee', titre:'Idée', tel:'titre', valeur:x => x.text, html:x => esc(x.text || 'Note vocale sans texte')},
-      {id:'archivee', titre:'Archivée', tel:'droite', valeur:x => x.archived || x.modif, html:x => esc(ilya(x.archived || x.modif))},
-      {id:'actions', titre:'', tel:'actions', html:x => `<div class="actions-ligne"><button type="button" class="btn compact" data-action="idee-desarchiver" data-id="${esc(x.id)}">Sortir des archives</button>
-        <button type="button" class="icone-btn petit" data-action="idee-supprimer" data-id="${esc(x.id)}" title="Supprimer" aria-label="Supprimer">${ico('corbeille', 16)}</button></div>`}]});
-}
 
 /* « Autre… » : choisir le type, puis compléter la fiche avant « Ajouter » ; l'idée quitte Idées une fois l'élément ajouté */
 function rangerAutrement(x){
@@ -102,20 +91,17 @@ glisserType('depense', {etiquette:c => { const m = DB.mouvements.find(y => y.id 
   depot:c => { const m = DB.mouvements.find(y => y.id === c.d.id), cat = c.cible.dataset.cat; if(!m || !cat) return false; categoriser([[m, cat]], resume(m) + ' → ' + cat); }});
 
 export default {
-  id:'idees', nom:'Idées', icone:'ampoule', couleur:'jaune', menu:20, sousMenu:SOUS, styles:true,
+  id:'idees', nom:'Idées', icone:'ampoule', couleur:'jaune', menu:20, styles:true,
   compteur:() => ideesOuvertes().length,
-  titre:ctx => ctx.arg === 'archivees' ? 'Idées archivées' : 'Idées',
-  pages:{idees:ctx => ctx.arg === 'archivees' ? pageArchivees() : pageARanger()},
+  titre:() => 'Idées',
+  pages:{idees:pageARanger},
   actions:{
     'idee-ajouter':texte => { const x = ajouter('inbox', {text:texte, created:maintenant(), status:'open', modif:maintenant()}); modifie('idee');
       toast('Idée notée.', [['Annuler', () => { DB.inbox = DB.inbox.filter(y => y !== x); modifie('annuler'); }]]); },
     'idee-ouvrir':el => { const x = idee(el.dataset.id); if(!x) return;
-      ouvrirElement('inbox', x.id, x.status === 'archived' ? {} : {boutons:[['Ranger : ' + lecture(x).nom.toLowerCase(), 'idee-ranger', {plein:true}]]}); },
+      ouvrirElement('inbox', x.id, {boutons:[['Ranger : ' + lecture(x).nom.toLowerCase(), 'idee-ranger', {plein:true}]]}); },
     'idee-ranger':el => { const x = idee(el.dataset.id); if(!x) return; if(enregistrerCapture(x.text, 'auto', {idee:x})) fermerFiche(); },
     'idee-autre':el => { const x = idee(el.dataset.id); if(x) rangerAutrement(x); },
-    'idee-archiver':el => { const x = idee(el.dataset.id); if(!x) return; x.status = 'archived'; x.archived = maintenant(); x.modif = maintenant(); modifie('archiver');
-      toast('Idée archivée.', [['Annuler', () => { x.status = 'open'; x.archived = ''; modifie('annuler'); }]]); },
-    'idee-desarchiver':el => { const x = idee(el.dataset.id); if(!x) return; x.status = 'open'; x.archived = ''; x.modif = maintenant(); modifie('desarchiver'); toast('Idée remise dans À ranger.'); },
     'idee-supprimer':el => { const x = idee(el.dataset.id); if(!x) return; const remettre = retirer('inbox', x); modifie('supprimer');
       toast('Idée mise à la corbeille.', [['Annuler', () => { remettre(); modifie('annuler'); }]]); },
     'depense-ouvrir':el => ouvrirElement('mouvements', el.dataset.id),

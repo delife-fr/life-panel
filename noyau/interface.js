@@ -27,6 +27,12 @@ export const bientot = (lot, points) => `<section class="panneau bientot"><p cla
 export const bouton = (texte, action, {icone = '', plein = false, attrs = ''} = {}) =>
   `<button type="button" class="btn${plein ? ' plein' : ''}" data-action="${esc(action)}" ${attrs}>${icone ? ico(icone, 16, 1.8) : ''}<span>${esc(texte)}</span></button>`;
 
+/* Un bloc qu'on plie ou déplie d'une flèche (état gardé sur cet appareil) */
+export const blocPliable = (id, titre, html, {droite = ''} = {}) => { const plie = !!pref('plie.' + id, false);
+  return `<section class="bloc pliable${plie ? ' plie' : ''}"><div class="bloc-tete"><button type="button" class="tableau-plier" data-bloc-plier="${esc(id)}" aria-expanded="${!plie}">${ico('bas', 16, 2)}<span>${esc(titre)}</span></button>${droite}</div><div class="bloc-corps">${html}</div></section>`; };
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-bloc-plier]'); if(!b) return;
+  const s = b.closest('.pliable'), plie = !s.classList.contains('plie'); s.classList.toggle('plie', plie); b.setAttribute('aria-expanded', !plie); changerPref('plie.' + b.dataset.blocPlier, plie); });
+
 /* --- Messages en bas de l'écran (avec, au besoin, « Annuler ») --- */
 let tToast;
 export function toast(message, actions = null){
@@ -121,6 +127,7 @@ export function construireCoquille(){
       ${idees ? `<a class="icone-btn seul-tel avec-nb" href="${lien('idees')}" aria-label="Idées">${ico(idees.icone, 20)}${placeCompteur('idees')}</a>` : ''}
       <button type="button" class="btn plein masque-tel" data-action="noter">${ico('plus', 16, 2.2)}<span>Noter</span></button>
       <button type="button" class="icone-btn" data-action="tags" aria-label="Tags" title="Tags (T)">${ico('tag', 19)}</button>
+      <button type="button" class="icone-btn masque-tel" data-action="aide" aria-label="Aide" title="Aide : raccourcis et glisser-déposer (?)">${ico('info', 19)}</button>
       <button type="button" class="icone-btn" data-action="theme"></button>
       ${reglages ? `<a class="icone-btn" href="${lien('reglages')}" data-nav="reglages" aria-label="Réglages" title="Réglages">${ico('reglages', 19)}</a>` : ''}
     </div>`;
@@ -157,7 +164,7 @@ function majCadre(m, r){
   /* Sous-menu */
   let sm = []; try { sm = (typeof m.sousMenu === 'function' ? m.sousMenu(r) : m.sousMenu) || []; } catch(e){ console.error(e); }
   const s = $('#sous-menu'), arg = (r.arg || '').split('/')[0], actif = sm.some(([a]) => a === r.arg) ? r.arg : sm.some(([a]) => a === arg) ? arg : sm.length ? sm[0][0] : '';
-  s.innerHTML = sm.map(([a, t]) => `<a href="${lien(m.id, a)}"${a === actif ? ' class="actif" aria-current="page"' : ''}>${esc(t)}</a>`).join('');
+  s.innerHTML = sm.map(([a, t, n]) => `<a href="${lien(m.id, a)}"${a === actif ? ' class="actif" aria-current="page"' : ''}>${esc(t)}${n ? `<span class="n">${n}</span>` : ''}</a>`).join('');
   s.hidden = !sm.length;
   /* Compteurs ; « Plus » additionne ceux des sections qu'il contient */
   $$('[data-compteur]').forEach(x => { const id = x.dataset.compteur;
@@ -204,7 +211,7 @@ export function brancherActions(){
   actionNoyau('chercher', () => toast('La recherche arrive au lot 7.'));
 }
 
-/* --- Clavier : Ctrl K ou / chercher · C noter · T les tags · 1 à 8 les sections · Échap ferme --- */
+/* --- Clavier : Ctrl K ou / chercher · C noter · T les tags · ? l'aide · 1 à 8 les sections · Échap ferme --- */
 export function brancherClavier(){
   document.addEventListener('keydown', e => {
     if(e.key === 'Escape' && fiche.ouverte){ e.preventDefault(); fermerFiche(); return; }
@@ -215,6 +222,7 @@ export function brancherClavier(){
     if(e.key === '/') return action('chercher');
     if(e.key === 'c' || e.key === 'C') return action('noter');
     if(e.key === 't' || e.key === 'T') return action('tags');
+    if(e.key === '?') return action('aide');
     if(/^[1-9]$/.test(e.key)){ const m = dansLeMenu()[Number(e.key) - 1]; if(m){ e.preventDefault(); location.hash = lien(m.id); } }
   });
 }

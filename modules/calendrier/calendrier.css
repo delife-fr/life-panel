@@ -22,7 +22,7 @@
 .cal-el.tache{--c:var(--c-vert)}
 .cal-el.fait{color:var(--texte-3);text-decoration:line-through}
 .cal-el:hover{background:color-mix(in srgb, var(--c) 26%, var(--panneau))}
-.cal-case{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--c);flex-shrink:0}
+.cal-case{width:9px;height:9px;border-radius:2px;border:1.5px solid var(--c);flex-shrink:0}
 .cal-el.fait .cal-case{background:var(--c)}
 .cal-plus{align-self:flex-start;padding:1px 6px;border:0;border-radius:5px;background:var(--panneau-2);color:var(--texte-2);font-size:12px;font-weight:600;cursor:pointer}
 .cal-liste{display:flex;flex-direction:column;gap:6px}

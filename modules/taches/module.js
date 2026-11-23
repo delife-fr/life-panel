@@ -1,13 +1,13 @@
-/* LIFE PANEL v5 · modules/taches — les tâches, au plus simple : un tableau.
-   - Par date : les tâches à faire, triées par date (un tiret quand il n'y en a pas, en dernier). Une tâche rangée dans une
-     liste et sans date reste dans sa liste (comme en v4.9) ; la recherche, elle, regarde toutes les tâches. Une tâche cochée
-     reste visible, barrée, en bas du tableau (plus d'archives en v5).
-   - Listes : les listes personnalisées (Courses, Voyage…) en puces ; une liste ouverte montre ses tâches et sa ligne d'ajout.
-   - Partout : une ligne pour ajouter vite (« appeler Paul demain 15h #perso » garde la date, l'heure et le tag) ; un clic
-     sur une ligne ouvre la fiche au centre (date, liste, étapes, dossier, tags, attributs).
+/* LIFE PANEL v5 · modules/taches — les tâches, au plus simple : un seul tableau, sans sous-menu.
+   - Toutes les tâches, celles des listes comprises (colonne Liste, triable) ; la date avec un tiret quand il n'y en a pas
+     (en dernier) ; une tâche cochée reste visible, barrée, en bas (plus d'archives en v5).
+   - Les listes personnalisées (Courses, Voyage…) en puces au-dessus : un clic filtre le tableau sur la liste (et la ligne
+     d'ajout y range), un nouveau clic revient à tout ; « Nouvelle liste… » en une ligne.
+   - Une ligne pour ajouter vite (« appeler Paul demain 15h #perso » garde la date, l'heure et le tag) ; un clic sur une
+     ligne ouvre la fiche au centre (date, liste, étapes, dossier, tags, attributs).
    - PC : Ctrl + clic ou Maj + clic choisit plusieurs tâches ; une barre propose Cocher, Date, Liste, Dossier, Supprimer.
-   - Glisser une tâche (ou celles choisies) : sur une liste (page Listes), sur un jour du Calendrier, ou sur l'onglet
-     Calendrier (choisir le jour). */
+   - Glisser une tâche (ou celles choisies) : sur une puce de liste, sur un jour du Calendrier, ou sur l'onglet Calendrier
+     (choisir le jour). */
 import {esc, jourCourt, jourDe, heureTexte, maintenant, pluriel, propreNom, cleNom, majuscule} from '../../noyau/outils.js';
 import {ico} from '../../noyau/icones.js';
 import {DB, ajouter, modifie, retirer} from '../../noyau/donnees.js';
@@ -21,8 +21,7 @@ import {glisserType} from '../../noyau/glisser.js';
 import {lireCapture} from '../../noyau/capture.js';
 import {ouvrirElement} from '../../noyau/fiches.js';
 
-const SOUS = [['', 'Par date'], ['listes', 'Listes']];
-const TABLEAUX = ['taches', 'taches-listes', 'taches-liste'];
+const TABLEAUX = ['taches'];
 const tache = id => DB.taches.find(t => t.id === id);
 const uneListe = id => (id && DB.listes.find(l => l.id === id)) || null;
 /* À faire, ou cochée aujourd'hui (pas encore partie aux archives) */
@@ -40,38 +39,25 @@ const actionsChoix = id => [['taches-choix-cocher', 'Cocher', 'check'], ['taches
 function tableTaches({id, lignes, toutes = null, liste = true, vide, outils = ''}){
   return tableau({id, lignes, toutes, cle:t => t.id, colonnes:colonnes('taches', toutes || lignes, {liste}), ouvrir:'tache-ouvrir', glisser:'tache',
     coche:{action:'tache-cocher', etat:t => t.fait, titre:'Faite'}, enBas:t => t.fait, classe:t => t.fait ? 'fait' : '',
-    recherche:recherche('taches'), tags:t => t.tags, tri:liste && id === 'taches-listes' ? {col:'liste', sens:1} : {col:'date', sens:1},
+    recherche:recherche('taches'), tags:t => t.tags, tri:{col:'date', sens:1},
     selection:{un:'tâche choisie', plusieurs:'tâches choisies', actions:actionsChoix(id)},
     texteRecherche:'Chercher dans les tâches', vide, outils});
 }
 
 
-/* --- Par date --- */
-function pageDate(ctx){
-  const t = tableTaches({id:'taches', lignes:DB.taches.filter(x => x.date || !x.liste), toutes:DB.taches,
-      vide:'Rien à faire. Écris une tâche juste au-dessus, puis Entrée.'});
-  return entete('Tâches') + `<div class="page-taches">${champAjout('tache-ajouter', 'Ajouter une tâche (ex. appeler Paul demain 15h)…')}
-    ${t}</div>`;
-}
-
-/* --- Listes --- */
-function pageListes(ctx){
-  const l = uneListe((ctx.arg || '').split('/')[1]), listes = listesTriees();
+/* --- La page : toutes les tâches, celles des listes comprises ; les listes en puces au-dessus (un clic filtre) --- */
+function page(ctx){
+  const l = uneListe(ctx.params.get('liste')), listes = listesTriees();
   const aFaire = id => DB.taches.filter(t => t.liste === id && !t.fait).length;
   const puces = `<nav class="puces-listes" aria-label="Listes">
-    ${listes.length ? `<a class="puce-choix${l ? '' : ' actif'}" href="${lien('taches', 'listes')}">Toutes</a>` : ''}
-    ${listes.map(x => { const n = aFaire(x.id);
-      return `<a class="puce-choix${l === x ? ' actif' : ''}" href="${lien('taches', 'listes/' + x.id)}" data-depot="tache" data-liste-id="${esc(x.id)}"${l === x ? ' aria-current="true"' : ''}>${esc(x.nom)}${n ? `<span class="n">${n}</span>` : ''}</a>`; }).join('')}
+    ${listes.map(x => { const n = aFaire(x.id), on = l === x;
+      return `<a class="puce-choix${on ? ' actif' : ''}" href="${on ? lien('taches') : lien('taches', '', {liste:x.id})}" data-depot="tache" data-liste-id="${esc(x.id)}"${on ? ' aria-current="true"' : ''}>${ico('liste', 14)} ${esc(x.nom)}${n ? `<span class="n">${n}</span>` : ''}</a>`; }).join('')}
+    ${l ? `<button type="button" class="icone-btn" data-action="liste-ouvrir" data-id="${esc(l.id)}" aria-label="Renommer ou supprimer la liste « ${esc(l.nom)} »" title="Renommer ou supprimer">${ico('modifier', 16)}</button>` : ''}
     ${champAjout('liste-nouvelle', 'Nouvelle liste…')}</nav>`;
-  let corps;
-  if(l) corps = `<div class="liste-tete"><h2>${esc(l.nom)}</h2>
-      <button type="button" class="icone-btn" data-action="liste-ouvrir" data-id="${esc(l.id)}" aria-label="Renommer ou supprimer la liste" title="Renommer ou supprimer">${ico('modifier', 17)}</button></div>
-    ${champAjout('tache-ajouter', 'Ajouter à « ' + l.nom + ' »…', {donnees:{liste:l.id}})}
-    ${tableTaches({id:'taches-liste', lignes:DB.taches.filter(t => t.liste === l.id && visible(t)), liste:false, vide:'Cette liste est vide : écris sa première tâche juste au-dessus.'})}`;
-  else if(!listes.length) corps = `<div class="vide">Aucune liste pour l’instant. Une liste rassemble des tâches qui n’ont pas besoin de date
-    (Courses, Voyage, Déménagement…) : donne-lui un nom ci-dessus, puis Entrée.</div>`;
-  else corps = tableTaches({id:'taches-listes', lignes:DB.taches.filter(t => t.liste && visible(t)), vide:'Aucune tâche dans tes listes.'});
-  return entete('Listes', {sur:'Tâches'}) + `<div class="page-taches">${puces}${corps}</div>`;
+  return entete(l ? l.nom : 'Tâches', l ? {sur:'Tâches'} : {}) + `<div class="page-taches">${puces}
+    ${champAjout('tache-ajouter', l ? 'Ajouter à « ' + l.nom + ' »…' : 'Ajouter une tâche (ex. appeler Paul demain 15h)…', l ? {donnees:{liste:l.id}} : {})}
+    ${tableTaches({id:'taches', lignes:l ? DB.taches.filter(t => t.liste === l.id) : DB.taches, liste:!l,
+      vide:l ? 'Cette liste est vide : écris sa première tâche juste au-dessus.' : 'Rien à faire. Écris une tâche juste au-dessus, puis Entrée.'})}</div>`;
 }
 
 /* --- Créer, renommer, supprimer une liste --- */
@@ -80,7 +66,7 @@ function creerListe(texte){
   const meme = DB.listes.find(l => cleNom(l.nom) === cleNom(nom));
   const l = meme || ajouter('listes', {nom, modif:maintenant()});
   if(!meme) modifie('nouvelle liste');
-  location.hash = lien('taches', 'listes/' + l.id);
+  location.hash = lien('taches', '', {liste:l.id});
   setTimeout(() => { const i = document.querySelector('[data-ajout="tache-ajouter"] input'); if(i) i.focus(); }, 60);
   return l;
 }
@@ -172,9 +158,9 @@ glisserType('tache', {
 const choisies = el => choixTableau(el.dataset.tableau || '');
 
 export default {
-  id:'taches', nom:'Tâches', icone:'taches', couleur:'vert', menu:40, onglet:30, depot:'idee', sousMenu:SOUS, styles:true,
-  titre:ctx => (ctx.arg || '').startsWith('listes') ? 'Listes de tâches' : 'Tâches',
-  pages:{taches:ctx => (ctx.arg || '').startsWith('listes') ? pageListes(ctx) : pageDate(ctx)},
+  id:'taches', nom:'Tâches', icone:'taches', couleur:'vert', menu:40, onglet:30, depot:'idee', styles:true,
+  titre:ctx => (uneListe(ctx.params.get('liste')) || {nom:'Tâches'}).nom,
+  pages:{taches:page},
   actions:{
     'tache-ouvrir':el => ouvrirElement('taches', el.dataset.id),
     /* Une ligne, Entrée : la phrase est lue comme une tâche (date et heure écrites gardées), les « #mots » deviennent des tags */
