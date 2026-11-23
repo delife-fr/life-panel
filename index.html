@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-H0vZkawybFNfcY8g0jsmn3SlpYChU4Zfw2tr7J5YzyY='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-6xB6zBoqc0Mjcj1/utMIQvdRY+4QalKZ4UTfPnMhqXw='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v4.8
+  LIFE PANEL — v4.9
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -248,6 +248,11 @@
   dernier) ; filtres rapides « Anniversaires sous 60 j », « À répondre », « À relancer » ; le résumé en haut compte tout cela. Un clic sur
   la ligne (ou Entrée) ouvre la fiche en grand, inchangée ; téléphone et e-mail restent des liens directs. Sur téléphone, une carte par
   fiche, avec « Trier : » en tête. L'annuaire par lettre et « Tout déplier » sont retirés. Mêmes données (VERSION 23).
+  v4.9 : « À trier » devient une page à part entière (menu, après l'Inbox, avec le nombre en jaune ; boutons « Trier » de l'accueil et de
+  l'Inbox), à la place de la fenêtre qui montrait une carte à la fois. Tout est visible d'un coup : les captures de l'Inbox (« Enregistrer :
+  tâche » comme la phrase a été lue, « Autre type… », archiver, supprimer), puis les dépenses sans catégorie en tableau, les plus récentes
+  d'abord (la catégorie proposée en un clic, une autre dans la liste, « Accepter les propositions » pour toutes d'un coup ; 50 à la fois).
+  Chaque décision s'applique tout de suite, avec « Annuler ». Sur téléphone, une carte par dépense. Mêmes données (VERSION 23).
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -679,6 +684,31 @@ a.puce.lien-tel:hover{border-color:var(--i-bleu)}
 .carte-note .depliable-tete{gap:10px}
 .date-t{font-size:var(--t2);color:var(--texte-faible);white-space:nowrap}
 .md-extrait{font-size:var(--t4);max-height:260px;overflow:auto;padding-right:4px}
+/* À trier (v4.9) : les captures en liste, les dépenses en tableau avec la catégorie proposée en un clic */
+.page-trier{display:flex;flex-direction:column;gap:16px}
+.liste-tri .boutons{flex-wrap:wrap;justify-content:flex-end;gap:6px}
+.table-tri td.lib{min-width:220px}
+.table-tri td.cat{width:1%;white-space:nowrap}
+.choix-cat{display:flex;gap:6px;align-items:center;justify-content:flex-end}
+.choix-cat select.saisie{width:auto;min-width:0;max-width:220px;padding:5px 8px;font-size:var(--t3)}
+@media (max-width:760px){
+  .liste-tri > li{flex-wrap:wrap}
+  .liste-tri .boutons{flex:1 1 100%;justify-content:flex-start;gap:4px}
+  .liste-tri .boutons .btn.compact{padding:5px 9px}
+  .defile:has(> .table-tri){margin:0;overflow:visible}
+  .table-tri,.table-tri tbody{display:block}
+  .table-tri thead{display:none}
+  .table-tri tbody tr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:10px 2px;border-bottom:1px solid var(--trait-doux)}
+  .table-tri tbody tr:last-child{border-bottom:0}
+  .table-tri td{display:block;padding:0;border:0}
+  .table-tri td.lib{order:1;flex:1 1 0;min-width:0}
+  .table-tri td.num{order:2;font-weight:600;align-self:flex-start}
+  .table-tri tbody tr::after{content:'';order:3;flex-basis:100%;height:0}
+  .table-tri td.date{order:4;font-size:var(--t2)}
+  .table-tri td.cat{order:5;flex:1 1 100%;width:auto;white-space:normal}
+  .choix-cat{justify-content:flex-start;flex-wrap:wrap}
+  .choix-cat select.saisie{flex:1 1 160px;max-width:none}
+}
 /* Contacts (v4.8) : un tableau triable ; un clic sur la ligne ouvre la fiche ; sur téléphone, une carte par fiche */
 .carte-contacts{padding:6px 8px}
 .carte-contacts .defile{margin:0}
@@ -1346,17 +1376,6 @@ body{padding-bottom:calc(62px + env(safe-area-inset-bottom))}
 .toast.actions{pointer-events:auto;display:flex;align-items:center;gap:2px;padding-right:6px;text-align:left}
 .toast-btn{border:0;background:none;color:var(--i-bleu);font:inherit;font-weight:700;padding:8px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
 /* Tri : une carte, une décision */
-.tri-avance{display:flex;align-items:center;gap:12px;margin:0 0 14px;font-size:var(--t3);color:var(--texte-doux);font-variant-numeric:tabular-nums}
-.tri-avance .barre-prog{flex:1}
-.tri-carte{padding:16px;border-radius:var(--rayon);border:1px solid var(--trait);background:var(--fond)}
-.tri-carte .source{font-size:var(--t1);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--texte-doux)}
-.tri-carte .quoi{font-size:var(--t7);font-weight:700;line-height:1.3;margin-top:6px;overflow-wrap:anywhere;white-space:pre-wrap}
-.tri-carte .combien{font-size:var(--t9);font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
-.tri-question{font-size:var(--t3);color:var(--texte-doux);margin:14px 0 8px}
-.tri-choix{display:flex;flex-direction:column;gap:8px}
-.tri-choix .btn{justify-content:space-between;min-height:46px;text-align:left;white-space:normal}
-.tri-choix .btn small{font-size:var(--t2);font-weight:400;opacity:.8;flex-shrink:0}
-.tri-fini{display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px 8px;text-align:center}
 /* Liens entre notes : [[Titre]] ; en rose, la note reste à écrire */
 .lien-wiki{color:var(--i-bleu);text-decoration:underline;text-underline-offset:3px;background:none;border:0;padding:0;font:inherit;cursor:pointer}
 .lien-wiki.rouge{color:var(--i-rose)}
@@ -4010,25 +4029,25 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>t</kbd> tags</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v4.8 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v4.9 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
 /* ==========================================================================
    G. ROUTEUR — une seule fonction rendre(), jamais redéfinie
    ========================================================================== */
-const ROUTES = {accueil:pageAccueil, inbox:pageInbox, taches:pageTaches, projets:pageProjets, projet:pageProjet,
+const ROUTES = {accueil:pageAccueil, inbox:pageInbox, trier:pageTrier, taches:pageTaches, projets:pageProjets, projet:pageProjet,
   finances:pageFinances, notes:pageNotes, documents:pageDocuments, contacts:pageContacts, calendrier:pageCalendrier, donnees:pageDonnees, recherche:pageRecherche, corbeille:pageCorbeille, archives:pageArchives};
 /* Notes et contacts s'ouvrent dans une fenêtre : « #/note/ID » affiche la page Notes puis la fenêtre */
 const FICHES = {note:{page:'notes', ouvrir:id => ficheNote(id)}, contact:{page:'contacts', ouvrir:id => ficheContact(id)}, document:{page:'documents', ouvrir:id => ficheDocument(id)},
   evenement:{page:'calendrier', ouvrir:id => ficheEvenement(id)}};
-const MENU = [['accueil','Aujourd’hui','maison'],['calendrier','Calendrier','calendrier'],['inbox','Inbox','ampoule'],['taches','Tâches','coche'],
+const MENU = [['accueil','Aujourd’hui','maison'],['calendrier','Calendrier','calendrier'],['inbox','Inbox','ampoule'],['trier','À trier','liste'],['taches','Tâches','coche'],
   ['projets','Projets','dossier'],['finances','Finances','portefeuille'],['notes','Notes','doc'],['documents','Documents','document'],['contacts','Contacts','personnes']];
 const PARENT = {projet:'projets'};   /* page d'un projet : l'entrée « Projets » du volet reste en surbrillance */
 /* v4 : cinq onglets en bas de l'écran (téléphone, tablette) ; chaque page appartient à l'un d'eux. Sur grand écran, le volet reste
    affiché à gauche et donne chaque module en un clic : onglets et sous-onglets sont alors cachés. */
 const ONGLETS = [['accueil','Aujourd’hui','maison'],['taches','Tâches','coche'],['calendrier','Calendrier','calendrier'],['finances','Finances','portefeuille'],['notes','Notes','doc']];
-const GROUPE = {accueil:'accueil', inbox:'accueil', taches:'taches', projets:'taches', projet:'taches', calendrier:'calendrier', finances:'finances', notes:'notes', documents:'notes', contacts:'notes'};
+const GROUPE = {accueil:'accueil', inbox:'accueil', trier:'accueil', taches:'taches', projets:'taches', projet:'taches', calendrier:'calendrier', finances:'finances', notes:'notes', documents:'notes', contacts:'notes'};
 /* v4.1 : le Wiki, l'autre appli de la suite. Sur panel.<domaine>, il est à wiki.<domaine> ; ailleurs (fichier ouvert sur l'appareil,
    tests), à son adresse GitHub Pages, qui renvoie vers son domaine. Même onglet : Retour, ou « Life Panel » dans le Wiki, ramène ici. */
 const adresseWiki = (h = location.hostname) => /^panel\./i.test(h) ? 'https://' + h.replace(/^panel\./i, 'wiki.') + '/' : 'https://delife-fr.github.io/wiki/';
@@ -4054,7 +4073,7 @@ function lireRoute(){
 }
 function titrePage(){
   const r = lireRoute();
-  const t = {accueil:'Aujourd’hui', inbox:'Inbox', taches:'Tâches', projets:'Projets', projet:nomProjet(r.id) || 'Projet',
+  const t = {accueil:'Aujourd’hui', inbox:'Inbox', trier:'À trier', taches:'Tâches', projets:'Projets', projet:nomProjet(r.id) || 'Projet',
     finances:'Finances', notes:'Notes', documents:'Documents', contacts:'Contacts', calendrier:'Calendrier', donnees:'Données', recherche:'Recherche', corbeille:'Corbeille', archives:'Archives'}[r.nom];
   return t + ' · Life Panel';
 }
@@ -4130,6 +4149,7 @@ function compteursMenu(){
   const etats = docs.map(x => etatDocument(x).etat);
   return {
     calendrier:{n:evenementsDuJour(auj).length, titre:'événement(s) aujourd’hui'},
+    trier:{alerte:aTrier().total, quoi:'à trier', jaune:true},
     taches:{n:aFaire.length, alerte:aFaire.filter(estEnRetard).length, quoi:'en retard'},
     projets:{n:actifs(DB.projets).length},
     finances:{alerte:sansCategorie().length, quoi:'à catégoriser', jaune:true},
@@ -5083,54 +5103,50 @@ function ficheCapture(texte = '', inboxId = ''){
   if(b) b.onclick = () => { const t = zone.value.trim(); if(!t){ zone.focus(); return; }
     ajouter('inbox', {text:t, created:maintenant()}); fermerModale(); sauver(); rendre(); toast('Ajouté à l’Inbox'); };
 }
-/* --- TRI (v4) : ce qui attend une décision, une carte à la fois — les captures de l'Inbox, puis les dépenses sans catégorie
-   (les plus récentes d'abord). Une touche par carte ; « Passer » la laisse pour la prochaine fois. --- */
-let tri = null;
-function fileTri(){
-  return [...inboxOuverte().filter(x => x.text && !tri.passes.has(x.id)).map(x => ({genre:'inbox', x})),
-    ...sansCategorie().filter(m => !tri.passes.has(m.id)).sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(x => ({genre:'depense', x}))];
-}
+/* --- À TRIER (v4.9) : une page à part entière, à la place de la fenêtre qui montrait une carte à la fois. Tout ce qui attend une
+   décision est visible d'un coup : les captures de l'Inbox (enregistrer comme la phrase a été lue, autre type, archiver, supprimer),
+   puis les dépenses sans catégorie, les plus récentes d'abord (la catégorie proposée en un clic, une autre dans la liste, ou
+   « Accepter les propositions » pour toutes d'un coup). Chaque décision s'applique tout de suite, avec « Annuler ». --- */
+const DEPENSES_TRI_PAR_PAGE = 50;
+let limiteTri = DEPENSES_TRI_PAR_PAGE;
 /* Catégories les plus utilisées, pour proposer les bonnes d'abord */
 function categoriesFrequentes(){
   const n = {}; DB.mouvements.forEach(m => { if(m.type !== 'revenu' && m.categorie) n[m.categorie] = (n[m.categorie] || 0) + 1; });
   return unique([...Object.keys(n).sort((a, b) => n[b] - n[a]), ...DB.categories]).filter(c => DB.categories.includes(c));
 }
-function ficheTri(){
-  if(!tri) tri = {faits:0, passes:new Set()};
-  const file = fileTri(), e = file[0], vus = tri.faits + tri.passes.size, total = vus + file.length;
-  const avance = `<div class="tri-avance"><span>${e ? Math.min(vus + 1, total) + ' / ' + total : 'Terminé'}</span>${barre(total ? Math.round(vus / total * 100) : 100, 'fine')}</div>`;
-  if(!e){
-    ouvrirModale(teteModale('Trier', 'ampoule', 'jaune') + avance + `<div class="tri-fini">${pastille('check', 'vert', 56, 28)}<strong style="font-size:var(--t8)">${tri.passes.size ? 'C’est fait pour cette fois' : 'Tout est trié'}</strong>
-      <span class="aide" style="margin:0">${tri.faits ? pluriel(tri.faits, 'élément rangé', 'éléments rangés') : 'Rien n’attendait'}${tri.passes.size ? ' · ' + pluriel(tri.passes.size, 'laissé', 'laissés') + ' pour plus tard' : ''}.</span></div>
-      <div class="actions"><button class="btn p" data-action="fermer">Terminer</button></div>`, {saisie:false});
-    return;
-  }
-  const d = `data-id="${esc(e.x.id)}"`;
-  let carte, question, choix;
-  if(e.genre === 'inbox'){
-    const c = lireCapture(e.x.text), [nom] = TYPES_CAPTURE[c.type];
-    carte = `<div class="source">Capture · ${esc(ilya(e.x.created))}</div><div class="quoi">${esc(e.x.text)}</div>`;
-    question = 'Qu’en faire ?';
-    choix = (c.liste ? `<button class="btn p" data-action="tri-creer" ${d}><span>Enregistrer : ${nom.toLowerCase()}</span><small>${esc(c.puces.slice(0, 2).join(' · '))}</small></button>` : '') +
-      `<button class="btn" data-action="tri-details" ${d}><span>Autre type, ou tout préciser…</span></button>
-       <button class="btn" data-action="tri-archiver" ${d}><span>Archiver</span></button>
-       <button class="btn danger" data-action="tri-supprimer" ${d}><span>Supprimer</span><small>corbeille, 30 jours</small></button>`;
-  } else {
-    const m = e.x, propose = devinerCategorie(m.libelle), autres = categoriesFrequentes().filter(c => c !== propose).slice(0, propose ? 3 : 4);
-    carte = `<div class="source">Dépense · ${esc(dateCourteAn(m.date))}${m.compte ? ' · ' + esc(m.compte) : ''}</div><div class="quoi">${esc(m.libelle || 'Sans libellé')}</div><div class="combien">${eur(m.montant)}</div>`;
-    question = 'Quelle catégorie ?';
-    choix = (propose ? `<button class="btn p" data-action="tri-categorie" ${d} data-cat="${esc(propose)}"><span>${esc(propose)}</span><small>proposée</small></button>` : '') +
-      autres.map(c => `<button class="btn" data-action="tri-categorie" ${d} data-cat="${esc(c)}"><span>${esc(c)}</span></button>`).join('') +
-      `<select class="saisie" id="tri-autre" aria-label="Autre catégorie"><option value="">Autre catégorie…</option>${DB.categories.map(c => `<option>${esc(c)}</option>`).join('')}</select>`;
-  }
-  ouvrirModale(teteModale('Trier', 'ampoule', 'jaune') + avance + `<div class="tri-carte">${carte}</div><p class="tri-question">${question}</p>
-    <div class="tri-choix">${choix}<button class="btn f" data-action="tri-passer" ${d} style="justify-content:center">Passer, je verrai plus tard</button></div>`, {saisie:false});
-  const autre = $('#tri-autre'); if(autre) autre.onchange = () => { if(autre.value) classerTri(e.x.id, autre.value); };
+const depensesATrier = () => sansCategorie().sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.cree || '').localeCompare(a.cree || ''));
+function pageTrier(){
+  const captures = inboxOuverte().filter(x => x.text), deps = depensesATrier(), props = deps.filter(m => devinerCategorie(m.libelle));
+  const resume = captures.length || deps.length ? [captures.length ? `<b>${pluriel(captures.length, 'capture')}</b> de l’Inbox` : '', deps.length ? `<b>${pluriel(deps.length, 'dépense')}</b> sans catégorie` : ''].filter(Boolean).join(' · ') + '. Chaque choix s’applique tout de suite, avec « Annuler ».'
+    : 'Ce qui attend une décision : les captures de l’Inbox et les dépenses sans catégorie.';
+  const tete = titre('À trier', resume, `<a class="btn" href="#/inbox">${ico('ampoule', 14)}Inbox</a>` + btnAction('capture', ico('plus', 14) + 'Capture rapide', 'btn p'));
+  if(!captures.length && !deps.length) return tete + `<section class="carte">${vide('Tout est trié. Rien n’attend de décision.', `<a class="btn" href="#/accueil">Retour à l’accueil</a>`)}</section>`;
+  const sectionInbox = captures.length ? `<section class="carte">${enteteCarte('ampoule', 'jaune', pluriel(captures.length, 'capture') + ' à ranger')}
+    <ul class="liste liste-tri">${captures.map(x => { const c = lireCapture(x.text), [nom, icone, couleur] = TYPES_CAPTURE[c.type], d = `data-id="${esc(x.id)}"`;
+      return `<li>${pastille(icone, couleur, 28, 14)}<span class="corps"><span class="t" style="white-space:normal">${esc(x.text)}</span><span class="s">${esc(ilya(x.created))} · lue comme ${esc(nom.toLowerCase())}${c.puces.length ? ' : ' + esc(c.puces.slice(0, 2).join(' · ')) : ''}</span></span>
+        <div class="boutons">${c.liste ? btnAction('atrier-creer', 'Enregistrer : ' + nom.toLowerCase(), 'btn p compact', d) : ''}${btnAction('inbox-traiter', 'Autre type…', 'btn compact', d)}
+          <button class="icone-btn" data-action="inbox-archiver" ${d} title="Archiver" aria-label="Archiver">${ico('archive', 15)}</button>
+          <button class="icone-btn danger" data-action="inbox-supprimer" ${d} title="Supprimer" aria-label="Supprimer">${ico('corbeille', 15)}</button></div></li>`; }).join('')}</ul></section>` : '';
+  const options = categoriesFrequentes().map(c => `<option>${esc(c)}</option>`).join('');
+  const sectionDepenses = deps.length ? `<section class="carte">${enteteCarte('euro', 'vert', pluriel(deps.length, 'dépense') + ' sans catégorie', props.length ? btnAction('atrier-tout', ico('check', 13) + (props.length > 1 ? `Accepter les ${props.length} propositions` : 'Accepter la proposition'), 'btn compact') : '')}
+    <div class="defile"><table class="table-tri"><thead><tr><th>Date</th><th>Libellé</th><th class="num">Montant</th><th>Catégorie</th></tr></thead><tbody>
+    ${deps.slice(0, limiteTri).map(m => { const p = devinerCategorie(m.libelle), d = `data-id="${esc(m.id)}"`, sous = [m.compte, nomProjet(m.projet), m.note].filter(Boolean).join(' · ');
+      return `<tr><td class="date">${dateCourte(m.date)}</td>
+        <td class="lib"><button type="button" class="nom-lien" data-action="mvt-modifier" ${d} title="Modifier">${esc(m.libelle || 'Sans libellé')}</button>${sous ? `<span class="note-mvt">${esc(sous)}</span>` : ''}</td>
+        <td class="num">−${eur(m.montant)}</td>
+        <td class="cat"><div class="choix-cat">${p ? `<button type="button" class="btn p compact" data-action="atrier-categorie" ${d} data-cat="${esc(p)}" title="Catégorie proposée">${ico('check', 13)}${esc(p)}</button>` : ''}
+          <select class="saisie" data-tri-cat="${esc(m.id)}" aria-label="Catégorie de ${esc(m.libelle || 'cette dépense')}"><option value="">${p ? 'Autre…' : 'Choisir une catégorie…'}</option>${options}</select></div></td></tr>`; }).join('')}</tbody></table></div>
+    ${deps.length > limiteTri ? `<div class="boutons" style="justify-content:center;margin-top:10px">${btnAction('atrier-plus', 'Voir ' + Math.min(DEPENSES_TRI_PAR_PAGE, deps.length - limiteTri) + ' de plus', 'btn')}</div>` : ''}</section>` : '';
+  return tete + `<div class="page-trier">${sectionInbox}${sectionDepenses}</div>`;
 }
-function classerTri(id, categorie){
-  const m = DB.mouvements.find(x => x.id === id); if(!m || !tri) return;
-  m.categorie = categorie; m.modif = maintenant(); toucherProjet(m.projet); sauver(); tri.faits++; rendreApresModale = true; ficheTri();
+function classerDepenses(liste, quoi){
+  const avant = liste.map(([m]) => [m, m.categorie, m.modif]);
+  liste.forEach(([m, c]) => { m.categorie = c; m.modif = maintenant(); toucherProjet(m.projet); });
+  sauver(); rendre();
+  toast(quoi, [['Annuler', () => { avant.forEach(([m, c, mo]) => { m.categorie = c; m.modif = mo; }); sauver(); rendre(); toast('Annulé'); }]]);
 }
+document.addEventListener('change', e => { const id = e.target.dataset && e.target.dataset.triCat; if(!id || !e.target.value) return;
+  const m = DB.mouvements.find(x => x.id === id); if(m) classerDepenses([[m, e.target.value]], '« ' + extrait(m.libelle || 'Dépense', 40) + ' » → ' + e.target.value); });
 function ficheMigration(anciennes){
   ouvrirModale(teteModale('Reprendre tes données', 'base', 'bleu') + `<p class="texte">J’ai trouvé des données de plusieurs versions précédentes dans ce navigateur. Lesquelles veux-tu utiliser dans cette version ? Les autres restent disponibles dans la page Données.</p>
     <div class="choix-migration">${anciennes.map(a => `<button data-action="migration-choisir" data-cle="${esc(a.cle)}"><strong>Données de ${esc(a.nom)}</strong><span>${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></button>`).join('')}</div>
@@ -5218,13 +5234,12 @@ const ACTIONS = {
       if(b){ b.setAttribute('aria-expanded', ouvert); b.title = ouvert ? 'Replier les étapes' : 'Voir les étapes'; } }); },
   'etape-supprimer': el => { const t = tache(el.dataset.id); if(!t || !t.etapes[Number(el.dataset.i)]) return; t.etapes.splice(Number(el.dataset.i), 1); majEtapes(t); },
   /* v4 : tri, accueil replié, lien vers une note à écrire, alerte des rappels */
-  'trier': () => { tri = null; ficheTri(); },
-  'tri-creer': el => { const x = DB.inbox.find(i => i.id === el.dataset.id); if(!x || !tri) return; if(enregistrerCapture(x.text, 'auto', x.id, {silencieux:true})) tri.faits++; rendreApresModale = true; ficheTri(); },
-  'tri-details': el => { const x = DB.inbox.find(i => i.id === el.dataset.id); if(x) ficheCapture(x.text, x.id); },
-  'tri-archiver': el => { const x = DB.inbox.find(i => i.id === el.dataset.id); if(!x || !tri) return; x.status = 'archived'; x.archived = x.modif = maintenant(); sauver(); tri.faits++; rendreApresModale = true; ficheTri(); },
-  'tri-supprimer': el => { const x = DB.inbox.find(i => i.id === el.dataset.id); if(!x || !tri) return; mettreCorbeille('inbox', x); DB.inbox = DB.inbox.filter(i => i.id !== x.id); sauver(); tri.faits++; rendreApresModale = true; ficheTri(); },
-  'tri-categorie': el => classerTri(el.dataset.id, el.dataset.cat),
-  'tri-passer': el => { if(!tri) return; tri.passes.add(el.dataset.id); ficheTri(); },
+  /* v4.9 : « Trier » ouvre la page « À trier » (plus de fenêtre à cartes) */
+  'trier': () => { if(lireRoute().nom === 'trier') rendre(); else location.hash = '#/trier'; },
+  'atrier-creer': el => { const x = DB.inbox.find(i => i.id === el.dataset.id); if(x) enregistrerCapture(x.text, 'auto', x.id); },
+  'atrier-categorie': el => { const m = DB.mouvements.find(x => x.id === el.dataset.id); if(m && el.dataset.cat) classerDepenses([[m, el.dataset.cat]], '« ' + extrait(m.libelle || 'Dépense', 40) + ' » → ' + el.dataset.cat); },
+  'atrier-tout': () => { const l = depensesATrier().map(m => [m, devinerCategorie(m.libelle)]).filter(([, c]) => c); if(l.length) classerDepenses(l, pluriel(l.length, 'dépense classée', 'dépenses classées') + ' comme proposé'); },
+  'atrier-plus': () => { limiteTri += DEPENSES_TRI_PAR_PAGE; rendre(); },
   'accueil-tout': () => { accueilTout = !accueilTout; rendre(); },
   'note-wiki': el => formNote({titre:el.dataset.titre || ''}),
   'notif-ignorer': () => { try { localStorage.setItem(CLE_NOTIF_IGNORE, '1'); } catch(e){} rendre(); },
