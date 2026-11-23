@@ -35,11 +35,11 @@ sur « Chargement… ».
 | Idées (l'Inbox de la v4.9, avec À trier) | `idees` | jaune | Plus (+ icône en haut) | À ranger · Archivées |
 | Calendrier | `calendrier` | violet | onglet | 2 semaines · Mois · Agenda |
 | Tâches | `taches` | vert | onglet | Par date · Listes |
-| Dossiers (les « projets » des données) | `dossiers` | orange | Plus | Tous les dossiers · Sans dossier |
+| Dossiers (les « projets » des données) | `dossiers` | orange | Plus | Ouverts · Fermés ; dans un dossier : ‹ Dossiers · Tâches · Rendez-vous · Notes · Documents · Dépenses · Contacts · Journal · Idées |
 | Finance | `finance` | herbe | onglet | Mois · Année · Mouvements · Comptes · Catégories |
 | Carnet | `carnet` | rose | Plus | Notes · Journal · Documents |
 | Contacts | `contacts` | prune | Plus | — (filtres de la v4.8 en boutons au-dessus du tableau) |
-| Réglages (icône en haut à droite) | `reglages` | gris | Plus (+ icône en haut) | Données · Archives · Corbeille |
+| Réglages (icône en haut à droite) | `reglages` | gris | Plus (+ icône en haut) | Données · Tags · Corbeille |
 
 - **PC (à partir de 1 100 px)** : les sections en haut, le sous-menu de la section ouverte juste en dessous ; la barre prend
   la couleur de la section. À droite : Chercher (Ctrl K), Noter, l'icône jour/nuit, Réglages.
@@ -54,16 +54,24 @@ sur « Chargement… ».
   Tout élément peut y aller, idées et entrées du journal comprises. Couleur au choix.
 - **Dossiers rangés dans d'autres dossiers** (domaine › dossier › sous-dossier, ex. Perso › Finances › Assurances) :
   champ `parent` (id du dossier qui le contient ; attention, le champ `dossier` des projets est le chemin Drive de la v3.13).
-  Affichage par défaut : petites cartes comme en v4.9, toutes à plat, avec le chemin sur la carte ; l'arborescence est
-  une option. Un sous-dossier reprend la couleur de son domaine sauf choix contraire. « À trier » = Sans dossier,
-  « Archives » = dossiers archivés.
+  Affichage (23/11, comme Ontoplano) : un tableau dans l'ordre de la hiérarchie (sous-dossier en retrait) ; glisser un
+  dossier sur un autre l'y range. Un dossier ouvert : le sous-menu passe aux types, un tableau par type. Un sous-dossier
+  reprend la couleur de son domaine sauf choix contraire. Un dossier dont on n'a plus besoin est **fermé** (drapeau
+  `archive`) et reste visible dans « Fermés ». Plus de « Sans dossier ».
+- **Plus d'archives** (23/11) : pas de page Archives. Une tâche faite reste visible, barrée, en bas du tableau ; notes,
+  documents et contacts archivés en v4.9 sont affichés comme les autres (le drapeau reste dans les données).
+- **Contacts** (23/11) : plus d'« À lui dire », « À répondre », « Idées de cadeaux » ni de « Nouvelles » à l'écran (gardés
+  dans les données) ; la fiche montre les lignes du journal qui citent le contact (@Nom).
+- **La puce d'un dossier** est un lien vers le dossier, partout.
+- **Exemples** : Réglages › Données › « Charger des exemples » (modules/reglages/exemples.js) remplace les données de la
+  bêta par des données fictives ; à enrichir quand une fonction arrive.
 - **Tags sur tout élément**, idées comprises ; la fenêtre Tags de la v4.7 pour les gérer.
 - **Capture rapide dans chaque section** : une ligne, Entrée, c'est créé, les détails après. Le bouton + garde la phrase
   devinée de la v4.9 (« essence 45 » → une dépense).
 - **Journal** (Carnet) : une ou deux phrases datées ; « @ » ouvre la liste des contacts pendant la frappe, « # » les tags.
 - **Attributs libres** sur tout élément : un nom et une valeur inventés, dans la fiche ; un attribut utilisé apparaît aussi
   comme colonne du tableau.
-- **Des tableaux partout** (tâches, dépenses, notes, journal, documents, contacts, dossiers, agenda, archives, corbeille,
+- **Des tableaux partout** (tâches, dépenses, notes, journal, documents, contacts, dossiers, agenda, tags, corbeille,
   recherche) : un seul composant de tableau dans le noyau, avec sa recherche (même syntaxe que la grande barre : `#tag`…),
   ses colonnes triables, un affichage par paquets de 50 ; sur téléphone, une carte par ligne (tant pis si c'est chargé).
   **Pas de bouton « Colonnes »** (décision du 23/11) : une colonne s'affiche si au moins une ligne a quelque chose à y
@@ -71,9 +79,8 @@ sur « Chargement… ».
 - **Ne rien ajouter qui n'a pas été demandé** (23/11) : pas de raccourcis « Aujourd'hui, Demain, Samedi », pas de bande
   de dépôt, pas de texte d'aide en plus. La date d'une tâche se donne dans sa fiche ou en la glissant sur le Calendrier.
 - **Tâches au plus simple** : un tableau, une colonne Date (un tiret sans date), aucun regroupement par jour, ni statut,
-  ni notation. Fait au lot 3 : « Par date » montre les tâches à faire sauf celles d'une liste sans date (elles restent dans
-  leur liste, comme en v4.9 ; la recherche les trouve) ; cochée aujourd'hui = barrée en bas jusqu'à demain ; « Faites » à
-  part. Listes en puces (chacune reçoit les tâches glissées). Étapes dans la fiche (« 1/3 » dans le tableau).
+  ni notation. « Par date » montre les tâches sauf celles d'une liste sans date (elles restent dans leur liste, comme en
+  v4.9 ; la recherche les trouve) ; une tâche faite reste barrée en bas. Listes en puces (chacune reçoit les tâches glissées). Étapes dans la fiche (« 1/3 » dans le tableau).
 - **Sélection sur PC** (composant tableau, `selection`) : Ctrl + clic, Maj + clic, Échap ; une barre flottante en bas
   propose les actions ; glisser une ligne choisie emporte toute la sélection.
 - **Fiches au centre** : une grande tuile au milieu de l'écran, le site en arrière-plan (comme la modale de la v4.9) ;
@@ -125,6 +132,9 @@ Les modules ne s'importent **jamais** entre eux : ils passent par le noyau. Une 
 (texte) ; `apres` branche ce qui doit l'être ; les clics passent par `data-action` et le registre.
 
 ## Règles
+
+- **Économiser** (demande de l'utilisateur) : reprendre le code de la v4.9 (`git show origin/main:index.html`) et du
+  prototype plutôt que réécrire ; tests et captures d'écran seulement là où ça change.
 
 - **Données : rien n'est perdu.** `FORMES` garde les champs inconnus (`{...x, champs vérifiés}`), `normaliser` garde les
   clés inconnues et reste idempotent. Toute nouvelle donnée passe par `FORMES` (lecture comme création).

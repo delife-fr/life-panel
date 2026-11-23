@@ -183,7 +183,7 @@ export function normaliser(brut){
   if(typeof brut.prenom === 'string') d.prenom = brut.prenom;
   LISTES_DONNEES.forEach(k => { d[k] = tab(k).map(FORMES[k]); });
   d.inbox = d.inbox.filter(x => x.text || x.vocal);
-  d.projets.forEach(p => { if(!p.couleur) p.couleur = couleurLibre(d.projets); });
+  d.projets.forEach(p => { if(!p.couleur && !p.parent) p.couleur = couleurLibre(d.projets); });   /* un sous-dossier sans couleur prend celle de son dossier */
   /* v3.4 à v3.7 : les documents étaient rangés dans leur projet → ils rejoignent la liste unique (projet conservé) */
   const dejaLa = new Set(d.documents.map(x => x.id));
   const reprendre = (liste, projetId) => (Array.isArray(liste) ? liste : []).filter(x => x && typeof x === 'object')

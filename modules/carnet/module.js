@@ -10,21 +10,18 @@ import {puceDossier, puceTags, lienDocument} from '../../noyau/affichage.js';
 import {entete, champAjout, toast} from '../../noyau/interface.js';
 import {tableau} from '../../noyau/tableau.js';
 import {ouvrirElement} from '../../noyau/fiches.js';
-import {lireCapture} from '../../noyau/capture.js';
+import {lireCapture, lireTags, noterJournal} from '../../noyau/capture.js';
 
 const SOUS = [['', 'Notes'], ['journal', 'Journal'], ['documents', 'Documents']];
 const annee = d => d && d.slice(0, 4) !== aujourdhui().slice(0, 4) ? ' ' + d.slice(0, 4) : '';
 const quand = d => d ? esc(dateCourte(d) + annee(d)) : '—';
-/* Les « #mots » d'une phrase → des tags, retirés du texte */
-const RE_TAG = /(^|\s)#([\p{L}\d_-]+)/gu;
-const lireTags = t => ({tags:[...t.matchAll(RE_TAG)].map(m => m[2]), reste:t.replace(RE_TAG, ' ').replace(/\s+/g, ' ').trim()});
 const annuler = (liste, x) => [['Annuler', () => { DB[liste] = DB[liste].filter(y => y !== x); modifie('annuler'); }]];
 
 /* --- Notes --- */
 const texteNote = n => extrait(String(n.contenu || '').replace(/[#*_>`~\[\]()-]+/g, ' '), 140);
 function pageNotes(){
   return entete('Notes', {sur:'Carnet'}) + `<div class="page-carnet">${champAjout('note-ajouter', 'Nouvelle note : son titre, puis Entrée…')}${tableau({id:'notes',
-    lignes:DB.notes.filter(n => !n.archive), cle:n => n.id, ouvrir:'note-ouvrir', tri:{col:'modif', sens:-1},
+    lignes:DB.notes, cle:n => n.id, ouvrir:'note-ouvrir', tri:{col:'modif', sens:-1},
     recherche:n => [n.titre, n.contenu, cheminDossier(n.projet).join(' ')], tags:n => n.tags, texteRecherche:'Chercher dans les notes',
     vide:'Aucune note. Écris un titre juste au-dessus.', colonnes:[
       {id:'titre', titre:'Titre', tel:'titre', valeur:n => n.titre, html:n => esc(n.titre)},
@@ -37,12 +34,6 @@ function pageNotes(){
 
 /* --- Journal --- */
 const nomsContacts = ids => ids.map(id => (DB.contacts.find(c => c.id === id) || {}).nom).filter(Boolean);
-/* Les contacts cités par « @Nom » (le plus long nom d'abord : « @Paul Dupont » avant « @Paul ») */
-function contactsCites(texte){
-  const t = norm(texte), ids = [];
-  DB.contacts.slice().sort((a, b) => b.nom.length - a.nom.length).forEach(c => { const k = '@' + norm(c.nom); if(k.length > 2 && t.includes(k) && !ids.includes(c.id)) ids.push(c.id); });
-  return ids;
-}
 function pageJournal(){
   return entete('Journal', {sur:'Carnet'}) + `<div class="page-carnet"><div class="avec-suggestions">${champAjout('journal-ajouter', 'Ce qui s’est passé… (@ une personne, # un tag)', {id:'journal-saisie'})}
     <ul class="suggestions" id="journal-suggestions" role="listbox" hidden></ul></div>${tableau({id:'journal',
@@ -70,7 +61,7 @@ function proposer(champ){
   const m = morceauTape(champ); propositions = [];
   if(m){ const q = norm(m.texte);
     propositions = m.signe === '@'
-      ? DB.contacts.filter(c => !c.archive && norm(c.nom).split(' ').some((_, i, a) => a.slice(i).join(' ').startsWith(q))).slice(0, 6).map(c => ({texte:c.nom, insere:'@' + c.nom + ' '}))
+      ? DB.contacts.filter(c => norm(c.nom).split(' ').some((_, i, a) => a.slice(i).join(' ').startsWith(q))).slice(0, 6).map(c => ({texte:c.nom, insere:'@' + c.nom + ' '}))
       : tousLesTags().filter(t => norm(t).startsWith(q)).sort().slice(0, 6).map(t => ({texte:'#' + t, insere:'#' + t + ' '}));
     if(m.signe === '@' && !m.texte) propositions = propositions.slice(0, 6);
   }
@@ -97,7 +88,7 @@ document.addEventListener('mousedown', e => { const li = e.target.closest && e.t
 /* --- Documents --- */
 function pageDocuments(){
   return entete('Documents', {sur:'Carnet'}) + `<div class="page-carnet">${champAjout('document-ajouter', 'Ajouter un document : son titre ou son lien…')}${tableau({id:'documents',
-    lignes:DB.documents.filter(x => !x.archive), cle:x => x.id, ouvrir:'document-ouvrir', tri:{col:'titre', sens:1},
+    lignes:DB.documents, cle:x => x.id, ouvrir:'document-ouvrir', tri:{col:'titre', sens:1},
     recherche:x => [x.titre, x.url, x.note, cheminDossier(x.projet).join(' ')], tags:x => x.tags, texteRecherche:'Chercher dans les documents',
     vide:'Aucun document. Ajoute-en un juste au-dessus.', colonnes:[
       {id:'titre', titre:'Document', tel:'titre', valeur:x => x.titre, html:x => esc(x.titre)},
@@ -121,10 +112,8 @@ export default {
       const n = ajouter('notes', {titre:reste.slice(0, 200), contenu:'', tags, cree:maintenant(), modif:maintenant()}); modifie('ajout');
       toast('Note ajoutée : ' + n.titre, [['Écrire', () => ouvrirElement('notes', n.id)], ...annuler('notes', n)]); },
     'note-ouvrir':tr => ouvrirElement('notes', tr.dataset.id),
-    'journal-ajouter':texte => { const {tags, reste} = lireTags(texte); if(!reste) return false;
-      const contacts = contactsCites(reste), j = ajouter('journal', {date:aujourdhui(), texte:reste, contacts, tags, cree:maintenant(), modif:maintenant()});
-      const boite = document.getElementById('journal-suggestions'); if(boite) boite.hidden = true; propositions = [];
-      modifie('ajout'); toast('Noté dans le journal' + (contacts.length ? ' · ' + pluriel(contacts.length, 'personne') : '') + '.', annuler('journal', j)); },
+    'journal-ajouter':texte => { const boite = document.getElementById('journal-suggestions'); if(boite) boite.hidden = true; propositions = [];
+      if(!noterJournal(texte)) return false; },
     'journal-ouvrir':tr => ouvrirElement('journal', tr.dataset.id),
     'document-ajouter':texte => { const c = lireCapture(texte, 'document'), url = /^(https?:\/\/|drive:)/i.test(texte.trim()) ? texte.trim() : c.brut.url || '';
       const x = ajouter('documents', {...c.brut, url, titre:url && c.brut.titre === texte.trim() ? '' : c.brut.titre, modif:maintenant()}); modifie('ajout');

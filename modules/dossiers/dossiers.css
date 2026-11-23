@@ -2,4 +2,4 @@
 .page-dossiers{display:flex;flex-direction:column;gap:14px;max-width:1180px}
 .page-dossiers > .ajout{max-width:640px}
 .page-dossiers .filtres a{display:inline-flex;align-items:center;gap:4px}
-.tableau .col-chemin .pastille-dossier{display:inline-block;vertical-align:0}
+.nom-dossier{display:inline-flex;align-items:center;gap:8px;padding-left:calc(var(--retrait, 0) * 22px)}

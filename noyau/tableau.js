@@ -19,6 +19,7 @@
      ouvrir:'tache-ouvrir',                 action appelée avec la ligne (data-id) au clic ou par Entrée
      coche:{action:'tache-cocher', etat:x => x.fait, titre:'Fait'},
      glisser:'tache',                       les lignes se glissent (noyau/glisser.js)
+     depot:'dossier',                       on peut déposer ce type sur une ligne (ex. un dossier dans un autre)
      enBas:x => x.fait,                     ces lignes restent en dessous des autres, quel que soit le tri
      toutes:[…],                            facultatif : quand on cherche, on cherche dans ces lignes-là (plus large)
      selection:{un:'tâche choisie', plusieurs:'tâches choisies', actions:'<button…>'},
@@ -99,7 +100,7 @@ function corps(cfg){
     return `<td class="col-${esc(c.id)}${c.num ? ' num' : ''} t-${c.tel || 'sous'}${vide ? ' t-vide' : ''}" data-label="${esc(c.titre)}">${h}</td>`; };
   const ligne = x => { const id = esc(cfg.cle(x)), choisie = choisies.has(String(cfg.cle(x))), cl = [cfg.classe ? cfg.classe(x) || '' : '', choisie ? 'choisie' : ''].filter(Boolean).join(' ');
     const coche = cfg.coche ? `<td class="t-coche"><input type="checkbox" class="coche" data-action="${esc(cfg.coche.action)}" data-id="${id}"${cfg.coche.etat(x) ? ' checked' : ''} aria-label="${esc(cfg.coche.titre || 'Cocher')}"></td>` : '';
-    return `<tr data-tableau-ligne="${esc(cfg.id)}" data-id="${id}"${cfg.ouvrir ? ' tabindex="0"' : ''}${cfg.glisser ? ` data-glisser="${esc(cfg.glisser)}"` : ''}${cl ? ` class="${esc(cl)}"` : ''}${cfg.selection ? ` aria-selected="${choisie}"` : ''}>${coche}${cols.map(c => td(c, x)).join('')}<td class="t-saut" aria-hidden="true"></td></tr>`; };
+    return `<tr data-tableau-ligne="${esc(cfg.id)}" data-id="${id}"${cfg.ouvrir ? ' tabindex="0"' : ''}${cfg.glisser ? ` data-glisser="${esc(cfg.glisser)}"` : ''}${cfg.depot ? ` data-depot="${esc(cfg.depot)}"` : ''}${cl ? ` class="${esc(cl)}"` : ''}${cfg.selection ? ` aria-selected="${choisie}"` : ''}>${coche}${cols.map(c => td(c, x)).join('')}<td class="t-saut" aria-hidden="true"></td></tr>`; };
   return {compte, html:`<div class="defile-tableau"><table><thead><tr>${cfg.coche ? `<th class="t-coche"><span class="sr">${esc(cfg.coche.titre || 'Cocher')}</span></th>` : ''}${cols.map(th).join('')}</tr></thead>
     <tbody>${montrees.map(ligne).join('')}</tbody></table></div>
     ${l.length > montrees.length ? `<div class="tableau-plus"><button type="button" class="btn" data-tableau-plus="${esc(cfg.id)}">Voir ${Math.min(PAQUET, l.length - montrees.length)} de plus</button></div>` : ''}

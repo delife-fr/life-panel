@@ -155,7 +155,7 @@ function majCadre(m, r){
   $$('[data-onglet]').forEach(a => a.classList.toggle('actif', a.dataset.onglet === (dansOnglets ? m.id : 'plus')));
   /* Sous-menu */
   let sm = []; try { sm = (typeof m.sousMenu === 'function' ? m.sousMenu(r) : m.sousMenu) || []; } catch(e){ console.error(e); }
-  const s = $('#sous-menu'), arg = (r.arg || '').split('/')[0], actif = sm.some(([a]) => a === arg) ? arg : sm.length ? sm[0][0] : '';
+  const s = $('#sous-menu'), arg = (r.arg || '').split('/')[0], actif = sm.some(([a]) => a === r.arg) ? r.arg : sm.some(([a]) => a === arg) ? arg : sm.length ? sm[0][0] : '';
   s.innerHTML = sm.map(([a, t]) => `<a href="${lien(m.id, a)}"${a === actif ? ' class="actif" aria-current="page"' : ''}>${esc(t)}</a>`).join('');
   s.hidden = !sm.length;
   /* Compteurs ; « Plus » additionne ceux des sections qu'il contient */
@@ -174,6 +174,7 @@ function ouvrirPlus(){
 export function brancherActions(){
   document.addEventListener('click', e => {
     const el = e.target.closest('[data-action]'); if(!el || el.disabled) return;
+    const a = e.target.closest('a[href]'); if(a && a !== el && el.contains(a)) return;   /* un lien dans une ligne cliquable (puce d'un dossier) : le lien d'abord */
     const f = ACTIONS.get(el.dataset.action); if(!f) return;
     e.preventDefault();
     try { f(el, e); } catch(x){ console.error(x); toast('Un problème est survenu : ' + x.message); }

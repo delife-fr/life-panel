@@ -22,7 +22,8 @@ function prochaineDate(j, m, a){
 const MOIS = ['janv', 'fev', 'mars', 'avr', 'mai', 'juin', 'juil', 'aout', 'sep', 'oct', 'nov', 'dec'];
 const RE_DATE_NUM = /\b(\d{1,2})\/(\d{1,2})(?:\/(\d{4}|\d{2}))?\b/, RE_DATE_MOIS = /\b(\d{1,2})(?:er)?\s+(janv|fevr?|mars|avr|mai|juin|juil|aout|sept?|oct|nov|dec)[a-z]*\.?(?:\s+(\d{4}))?/;
 const RE_LE_JOUR = /\ble\s+(\d{1,2})(?:er)?\b(?!\s*(?:h\b|h\d|:|\/|€|eur|\d))/;
-function lireQuand(n){
+/* passe : un jour de la semaine sans « prochain » désigne le dernier passé (une dépense a déjà eu lieu) */
+function lireQuand(n, {passe = false} = {}){
   let date = '', heure = '';
   const dn = n.match(RE_DATE_NUM), dm = n.match(RE_DATE_MOIS), le = n.match(RE_LE_JOUR);
   if(dn) date = prochaineDate(Number(dn[1]), Number(dn[2]), dn[3] ? Number(dn[3]) : 0);
@@ -32,20 +33,23 @@ function lireQuand(n){
   if(!date){
     if(/\baujourd.?hui\b|\bce soir\b/.test(n)) date = aujourdhui();
     else if(/\bapres-demain\b/.test(n)) date = decaleJour(2);
+    else if(/\bavant-hier\b/.test(n)) date = decaleJour(-2);
+    else if(/\bhier\b/.test(n)) date = decaleJour(-1);
     else if(/\bdemain\b/.test(n)) date = decaleJour(1);
     else { const jours = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'], i = jours.findIndex(j => new RegExp('\\b' + j + '\\b').test(n));
-      if(i >= 0) date = decaleJour(((i - new Date().getDay() + 7) % 7) || 7); }
+      if(i >= 0){ const j = jours[i], avant = new RegExp('\\b' + j + '\\s+derni').test(n) || (passe && !new RegExp('\\b' + j + '\\s+prochain').test(n));
+        date = avant ? decaleJour(-(((new Date().getDay() - i + 7) % 7) || 7)) : decaleJour(((i - new Date().getDay() + 7) % 7) || 7); } }
   }
-  const m = n.match(/\b(\d{1,2})\s*(?:h|:)\s*(\d{2})?(?!\d)/);
+  const m = n.match(/\b(\d{1,2})\s*(?:h|:)(\d{2})?(?!\d)/);   /* « 13h45 » ; dans « 13h 45 », 45 est un montant */
   if(m && Number(m[1]) < 24 && (!m[2] || Number(m[2]) < 60)) heure = pad(m[1]) + ':' + (m[2] || '00');
   return {date, heure};
 }
 function sansQuand(s){
-  const t = String(s).replace(/\b(?:aujourd['’]?hui|ce soir|apr[eè]s-demain|demain)(?![\wàâçéèêëîïôûùüÿ])/gi, ' ')
-    .replace(/\b(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\b/gi, ' ')
+  const t = String(s).replace(/\b(?:aujourd['’]?hui|ce soir|apr[eè]s-demain|avant-hier|hier|demain)(?![\wàâçéèêëîïôûùüÿ])/gi, ' ')
+    .replace(/\b(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)(?:\s+(?:derni[eè]re?|prochaine?))?\b/gi, ' ')
     .replace(/\b\d{1,2}\/\d{1,2}(?:\/(?:\d{4}|\d{2}))?\b/g, ' ')
     .replace(/\b\d{1,2}(?:er)?\s+(?:janv|f[ée]vr?|mars|avr|mai|juin|juil|ao[uû]t|sept?|oct|nov|d[ée]c)[a-zéû]*\.?(?:\s+\d{4})?/gi, ' ')
-    .replace(/\b\d{1,2}\s*(?:h|:)\s*(?:\d{2})?(?!\d)/gi, ' ')
+    .replace(/\b\d{1,2}\s*(?:h|:)(?:\d{2})?(?!\d)/gi, ' ')
     .replace(/\ble\s+\d{1,2}(?:er)?\b/gi, ' ')
     .replace(/\s+/g, ' ').trim()
     .replace(/(?:[\s,–—-]+(?:à|a|le|de|du|pour|vers|ce|cette))+$/i, '').replace(/^(?:(?:le|à|a)\s+)+/i, '').replace(/[\s,–—:-]+$/, '').trim();
@@ -68,11 +72,11 @@ function analyser(texte){
   if(lien) return {type:'document', url:lien[0], titre:s.replace(lien[0], '').replace(bords, '').trim()};
   const m = s.match(/(\d+(?:[.,]\d{1,2})?)\s*(?:€|eur\b|euros?\b)/i);
   if(m) return {type:'depense', montant:Number(m[1].replace(',', '.')), libelle:majuscule(s.replace(m[0], '').replace(bords, '').trim()) || 'Dépense'};
-  const q = lireQuand(n), verbe = VERBES.test(n), co = lireCoordonnees(s);
+  const q = lireQuand(n), qp = lireQuand(n, {passe:true}), verbe = VERBES.test(n), co = lireCoordonnees(s);
   if(!verbe && !co.email && !co.telephone && !/\b(code|digicode|numero|pin|puk|mot de passe|page|chapitre|etage|porte|serie)\b/.test(n)){
     const reste = sansQuand(s).replace(/\s+/g, ' ').trim(), fin = reste.match(/^(.*\S)\s+(\d{1,3}(?:[.,]\d{1,2})?)$/), deb = reste.match(/^(\d{1,3}(?:[.,]\d{1,2})?)\s+(\S.*)$/);
     const x = fin ? [fin[2], fin[1]] : deb ? [deb[1], deb[2]] : null;
-    if(x) return {type:'depense', montant:Number(x[0].replace(',', '.')), libelle:majuscule(x[1].replace(bords, '').trim()), date:q.date && q.date <= aujourdhui() ? q.date : ''};
+    if(x) return {type:'depense', montant:Number(x[0].replace(',', '.')), libelle:majuscule(x[1].replace(bords, '').replace(/(?:\s+(?:à|a|le|de|du|pour|vers))+$/i, '').trim()), date:qp.date && qp.date <= aujourdhui() ? qp.date : ''};
   }
   if(!verbe && (co.email || co.telephone)) return {type:'contact', ...co};
   if(!verbe && q.date && q.heure) return {type:'evenement', ...q, titre:sansQuand(s)};
@@ -91,9 +95,10 @@ export function lireCapture(t, type = 'auto'){
     return {type:ty, liste:'taches', complet:true, brut:{nom, date, heure:q.heure || '', modif:maintenant()}, titre:nom, puces:[date ? jourCourt(date) : 'sans date', heureTexte(q.heure)].filter(Boolean)}; }
   if(ty === 'evenement'){ const titre = majuscule((a.type === 'evenement' ? a.titre : sansQuand(ligne1) || ligne1).slice(0, 120)), date = q.date || aujourdhui();
     return {type:ty, liste:'evenements', complet:true, brut:{titre, date, heure:q.heure || '', note:t.includes('\n') ? t : '', cree:maintenant()}, titre, puces:[jourCourt(date), q.heure ? heureTexte(q.heure) : 'toute la journée']}; }
-  if(ty === 'depense'){ const nb = (t.match(/(\d+(?:[.,]\d{1,2})?)/) || [])[1];
-    const montant = a.type === 'depense' ? a.montant : (nb ? Number(nb.replace(',', '.')) : 0), libelle = (a.type === 'depense' ? a.libelle : majuscule(ligne1)).slice(0, 120);
-    const categorie = categorieProposee({libelle}), jour = a.type === 'depense' && a.date ? a.date : aujourdhui(), compte = compteParDefaut();
+  if(ty === 'depense'){ const sansDate = sansQuand(ligne1), nb = (sansDate.match(/(\d+(?:[.,]\d{1,2})?)/) || [])[1], qp = lireQuand(norm(t), {passe:true});
+    const montant = a.type === 'depense' ? a.montant : (nb ? Number(nb.replace(',', '.')) : 0);
+    const libelle = (a.type === 'depense' ? a.libelle : majuscule(sansDate.replace(nb || '', ' ').replace(/\s*(?:€|eur\b|euros?\b)/i, '').replace(/\s+/g, ' ').replace(/^[\s\-–—:,]+|[\s\-–—:,]+$/g, '').replace(/(?:\s+(?:à|a|le|de|du|pour|vers))+$/i, '').trim()) || 'Dépense').slice(0, 120);
+    const categorie = categorieProposee({libelle}), jour = a.type === 'depense' && a.date ? a.date : qp.date && qp.date <= aujourdhui() ? qp.date : aujourdhui(), compte = compteParDefaut();
     return {type:ty, liste:'mouvements', complet:montant > 0, brut:{cree:maintenant(), type:'depense', montant, date:jour, libelle, categorie, compte, modif:maintenant()}, titre:libelle,
       puces:[montant > 0 ? eur(montant) : 'montant à préciser', categorie || 'sans catégorie', jourCourt(jour)]}; }
   if(ty === 'contact'){ const co = a.type === 'contact' ? a : lireCoordonnees(t), nom = co.nom || ligne1.slice(0, 80);
@@ -108,7 +113,7 @@ export function lireCapture(t, type = 'auto'){
    elle quitte Idées). S'il manque l'essentiel, la fiche s'ouvre pour compléter. Renvoie l'élément créé (ou null). */
 export function enregistrerCapture(t, type = 'auto', {idee = null, projet = null} = {}){
   const c = lireCapture(t, type);
-  if(projet && c.liste !== 'inbox') c.brut.projet = projet;   /* noté depuis la page d'un dossier */
+  if(projet) c.brut.projet = projet;   /* noté depuis la page d'un dossier */
   if(idee && c.liste !== 'inbox'){
     if(idee.tags && idee.tags.length) c.brut.tags = [...(c.brut.tags || []), ...idee.tags];
     if(idee.projet) c.brut.projet = idee.projet;
@@ -124,6 +129,23 @@ export function enregistrerCapture(t, type = 'auto', {idee = null, projet = null
     ['Modifier', () => ouvrirElement(c.liste, x.id)],
     ['Annuler', () => { DB[c.liste] = DB[c.liste].filter(y => y !== x); if(idee && !DB.inbox.includes(idee)) DB.inbox.splice(Math.max(0, position), 0, idee); modifie('annuler capture'); toast('C’est annulé.'); }]]);
   return x;
+}
+
+/* --- Le journal (Carnet) : une phrase datée ; « @Nom » relie les contacts cités, les « #mots » deviennent des tags --- */
+const RE_TAG = /(^|\s)#([\p{L}\d_-]+)/gu;
+export const lireTags = t => ({tags:[...t.matchAll(RE_TAG)].map(m => m[2]), reste:t.replace(RE_TAG, ' ').replace(/\s+/g, ' ').trim()});
+export function contactsCites(texte){   /* le plus long nom d'abord : « @Paul Dupont » avant « @Paul » */
+  const t = norm(texte), ids = [];
+  DB.contacts.slice().sort((a, b) => b.nom.length - a.nom.length).forEach(c => { const k = '@' + norm(c.nom); if(k.length > 2 && t.includes(k) && !ids.includes(c.id)) ids.push(c.id); });
+  return ids;
+}
+export function noterJournal(texte, {projet = null} = {}){
+  const {tags, reste} = lireTags(texte); if(!reste) return null;
+  const j = ajouter('journal', {date:aujourdhui(), texte:reste, contacts:contactsCites(reste), tags, projet, cree:maintenant(), modif:maintenant()});
+  toucherDossier(projet); modifie('ajout');
+  toast('Noté dans le journal' + (j.contacts.length ? ' · ' + j.contacts.length + (j.contacts.length > 1 ? ' personnes' : ' personne') : '') + '.',
+    [['Annuler', () => { DB.journal = DB.journal.filter(y => y !== j); modifie('annuler'); }]]);
+  return j;
 }
 
 /* --- La fenêtre « Noter » : une phrase, ce qu'elle va devenir en direct, Entrée --- */

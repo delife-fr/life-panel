@@ -4,7 +4,7 @@
      « Ajouter ». Supprimer = corbeille (30 jours), avec « Annuler » dans le message.
    - Sur tout élément : son dossier (le « super tag »), ses tags et des attributs libres (un nom, une valeur inventés).
    Les sections enrichiront leur fiche dans leur lot ; celle-ci sert partout dès maintenant (capture, Idées, Aujourd'hui). */
-import {esc, dateISO, maintenant, aujourdhui, propreNom, cleNom} from './outils.js';
+import {esc, dateISO, maintenant, aujourdhui, propreNom, cleNom, dateCourte} from './outils.js';
 import {ico} from './icones.js';
 import {DB, FORMES, ajouter, modifie, retirer, assurerCategorie, assurerCompte} from './donnees.js';
 import {dossiersActifs, cheminDossier, listesTriees, categoriesFrequentes, compteParDefaut, toucherDossier, cocherTache} from './calculs.js';
@@ -27,12 +27,12 @@ export const TYPES_ELEMENT = {
   notes:{nom:'Note', une:'une note', champs:[{c:'titre', t:'Titre', k:'texte'}, {c:'contenu', t:'Contenu (Markdown)', k:'zone', lignes:10}, ...COMMUNS]},
   contacts:{nom:'Contact', une:'un contact', champs:[{c:'nom', t:'Nom', k:'texte'}, {c:'telephone', t:'Téléphone', k:'tel', demi:true}, {c:'autreTelephone', t:'Autre téléphone', k:'tel', demi:true},
     {c:'email', t:'E-mail', k:'email'}, {c:'anniversaire', t:'Anniversaire', k:'date', demi:true}, {c:'derniereConversation', t:'Dernier échange', k:'date', demi:true}, {c:'adresse', t:'Adresse', k:'zone', lignes:2},
-    {c:'nouvelles', t:'Nouvelles', k:'zone', lignes:3}, {c:'aDire', t:'À lui dire', k:'cases'}, {c:'aRepondre', t:'À répondre', k:'cases'}, {c:'idees', t:'Idées de cadeaux', k:'cases'}, ...COMMUNS]},
+    {c:'journal', t:'Journal', k:'journal'}, ...COMMUNS]},   /* v5 : plus de Nouvelles ni d'À lui dire, À répondre, Idées (gardés dans les données) */
   documents:{nom:'Document', une:'un document', champs:[{c:'titre', t:'Titre', k:'texte'}, {c:'url', t:'Lien (site ou drive:chemin)', k:'url'},
     {c:'echeance', t:'Échéance', k:'date', demi:true}, {c:'preavis', t:'Préavis (jours)', k:'nombre', demi:true}, {c:'note', t:'Note', k:'zone', lignes:3}, ...COMMUNS]},
   projets:{nom:'Dossier', une:'un dossier', champs:[{c:'nom', t:'Nom', k:'texte'}, {c:'resume', t:'Pour quoi faire', k:'zone', lignes:2},
     {c:'parent', t:'Rangé dans', k:'dossier'}, {c:'couleur', t:'Couleur', k:'choix', options:[['', '— celle du dossier qui le contient —'], ['bleu', 'Bleu'], ['vert', 'Vert'], ['jaune', 'Jaune'], ['rose', 'Rose'], ['violet', 'Violet'], ['orange', 'Orange']], demi:true},
-    {c:'archive', t:'Archivé', k:'case'}, {c:'tags', t:'Tags', k:'tags'}, {c:'attributs', t:'Attributs', k:'attributs'}]},
+    {c:'archive', t:'Fermé (le dossier reste visible dans « Fermés »)', k:'case'}, {c:'tags', t:'Tags', k:'tags'}, {c:'attributs', t:'Attributs', k:'attributs'}]},
   listes:{nom:'Liste', une:'une liste', champs:[{c:'nom', t:'Nom', k:'texte'}]},
   journal:{nom:'Entrée du journal', une:'une entrée', champs:[{c:'date', t:'Date', k:'date', demi:true}, {c:'texte', t:'Ce qui s’est passé', k:'zone', lignes:4},
     {c:'contacts', t:'Personnes', k:'personnes'}, ...COMMUNS]}
@@ -71,6 +71,9 @@ function champ(f, d, x, liste){
     case 'categorie': html = `<input type="text" ${attrs} value="${esc(v || '')}" list="${id}-l" placeholder="— sans catégorie —"><datalist id="${id}-l">${categoriesFrequentes().map(c => `<option value="${esc(c)}">`).join('')}</datalist>`; break;
     case 'compte': html = `<input type="text" ${attrs} value="${esc(v || '')}" list="${id}-l"><datalist id="${id}-l">${DB.comptes.map(c => `<option value="${esc(c.nom)}">`).join('')}</datalist>`; break;
     case 'tags': html = `<input type="text" ${attrs} value="${esc((v || []).join(', '))}" placeholder="séparés par des virgules">`; break;
+    case 'journal': { const l = x.id ? DB.journal.filter(j => j.contacts.includes(x.id)).sort((a, b) => (b.date + b.cree).localeCompare(a.date + a.cree)) : [];
+      return `<div class="champ"><span class="etiquette">${esc(d.t)}</span>${l.length ? `<ul class="journal-fiche">${l.map(j => `<li><b>${esc(dateCourte(j.date))}</b> ${esc(j.texte)}</li>`).join('')}</ul>`
+        : '<p class="faible">Rien pour l’instant : écris une ligne avec @' + esc(x.nom || 'son nom') + ' dans Carnet › Journal.</p>'}</div>`; }
     case 'cases': html = `<div class="etapes" id="${id}">${(v || []).map(ligneEtape).join('')}</div>
       <button type="button" class="btn discret petit" data-etape-ajouter="${id}">${ico('plus', 14)}<span>Ajouter</span></button>`; break;
     case 'personnes': html = `<input type="text" ${attrs} value="${esc((v || []).map(i => (DB.contacts.find(c => c.id === i) || {}).nom).filter(Boolean).join(', '))}" list="${id}-l" placeholder="noms séparés par des virgules">

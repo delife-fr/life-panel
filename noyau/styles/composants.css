@@ -162,3 +162,9 @@ body:has(.tableau-choix) .toast{bottom:92px}
 .lien-externe{display:inline-flex;align-items:center;gap:5px;color:var(--accent-texte);text-decoration:none;max-width:100%;overflow:hidden}
 .lien-externe span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lien-externe:hover{text-decoration:underline}
+a.puce.dossier{text-decoration:none;color:var(--texte)}
+a.puce.dossier:hover{border-color:var(--bord-fort);background:var(--panneau-3)}
+.journal-fiche{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto}
+.journal-fiche li{padding:7px 10px;border-radius:var(--r-petit);background:var(--panneau-2);font-size:13.5px;color:var(--texte)}
+.journal-fiche b{color:var(--texte-2);font-weight:600;margin-right:6px}
+.formulaire .etiquette{display:block;font-size:12.5px;font-weight:600;color:var(--texte-2);margin-bottom:6px}

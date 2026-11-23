@@ -13,8 +13,7 @@ import {lien} from '../../noyau/adresses.js';
 import {lireCapture} from '../../noyau/capture.js';
 import '../../noyau/fiches.js';
 
-const puceDossier = id => id ? `<span class="puce dossier" style="--c:var(--c-${couleurDossier(id)})">${esc(nomDossier(id))}</span>` : '';
-const puceTags = tags => (tags || []).map(t => `<span class="puce">#${esc(t)}</span>`).join('');
+import {puceDossier, puceTags} from '../../noyau/affichage.js';
 
 function ligneRdv(ev){
   const passe = ev.heure && (ev.fin || ev.heure) < new Date().toTimeString().slice(0, 5);

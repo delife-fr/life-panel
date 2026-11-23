@@ -1,7 +1,7 @@
 /* LIFE PANEL v5 · modules/taches — les tâches, au plus simple : un tableau.
    - Par date : les tâches à faire, triées par date (un tiret quand il n'y en a pas, en dernier). Une tâche rangée dans une
      liste et sans date reste dans sa liste (comme en v4.9) ; la recherche, elle, regarde toutes les tâches. Une tâche cochée
-     aujourd'hui reste visible, barrée, en bas, jusqu'à demain (elle part alors aux archives). « Faites » : les terminées.
+     reste visible, barrée, en bas du tableau (plus d'archives en v5).
    - Listes : les listes personnalisées (Courses, Voyage…) en puces ; une liste ouverte montre ses tâches et sa ligne d'ajout.
    - Partout : une ligne pour ajouter vite (« appeler Paul demain 15h #perso » garde la date, l'heure et le tag) ; un clic
      sur une ligne ouvre la fiche au centre (date, liste, étapes, dossier, tags, attributs).
@@ -21,17 +21,17 @@ import {lireCapture} from '../../noyau/capture.js';
 import {ouvrirElement} from '../../noyau/fiches.js';
 
 const SOUS = [['', 'Par date'], ['listes', 'Listes']];
-const TABLEAUX = ['taches', 'taches-faites', 'taches-listes', 'taches-liste'];
+const TABLEAUX = ['taches', 'taches-listes', 'taches-liste'];
 const tache = id => DB.taches.find(t => t.id === id);
 const uneListe = id => (id && DB.listes.find(l => l.id === id)) || null;
 /* À faire, ou cochée aujourd'hui (pas encore partie aux archives) */
-const visible = t => !t.fait || !t.archive;
+const visible = () => true;   /* v5 : une tâche faite reste visible, barrée (le drapeau archive de la v4.9 n'est plus montré) */
 const texteDate = t => t.date ? majuscule(jourCourt(t.date)) + (t.heure ? ' · ' + heureTexte(t.heure) : '') : '';
 const nomCourt = t => '« ' + (t.nom.length > 40 ? t.nom.slice(0, 39) + '…' : t.nom) + ' »';
 const quoi = ts => ts.length > 1 ? pluriel(ts.length, 'tâche') : nomCourt(ts[0]);
 
 
-/* --- Le tableau des tâches (le même partout : Par date, Faites, Listes) --- */
+/* --- Le tableau des tâches (le même partout : Par date, Listes) --- */
 const actionsChoix = id => [['taches-choix-cocher', 'Cocher', 'check'], ['taches-choix-date', 'Date…', 'agenda'], ['taches-choix-liste', 'Liste…', 'liste'],
   ['taches-choix-dossier', 'Dossier…', 'dossier'], ['taches-choix-supprimer', 'Supprimer', 'corbeille']]
   .map(([a, t, i]) => `<button type="button" class="btn petit" data-action="${a}" data-tableau="${esc(id)}">${ico(i, 14)}<span>${t}</span></button>`).join('');
@@ -59,14 +59,9 @@ function tableTaches({id, lignes, toutes = null, liste = true, faites = false, v
 
 /* --- Par date --- */
 function pageDate(ctx){
-  const faites = ctx.params.get('voir') === 'faites';
-  const filtres = `<nav class="filtres" aria-label="Afficher"><a class="puce-choix${faites ? '' : ' actif'}" href="${lien('taches')}"${faites ? '' : ' aria-current="true"'}>À faire</a>
-    <a class="puce-choix${faites ? ' actif' : ''}" href="${lien('taches', '', {voir:'faites'})}"${faites ? ' aria-current="true"' : ''}>Faites</a></nav>`;
-  const t = faites
-    ? tableTaches({id:'taches-faites', lignes:DB.taches.filter(x => x.fait), faites:true, vide:'Aucune tâche terminée.', outils:filtres})
-    : tableTaches({id:'taches', lignes:DB.taches.filter(x => visible(x) && (x.date || !x.liste)), toutes:DB.taches.filter(visible), outils:filtres,
+  const t = tableTaches({id:'taches', lignes:DB.taches.filter(x => x.date || !x.liste), toutes:DB.taches,
       vide:'Rien à faire. Écris une tâche juste au-dessus, puis Entrée.'});
-  return entete('Tâches') + `<div class="page-taches">${faites ? '' : champAjout('tache-ajouter', 'Ajouter une tâche (ex. appeler Paul demain 15h)…')}
+  return entete('Tâches') + `<div class="page-taches">${champAjout('tache-ajouter', 'Ajouter une tâche (ex. appeler Paul demain 15h)…')}
     ${t}</div>`;
 }
 

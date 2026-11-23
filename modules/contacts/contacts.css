@@ -1,6 +1,5 @@
 /* LIFE PANEL v5 · modules/contacts/contacts.css */
 .page-contacts{display:flex;flex-direction:column;gap:14px;max-width:1320px}
 .page-contacts > .ajout{max-width:640px}
-.puce.repondre{--c:var(--c-orange);color:var(--texte);border-color:color-mix(in srgb, var(--c) 45%, var(--bord));background:color-mix(in srgb, var(--c) 14%, var(--panneau));font-size:11.5px}
 .filtres .n{font-size:11.5px;color:var(--texte-3);font-weight:600;margin-left:3px}
 .tableau .col-telephone,.tableau .col-anniversaire,.tableau .col-echange{white-space:nowrap}
