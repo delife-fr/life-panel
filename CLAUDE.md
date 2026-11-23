@@ -57,7 +57,17 @@ puis http://127.0.0.1:8765/
   devinée de la v4.9 (« essence 45 » → une dépense).
 - **Journal** (Carnet) : une ou deux phrases datées ; « @ » ouvre la liste des contacts pendant la frappe, « # » les tags.
 - **Attributs libres** sur tout élément : un nom et une valeur inventés, visibles dans la fiche, pas en colonne.
-- **Tâches au plus simple** : la liste de la v4.9, ni colonnes, ni statut, ni notation.
+- **Des tableaux partout** (tâches, dépenses, documents, contacts) : un seul composant de tableau dans le noyau, avec sa
+  recherche (même syntaxe que la grande barre : `#tag`…), ses colonnes triables et choisies (un attribut libre peut devenir
+  une colonne), un affichage par paquets de 50 ; sur téléphone, une carte par ligne. Les notes restent une liste de lignes
+  avec leurs tags.
+- **Tâches au plus simple** : un tableau, une colonne Date (un tiret sans date), aucun regroupement par jour, ni statut,
+  ni notation.
+- **Fiches au centre** : une grande tuile au milieu de l'écran, le site en arrière-plan (comme la modale de la v4.9) ;
+  pas de panneau à droite. Sur téléphone, plein écran depuis le bas.
+- **Glisser-déposer partout où c'est naturel** (moteur du prototype, souris et doigt), toujours doublé d'un bouton.
+- **Documents et Drive** : « Mon Drive » dans le sous-menu de Documents, même tableau, « Suivre l'échéance ».
+- **Téléphone** : à décider par Claude, l'utilisateur pense d'abord au PC.
 - **Recherche** : pour chercher, pas pour créer ; Entrée ouvre la page de résultats de la v4.9, tous types, #tag compris.
 - **Finance** : celle de la v4.9, dont le graphique par catégorie et le clic qui retire une catégorie du calcul.
 - **Contacts** : le tableau de la v4.8.
