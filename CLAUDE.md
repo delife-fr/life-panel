@@ -67,7 +67,11 @@ sur « Chargement… ».
   une colonne), un affichage par paquets de 50 ; sur téléphone, une carte par ligne. Les notes restent une liste de lignes
   avec leurs tags.
 - **Tâches au plus simple** : un tableau, une colonne Date (un tiret sans date), aucun regroupement par jour, ni statut,
-  ni notation.
+  ni notation. Fait au lot 3 : « Par date » montre les tâches à faire sauf celles d'une liste sans date (elles restent dans
+  leur liste, comme en v4.9 ; la recherche les trouve) ; cochée aujourd'hui = barrée en bas jusqu'à demain ; « Faites » à
+  part. Listes en puces (chacune reçoit les tâches glissées). Étapes dans la fiche (« 1/3 » dans le tableau).
+- **Sélection sur PC** (composant tableau, `selection`) : Ctrl + clic, Maj + clic, Échap ; une barre flottante en bas
+  propose les actions ; glisser une ligne choisie emporte toute la sélection.
 - **Fiches au centre** : une grande tuile au milieu de l'écran, le site en arrière-plan (comme la modale de la v4.9) ;
   pas de panneau à droite. Sur téléphone, plein écran depuis le bas.
 - **Glisser-déposer partout où c'est naturel** (moteur du prototype, souris et doigt), toujours doublé d'un bouton.
@@ -93,7 +97,8 @@ noyau/
   modules.js          le registre des sections (format d'un module décrit en tête du fichier)
   interface.js        coquille, rendre(), sous-menu, couleur de section, fiche au centre (ouvrirFiche), confirmer(), toast(),
                       champAjout() (ligne « ajouter vite »), thème, clics, clavier
-  tableau.js          le tableau commun (recherche, tri, colonnes, paquets de 50, cartes sur téléphone)
+  tableau.js          le tableau commun (recherche, tri, colonnes, attributs en colonnes, paquets de 50, sélection Ctrl + clic,
+                      cartes sur téléphone)
   glisser.js          le glisser-déposer (souris et doigt) : glisserType(type, {depot}), [data-glisser], [data-depot]
   fiches.js           la fiche de chaque type d'élément (TYPES_ELEMENT), avec dossier, tags et attributs libres
   capture.js          « Noter » en une phrase (bouton +, touche C), et le rangement d'une idée

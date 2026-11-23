@@ -1,7 +1,6 @@
 /* LIFE PANEL v5 · modules/idees/idees.css */
 .page-idees{display:flex;flex-direction:column;gap:14px;max-width:1180px}
 .page-idees > .ajout{max-width:640px}
-.aide{margin:0;font-size:12.5px;color:var(--texte-3)}
 .bloc-section{display:flex;flex-direction:column;gap:10px;margin-top:18px}
 .bloc-section .bloc-tete{margin:0}
 .categories-depot{display:flex;flex-wrap:wrap;gap:6px}
@@ -13,4 +12,3 @@
 .pastille-type{width:10px;height:10px;border-radius:3px;background:var(--c)}
 .tableau .col-lue{white-space:nowrap}
 .tableau .col-actions{width:1%}
-@media (max-width:1099px){ .masque-tel{display:none!important} }

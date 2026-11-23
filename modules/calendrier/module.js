@@ -9,7 +9,7 @@ const CONTENU = {
 };
 
 export default {
-  id:'calendrier', nom:'Calendrier', icone:'agenda', couleur:'violet', menu:30, onglet:20, depot:'idee', sousMenu:SOUS,
+  id:'calendrier', nom:'Calendrier', icone:'agenda', couleur:'violet', menu:30, onglet:20, depot:'idee tache', sousMenu:SOUS,
   pages:{
     calendrier:ctx => { const r = CONTENU[ctx.arg] ? ctx.arg : '';
       return entete('Calendrier', {sur:SOUS.find(x => x[0] === r)[1]}) + bientot(4, CONTENU[r]); }

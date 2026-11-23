@@ -34,7 +34,7 @@ function page(){
   const j = aujourdhui(), rdv = evenementsDuJour(j), taches = tachesDuJour();
   const faites = DB.taches.filter(t => t.fait && jourDe(t.faitLe) === j && !taches.includes(t));
   const jour = `<section class="bloc jour">
-    <div class="bloc-tete"><h2>Aujourd’hui</h2></div>
+    <div class="bloc-tete"><h2>Aujourd’hui</h2><a href="${lien('taches')}">Toutes les tâches ${ico('fleche', 14)}</a></div>
     ${rdv.length ? `<ul class="liste-jour">${rdv.map(ligneRdv).join('')}</ul>` : ''}
     ${taches.length || faites.length ? `<ul class="liste-jour">${[...taches, ...faites].map(ligneTache).join('')}</ul>`
       : !rdv.length ? '<p class="doux calme">Rien de prévu aujourd’hui.</p>' : ''}
@@ -56,7 +56,7 @@ function page(){
 }
 
 export default {
-  id:'aujourdhui', nom:'Aujourd’hui', icone:'grille', couleur:'bleu', menu:10, onglet:10, styles:true,
+  id:'aujourdhui', nom:'Aujourd’hui', icone:'grille', couleur:'bleu', menu:10, onglet:10, depot:'tache', styles:true,
   titre:() => 'Aujourd’hui',
   pages:{aujourdhui:page},
   actions:{

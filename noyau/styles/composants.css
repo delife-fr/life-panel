@@ -95,6 +95,11 @@ input.coche:checked::after{content:"";width:9px;height:5px;border:2px solid var(
 .formulaire .champ.quart{flex:1 1 calc(25% - 9px)}
 .champ-case{display:flex;align-items:center;gap:8px;flex:1 1 100%;margin:0;color:var(--texte);font-size:14px}
 .avec-vider{display:flex;gap:6px;align-items:center}
+.etapes{display:flex;flex-direction:column;gap:6px}
+.etapes:empty{display:none}
+.etape{display:flex;align-items:center;gap:8px}
+.etape .e-t{flex:1;min-width:0}
+.etape:has(.e-ok:checked) .e-t{color:var(--texte-3);text-decoration:line-through}
 .attributs{display:flex;flex-direction:column;gap:6px;margin:0 0 6px}
 .attribut{display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1.4fr) auto;gap:6px;align-items:center}
 @media (max-width:520px){ .formulaire .champ.demi,.formulaire .champ.quart{flex-basis:100%} }
@@ -118,3 +123,36 @@ input.coche:checked::after{content:"";width:9px;height:5px;border:2px solid var(
 .cible-active{outline:2px solid var(--accent)!important;outline-offset:-3px;background:var(--accent-doux)!important}
 .bloc-tete a{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
 .tableau .col-ajoutee,.tableau .col-date,.tableau .col-archivee{white-space:nowrap}
+
+/* --- Petits textes d'aide, masqués sur téléphone au besoin --- */
+.aide{margin:0;font-size:12.5px;color:var(--texte-3)}
+@media (max-width:1099px){ .masque-tel{display:none!important} }
+
+/* --- Filtres en puces (au-dessus d'un tableau) --- */
+.filtres{display:flex;flex-wrap:wrap;gap:6px}
+.filtres a.puce-choix{text-decoration:none}
+
+/* --- Lignes choisies dans un tableau (Ctrl + clic) et leur barre --- */
+.tableau tbody tr.choisie,.tableau tbody tr.choisie:hover{background:color-mix(in srgb, var(--accent) 16%, transparent)}
+.tableau tbody tr.choisie td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.tableau-choix{position:fixed;z-index:40;left:50%;bottom:24px;transform:translateX(-50%);display:flex;align-items:center;flex-wrap:wrap;justify-content:center;gap:6px;
+  max-width:calc(100vw - 32px);padding:8px 10px 8px 16px;border-radius:12px;background:var(--panneau-3);border:1px solid var(--bord-fort);box-shadow:var(--ombre-haute)}
+.tableau-choix .choix-nombre{font-weight:600;font-size:13px;margin-right:6px;white-space:nowrap}
+@media (max-width:1099px){ .tableau-choix{bottom:calc(var(--onglets) + 16px + env(safe-area-inset-bottom))} }
+
+/* --- Petites fenêtres de choix (un jour, une liste, un dossier) --- */
+.choix-grille{display:grid;grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));gap:8px}
+.choix-colonne{display:flex;flex-direction:column;gap:6px}
+.btn.choix{justify-content:flex-start;min-height:44px;text-align:left}
+.choix-grille .btn.choix{flex-direction:column;align-items:flex-start;gap:2px;padding:8px 12px;min-height:56px}
+.btn.choix small{color:var(--texte-3);font-size:12px;font-weight:400}
+.btn.choix b{font-weight:600}
+.pastille-dossier{width:10px;height:10px;border-radius:3px;background:var(--c);flex-shrink:0}
+.autre-jour{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--bord)}
+.autre-jour label{color:var(--texte-2);font-size:13px;margin-right:4px}
+.autre-jour input{width:auto}
+.fiche .ajout{margin-top:14px}
+/* Un message en bas de l'écran passe au-dessus de la barre de sélection au lieu de la cacher */
+body:has(.tableau-choix) .toast{bottom:92px}
+@media (max-width:1099px){ body:has(.tableau-choix) .toast{bottom:calc(var(--onglets) + 84px + env(safe-area-inset-bottom))} }
+@media (max-width:700px){ .tableau .t-droite.t-vide{display:none} }

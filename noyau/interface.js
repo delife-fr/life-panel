@@ -13,7 +13,7 @@ import {lireAdresse, lien} from './adresses.js';
 import {PAGES, ACTIONS, MODULES, dansLeMenu, dansLesOnglets, actionNoyau} from './modules.js';
 import {pref, changerPref} from './preferences.js';
 
-export const VERSION_APPLI = 'v5 bêta · lot 0';
+export const VERSION_APPLI = 'v5 bêta · lot 3';
 const LOGO = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="12" width="8" height="9" rx="2"/><rect x="3" y="15" width="8" height="6" rx="1.5"/></svg>`;
 const teinte = m => m && m.couleur ? `var(--c-${m.couleur})` : 'var(--accent)';
 
@@ -76,7 +76,7 @@ export function fermerFiche({depuisHistorique = false} = {}){
 }
 
 /* --- Une ligne pour ajouter vite : une phrase, Entrée. action = nom d'une action du registre, appelée avec le texte --- */
-export const champAjout = (action, texte, {id = ''} = {}) => `<form class="ajout" data-ajout="${esc(action)}" autocomplete="off">${ico('plus', 16, 2)}
+export const champAjout = (action, texte, {id = '', donnees = {}} = {}) => `<form class="ajout" data-ajout="${esc(action)}"${Object.entries(donnees).map(([k, v]) => ` data-${esc(k)}="${esc(v)}"`).join('')} autocomplete="off">${ico('plus', 16, 2)}
   <input type="text" name="texte" ${id ? `id="${esc(id)}"` : ''} placeholder="${esc(texte)}" aria-label="${esc(texte)}" enterkeyhint="done"></form>`;
 
 /* --- Confirmation (calme, au centre) : renvoie true ou false --- */

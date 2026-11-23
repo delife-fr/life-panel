@@ -7,7 +7,7 @@ import {entete, bientot} from '../../noyau/interface.js';
 const SOUS = [['', 'Tous les dossiers'], ['sans', 'Sans dossier']];
 
 export default {
-  id:'dossiers', nom:'Dossiers', icone:'dossier', couleur:'orange', menu:50, sousMenu:SOUS,
+  id:'dossiers', nom:'Dossiers', icone:'dossier', couleur:'orange', menu:50, depot:'tache', sousMenu:SOUS,
   pages:{
     dossiers:ctx => ctx.arg === 'sans'
       ? entete('Sans dossier') + bientot(6, ['Les éléments qui ne sont dans aucun dossier, à ranger'])

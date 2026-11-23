@@ -10,7 +10,8 @@
      onglet:30,                   place dans les onglets du bas sur téléphone ; absent = dans « Plus »
      sousMenu:[['', 'Par date'], ['listes', 'Listes']],   facultatif : le sous-menu (#/taches, #/taches/listes) ;
                                   peut aussi être une fonction ctx => [...]
-     depot:'idee',                facultatif : l'onglet de la section accepte qu'on y dépose ce type (ex. une idée à ranger)
+     depot:'idee tache',          facultatif : l'onglet de la section accepte qu'on y dépose ces types, séparés par une espace
+                                  (ex. une idée à ranger) ; c'est le module du type glissé qui décide quoi faire
      styles:true,                 charge modules/taches/taches.css
      pages:{taches:ctx => html},  les pages de la rubrique : #/taches → pages.taches({nom, arg, params})
      apres:{taches:(ctx, vue) => …},   facultatif : après l'affichage d'une page (brancher un champ, un glisser…)

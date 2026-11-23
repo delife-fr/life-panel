@@ -279,9 +279,9 @@ export function mettreCorbeille(type, element, extra = {}){
   DB.corbeille.unshift({id:uid(), type, supprimeLe:maintenant(), element:JSON.parse(JSON.stringify(element)), ...extra});
 }
 /* Retire un élément de sa liste vers la corbeille ; renvoie de quoi l'y remettre (« Annuler ») */
-export function retirer(liste, x){
+export function retirer(liste, x, extra = {}){
   const i = DB[liste].indexOf(x); if(i < 0) return () => {};
-  mettreCorbeille(liste, x);
+  mettreCorbeille(liste, x, extra);
   const entree = DB.corbeille[0];
   DB[liste].splice(i, 1);
   return () => { DB.corbeille = DB.corbeille.filter(e => e !== entree); if(!DB[liste].includes(x)) DB[liste].splice(Math.min(i, DB[liste].length), 0, x); };

@@ -15,7 +15,7 @@ const COMMUNS = [{c:'projet', t:'Dossier', k:'dossier'}, {c:'tags', t:'Tags', k:
 export const TYPES_ELEMENT = {
   inbox:{nom:'Idée', une:'une idée', champs:[{c:'text', t:'Idée', k:'zone', lignes:3}, ...COMMUNS]},
   taches:{nom:'Tâche', une:'une tâche', champs:[{c:'nom', t:'Tâche', k:'texte'}, {c:'fait', t:'Faite', k:'case'}, {c:'date', t:'Date', k:'date', demi:true}, {c:'heure', t:'Heure', k:'heure', demi:true},
-    {c:'liste', t:'Liste', k:'liste'}, ...COMMUNS]},
+    {c:'liste', t:'Liste', k:'liste'}, {c:'etapes', t:'Étapes', k:'etapes'}, ...COMMUNS]},
   evenements:{nom:'Rendez-vous', une:'un rendez-vous', champs:[{c:'titre', t:'Titre', k:'texte'}, {c:'date', t:'Date', k:'date', demi:true}, {c:'heure', t:'Début', k:'heure', quart:true}, {c:'fin', t:'Fin', k:'heure', quart:true},
     {c:'lieu', t:'Lieu', k:'texte'}, {c:'note', t:'Note', k:'zone', lignes:3}, ...COMMUNS]},
   mouvements:{nom:'Dépense', une:'une dépense', champs:[{c:'type', t:'Type', k:'choix', options:[['depense', 'Dépense'], ['revenu', 'Entrée d’argent']], demi:true}, {c:'montant', t:'Montant (€)', k:'montant', demi:true},
@@ -62,6 +62,8 @@ function champ(f, d, x, liste){
     case 'categorie': html = `<input type="text" ${attrs} value="${esc(v || '')}" list="${id}-l" placeholder="— sans catégorie —"><datalist id="${id}-l">${categoriesFrequentes().map(c => `<option value="${esc(c)}">`).join('')}</datalist>`; break;
     case 'compte': html = `<input type="text" ${attrs} value="${esc(v || '')}" list="${id}-l"><datalist id="${id}-l">${DB.comptes.map(c => `<option value="${esc(c.nom)}">`).join('')}</datalist>`; break;
     case 'tags': html = `<input type="text" ${attrs} value="${esc((v || []).join(', '))}" placeholder="séparés par des virgules">`; break;
+    case 'etapes': html = `<div class="etapes" id="${id}">${(v || []).map(ligneEtape).join('')}</div>
+      <button type="button" class="btn discret petit" data-etape-ajouter="${id}">${ico('plus', 14)}<span>Ajouter une étape</span></button>`; break;
     case 'attributs': html = `<div class="attributs" id="${id}">${(v || []).map(ligneAttribut).join('')}</div>
       <button type="button" class="btn discret petit" data-attribut-ajouter="${id}">${ico('plus', 14)}<span>Ajouter un attribut</span></button>`; break;
     default: html = `<input type="text" ${attrs} value="${esc(v || '')}">`;
@@ -70,6 +72,10 @@ function champ(f, d, x, liste){
 }
 const ligneAttribut = (a = {nom:'', valeur:''}) => `<div class="attribut"><input type="text" class="a-nom" value="${esc(a.nom)}" placeholder="Nom (ex. Téléphone pro)" aria-label="Nom de l’attribut">
   <input type="text" class="a-valeur" value="${esc(a.valeur)}" placeholder="Valeur" aria-label="Valeur"><button type="button" class="icone-btn petit" data-attribut-retirer aria-label="Retirer cet attribut">${ico('fermer', 14)}</button></div>`;
+
+/* Une étape d'une tâche : une case et un texte (Entrée ajoute la suivante) */
+const ligneEtape = (e = {t:'', ok:false}) => `<div class="etape"><input type="checkbox" class="coche e-ok"${e.ok ? ' checked' : ''} aria-label="Étape faite">
+  <input type="text" class="e-t" value="${esc(e.t)}" placeholder="Une étape" aria-label="Étape"><button type="button" class="icone-btn petit" data-etape-retirer aria-label="Retirer cette étape">${ico('fermer', 14)}</button></div>`;
 
 /* Lit le formulaire → les valeurs, au format attendu par FORMES */
 function lire(f, liste, x){
@@ -84,6 +90,7 @@ function lire(f, liste, x){
       case 'dossier': case 'liste': r[d.c] = e.value || null; break;
       case 'categorie': r[d.c] = propreNom(e.value) ? assurerCategorie(e.value) : ''; break;
       case 'compte': r[d.c] = propreNom(e.value) ? assurerCompte(e.value) : ''; break;
+      case 'etapes': r[d.c] = [...e.querySelectorAll('.etape')].map(l => ({t:propreNom(l.querySelector('.e-t').value), ok:l.querySelector('.e-ok').checked})).filter(x => x.t); break;
       case 'attributs': r[d.c] = [...e.querySelectorAll('.attribut')].map(l => ({nom:l.querySelector('.a-nom').value, valeur:l.querySelector('.a-valeur').value})); break;
       default: r[d.c] = e.value;
     }
@@ -126,12 +133,23 @@ function enregistrer(f, liste, x){
 function brancher(boite, f, liste, x, {nouveau, apresAjout}){
   const form = boite.querySelector('form');
   form.addEventListener('submit', e => e.preventDefault());
+  /* Entrée dans une étape : la suivante s'ouvre juste en dessous */
+  form.addEventListener('keydown', e => {
+    if(e.key !== 'Enter' || !e.target.classList.contains('e-t')) return;
+    e.preventDefault();
+    if(!e.target.value.trim()) return;
+    const l = e.target.closest('.etape'); l.insertAdjacentHTML('afterend', ligneEtape()); l.nextElementSibling.querySelector('.e-t').focus();
+  });
   if(!nouveau) form.addEventListener('change', () => enregistrer(f, liste, x));
   boite.addEventListener('click', e => {
     const vider = e.target.closest('[data-vider]');
     if(vider){ const c = document.getElementById(vider.dataset.vider); c.value = ''; c.dispatchEvent(new Event('change', {bubbles:true})); return; }
     const ajoutA = e.target.closest('[data-attribut-ajouter]');
     if(ajoutA){ const zone = document.getElementById(ajoutA.dataset.attributAjouter); zone.insertAdjacentHTML('beforeend', ligneAttribut()); zone.lastElementChild.querySelector('input').focus(); return; }
+    const ajoutE = e.target.closest('[data-etape-ajouter]');
+    if(ajoutE){ const zone = document.getElementById(ajoutE.dataset.etapeAjouter); zone.insertAdjacentHTML('beforeend', ligneEtape()); zone.lastElementChild.querySelector('.e-t').focus(); return; }
+    const retE = e.target.closest('[data-etape-retirer]');
+    if(retE){ retE.closest('.etape').remove(); form.dispatchEvent(new Event('change', {bubbles:true})); return; }
     const retA = e.target.closest('[data-attribut-retirer]');
     if(retA){ retA.closest('.attribut').remove(); form.dispatchEvent(new Event('change', {bubbles:true})); return; }
     if(e.target.closest('[data-fiche-ajouter]')){
