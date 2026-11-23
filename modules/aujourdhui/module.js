@@ -7,7 +7,7 @@
 import {esc, eur, aujourdhui, jourEtMois, jourCourt, heureTexte, pluriel, ecartJours, jourDe, maintenant} from '../../noyau/outils.js';
 import {ico} from '../../noyau/icones.js';
 import {DB, ajouter, modifie} from '../../noyau/donnees.js';
-import {tachesDuJour, evenementsDuJour, anniversaires, ageFete, documentsARenouveler, texteEcheance, ideesOuvertes, sansCategorie,
+import {tachesDuJour, evenementsDuJour, heureIci, anniversaires, ageFete, documentsARenouveler, texteEcheance, ideesOuvertes, sansCategorie,
   nomDossier, couleurDossier, estEnRetard, nomListe} from '../../noyau/calculs.js';
 import {entete, champAjout, toast} from '../../noyau/interface.js';
 import {lien} from '../../noyau/adresses.js';
@@ -18,9 +18,9 @@ import {puceDossier, puceTags} from '../../noyau/affichage.js';
 import {depenses, dans, somme, parCategorie} from '../../noyau/finance.js';
 
 function ligneRdv(ev){
-  const passe = ev.heure && (ev.fin || ev.heure) < new Date().toTimeString().slice(0, 5);
+  const j = aujourdhui(), h = heureIci(ev, j), passe = h && (heureIci(ev, j, true) || h) < new Date().toTimeString().slice(0, 5);
   return `<li class="ligne-jour rdv${passe ? ' passe' : ''}" data-action="ouvrir-element" data-liste="evenements" data-id="${esc(ev.id)}" tabindex="0">
-    <span class="heure">${ev.heure ? esc(heureTexte(ev.heure)) : 'journée'}</span>
+    <span class="heure">${h ? esc(heureTexte(h)) : 'journée'}</span>
     <span class="corps"><span class="t">${esc(ev.titre)}</span>${ev.lieu || ev.projet ? `<span class="s">${ev.lieu ? esc(ev.lieu) : ''}${puceDossier(ev.projet)}</span>` : ''}</span></li>`;
 }
 function ligneTache(t){

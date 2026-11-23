@@ -3,7 +3,7 @@
    (section D) sans changement de sens : une seule définition de « aujourd'hui » pour les tâches, les dates d'un événement
    qui se répète, les anniversaires, l'échéance des documents, les catégories de dépenses. */
 import {DB} from './donnees.js';
-import {aujourdhui, versDate, ecartJours, pad, joursDansMois, norm, cleNom, unique, maintenant, pluriel, hachage, propreNom} from './outils.js';
+import {aujourdhui, versDate, ecartJours, pad, joursDansMois, norm, cleNom, unique, maintenant, pluriel, hachage, propreNom, heureTexte} from './outils.js';
 
 export const nonArchives = l => l.filter(x => !x.archive);
 export const parModif = (a, b) => (b.modif || '').localeCompare(a.modif || '');
@@ -83,9 +83,37 @@ export function occurrences(ev, debut, fin){
   } else for(let y = Math.max(a, Number(debut.slice(0, 4))); y + '-01-01' <= borne; y++) prendre(y + '-' + jourAnniv(ev.date, y));
   return res;
 }
-/* Les rendez-vous d'un jour, dans l'ordre des heures (journée entière d'abord) */
+/* --- Fuseaux (v4.9) : un rendez-vous peut être fixé à l'heure d'un autre fuseau (ex. un vol à l'heure d'Athènes) ;
+   partout on montre l'heure là où se trouve l'appareil (même calcul que le script des rappels) --- */
+export const FUSEAUX = [['Europe/Paris', 'Paris'], ['Europe/Athens', 'Athènes']];
+export const fuseauIci = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Paris'; } catch(e){ return 'Europe/Paris'; } };
+export const nomFuseau = tz => (FUSEAUX.find(f => f[0] === tz) || [0, String(tz).split('/').pop().replace(/_/g, ' ')])[1];
+export const autreFuseau = ev => !!ev.fuseau && !!ev.heure && ev.fuseau !== fuseauIci();
+function partiesLocales(ms, tz){
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {timeZone:tz, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23'})
+    .formatToParts(new Date(ms)).map(x => [x.type, x.value]));
+  return {date:`${p.year}-${p.month}-${p.day}`, hm:pad(Number(p.hour) % 24) + ':' + p.minute};
+}
+function instantFuseau(date, heure, tz){
+  const [a, mo, j] = date.split('-').map(Number), [h, mi] = heure.split(':').map(Number), mur = Date.UTC(a, mo - 1, j, h, mi);
+  const decalage = ms => { const l = partiesLocales(ms, tz), [la, lm, lj] = l.date.split('-').map(Number), [lh, lmi] = l.hm.split(':').map(Number); return Date.UTC(la, lm - 1, lj, lh, lmi) - ms; };
+  const t = mur - decalage(mur);
+  return mur - decalage(t);
+}
+/* L'heure « ici » du début (ou de la fin) d'un rendez-vous le jour j ; '' pour une journée entière */
+export function heureIci(ev, j, fin = false){
+  const h = fin ? ev.fin : ev.heure; if(!h) return '';
+  return autreFuseau(ev) ? partiesLocales(instantFuseau(j, h, ev.fuseau), fuseauIci()).hm : h;
+}
+/* « 10 h – 11 h », ou « 10 h – 11 h (9 h – 10 h à Athènes) » quand le rendez-vous est fixé à l'heure d'un autre fuseau */
+export function texteHeures(ev, j){
+  if(!ev.heure) return '';
+  const ici = heureTexte(heureIci(ev, j)) + (ev.fin ? ' – ' + heureTexte(heureIci(ev, j, true)) : '');
+  return autreFuseau(ev) ? ici + ' (' + heureTexte(ev.heure) + (ev.fin ? ' – ' + heureTexte(ev.fin) : '') + ' à ' + nomFuseau(ev.fuseau) + ')' : ici;
+}
+/* Les rendez-vous d'un jour, dans l'ordre des heures d'ici (journée entière d'abord) */
 export const evenementsDuJour = j => DB.evenements.filter(ev => occurrences(ev, j, j).length)
-  .sort((a, b) => (a.heure || '').localeCompare(b.heure || '') || a.titre.localeCompare(b.titre, 'fr'));
+  .sort((a, b) => heureIci(a, j).localeCompare(heureIci(b, j)) || a.titre.localeCompare(b.titre, 'fr'));
 
 /* --- Contacts : anniversaires (né un 29 février : fêté le 28 les années non bissextiles) --- */
 export function joursAvantAnniv(s){

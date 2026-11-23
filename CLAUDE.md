@@ -67,9 +67,21 @@ sur « Chargement… ».
   le retire des éléments, les éléments restent.
 - **Toutes les colonnes partout** : `noyau/colonnes.js` donne les colonnes de chaque type, les mêmes dans la section et dans
   la page d'un dossier (étapes, lien, montant, attributs…). Le dossier d'un élément = **un petit carré de couleur et son
-  nom**, partout (pas de pastille autour) ; dans une fiche, le dossier se choisit dans une liste déroulante avec ces carrés.
+  nom**, partout (pas de pastille autour) ; dans une fiche, le dossier se choisit dans une liste déroulante avec ces carrés,
+  les dossiers par ordre alphabétique, **sans leur chemin** (il prenait trop de place). Les compteurs du sous-menu d'un
+  dossier sont dans une petite pastille ronde.
 - **Cases à cocher carrées** (comme le prototype). **Aide « ? »** en haut à droite (modules/aide) : raccourcis et gestes,
   à tenir à jour quand un geste arrive. **Tags d'une fiche** : après une virgule, les tags existants sont proposés.
+- **Calendrier** : « Afficher » (une colonne à droite sur PC, une rangée au-dessus sur téléphone) : Rendez-vous, Tâches,
+  Dépenses, retenu sur cet appareil ; les dépenses (comptes pointés) sont cachées au départ, une ligne par jour avec le
+  total, un clic montre le jour. Pas d'anniversaires ni d'échéances de documents (décision du tour 1).
+- **Rendez-vous** : « Heure de » (là où je suis, Paris, Athènes : FUSEAUX dans calculs.js) et Personnes, comme la v4.9 ;
+  partout l'heure d'ici (heureIci, texteHeures), l'heure du fuseau entre parenthèses.
+- **Repris de la v4.9 (23/11)** : import d'un relevé bancaire CSV (Finance › Mouvements, modules/finance/releve.js),
+  import vCard (Contacts, modules/contacts/vcard.js), finances en CSV et retour à la copie de secours (Réglages › Données),
+  « Renouvelé » et « Créer une tâche » dans la fiche d'un document, « Répéter » dans celle d'une dépense
+  (`boutons` d'un type dans TYPES_ELEMENT). Choisir un fichier, en télécharger un : noyau/fichiers.js.
+- **Corbeille** gardée (Réglages › Corbeille, 30 jours) ; seules les archives sont parties.
 - **Aujourd'hui** : une tuile Finance (dépensé ce mois-ci, comptes pointés, anneau par catégorie), comme la v4.9.
 - **Couleurs** des catégories et des dossiers : 14 teintes (les 9 de la v4.9 + cyan, brun, olive, indigo, gris) et 13
   rayées (TEINTES, COULEURS_CAT dans donnees.js).
@@ -137,6 +149,7 @@ noyau/
                       sélection Ctrl + clic, cartes sur téléphone)
   affichage.js        dossier (carré de couleur + nom), tags, lien de document (Drive compris), téléphone, e-mail
   finance.js          comptes pointés, dépenses d'une période, l'anneau par catégorie (Finance et Aujourd'hui)
+  fichiers.js         choisir un fichier sur l'appareil (texte décodé), en télécharger un, cellule CSV
   colonnes.js         les colonnes de chaque type d'élément et le texte où chercher, communs à tous les tableaux
   glisser.js          le glisser-déposer (souris et doigt) : glisserType(type, {depot}), [data-glisser], [data-depot]
   fiches.js           la fiche de chaque type d'élément (TYPES_ELEMENT), avec dossier, tags et attributs libres
@@ -149,7 +162,8 @@ noyau/
 modules/
   liste.js            les sections actives
   <section>/          module.js (+ <section>.css si styles:true) ; recherche/ (Ctrl K, résultats), tags/ (la fenêtre Tags) et
-                      aide/ (« ? ») ne sont pas des sections ; reglages/exemples.js = les données fictives
+                      aide/ (« ? ») ne sont pas des sections ; reglages/exemples.js = les données fictives,
+                      finance/releve.js = l'import d'un relevé, contacts/vcard.js = l'import vCard
 sw.js, manifest.webmanifest   ceux de la v4.9, pas encore branchés : refaits au lot 1
 ```
 
@@ -174,6 +188,8 @@ Les modules ne s'importent **jamais** entre eux : ils passent par le noyau. Une 
   `var(--section)` = la couleur de la section ouverte.
 - **Langue** : noms, commentaires et textes en français. Les commentaires disent pourquoi, pas ce que fait la ligne.
 - **Calme** : peu de texte à l'écran, pas de chiffres techniques, ce qu'il y a à faire aujourd'hui d'abord.
+- **Tri des tableaux** : `localeCompare` avec `numeric:true` ; une clé date + heure garde un espace entre les deux
+  (« 2026-11-23 10:00 »), sinon « 23 » et « 10 » se collent en un seul nombre.
 
 ## Compatibilité à garder
 

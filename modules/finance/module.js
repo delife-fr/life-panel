@@ -3,7 +3,7 @@
      Un clic sur une catégorie la retire du calcul de l'anneau (total au centre et %), pour cette période et sur cet appareil
      (ex. un virement entre ses propres comptes) ; un nouveau clic la remet. Les cases des comptes choisissent ce qui est
      compté dans les statistiques (Cash, compte joint…), comme en v4.9.
-   - Mouvements : tous, dans un tableau. Comptes et Catégories : un tableau chacun, une ligne pour en ajouter.
+   - Mouvements : tous, dans un tableau ; « Importer un relevé » (CSV de la banque, releve.js). Comptes et Catégories : un tableau chacun, une ligne pour en ajouter.
    - Une ligne pour ajouter vite : « essence 45 » devient une dépense rangée dans sa catégorie. */
 import {esc, eur, aujourdhui, moisCourant, decaleMois, nomMois, joursDansMois, dateCourte, pluriel, maintenant, propreNom, cleNom, pad, jourDe} from '../../noyau/outils.js';
 import {ico} from '../../noyau/icones.js';
@@ -17,6 +17,7 @@ import {colonnes, recherche} from '../../noyau/colonnes.js';
 import {nuancier} from '../../noyau/fiches.js';
 import {enregistrerCapture} from '../../noyau/capture.js';
 import {ouvrirElement} from '../../noyau/fiches.js';
+import {importerReleve, choisirReleve, cocherReleve, validerReleve} from './releve.js';
 import {somme, unCompte, dansStats, depenses, revenus, dans, teinte, parCategorie, basculerRetiree} from '../../noyau/finance.js';
 
 const SOUS = [['', 'Mois'], ['annee', 'Année'], ['mouvements', 'Mouvements'], ['comptes', 'Comptes'], ['categories', 'Catégories']];
@@ -75,7 +76,7 @@ function pageAnnee(ctx){
 }
 
 /* --- Mouvements, Comptes, Catégories --- */
-const pageMouvements = () => entete('Mouvements', {sur:'Finance'}) + `<div class="page-finance">${ajout()}${tableMouvements('mouvements', DB.mouvements, {vide:'Aucun mouvement. Ajoute une dépense juste au-dessus.'})}</div>`;
+const pageMouvements = () => entete('Mouvements', {sur:'Finance', actions:`<button type="button" class="btn" data-action="releve-importer">${ico('importer', 16)}<span>Importer un relevé</span></button>`}) + `<div class="page-finance">${ajout()}${tableMouvements('mouvements', DB.mouvements, {vide:'Aucun mouvement. Ajoute une dépense juste au-dessus.'})}</div>`;
 
 function pageComptes(){
   const mois = moisCourant();
@@ -146,6 +147,8 @@ export default {
   pages:{finance:ctx => ({annee:pageAnnee, mouvements:pageMouvements, comptes:pageComptes, categories:pageCategories})[ctx.arg] ? ({annee:pageAnnee, mouvements:pageMouvements, comptes:pageComptes, categories:pageCategories})[ctx.arg](ctx) : pageMois(ctx)},
   actions:{
     'finance-ajouter':texte => { enregistrerCapture(texte, 'depense'); },
+    'releve-importer':() => importerReleve(), 'releve-fichier':() => choisirReleve(), 'releve-valider':() => validerReleve(),
+    'releve-tout':() => cocherReleve(true), 'releve-rien':() => cocherReleve(false),
     'mouvement-ouvrir':tr => ouvrirElement('mouvements', tr.dataset.id),
     'finance-retirer':el => { basculerRetiree(el.dataset.periode, el.dataset.cat); rendre(); },
     'compte-stats':el => {

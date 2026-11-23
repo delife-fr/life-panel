@@ -5,7 +5,7 @@
 import {esc, eur, aujourdhui, dateCourte, jourCourt, majuscule, heureTexte, decaleJour, extrait} from './outils.js';
 import {ico} from './icones.js';
 import {DB} from './donnees.js';
-import {nomListe, nomDossier, estEnRetard, couleurCategorie, joursAvantAnniv, etatDocument, texteEcheance, cheminDossier} from './calculs.js';
+import {nomListe, nomDossier, estEnRetard, couleurCategorie, joursAvantAnniv, etatDocument, texteEcheance, cheminDossier, texteHeures} from './calculs.js';
 import {puceDossier, puceTags, lienDocument, lienTel, lienMail} from './affichage.js';
 import {colonnesAttributs} from './tableau.js';
 
@@ -24,14 +24,14 @@ const COLONNES = {
   taches:({liste = true} = {}) => [
     {id:'nom', titre:'Tâche', tel:'titre', valeur:t => t.nom, html:t => { const n = t.etapes.length, f = t.etapes.filter(e => e.ok).length;
       return esc(t.nom) + (n ? ` <span class="etapes-compte${f === n ? ' fini' : ''}" title="Étapes faites">${f}/${n}</span>` : ''); }},
-    {id:'date', titre:'Date', tel:'droite', garder:true, valeur:t => t.date ? t.date + (t.heure || '99:99') : '',
+    {id:'date', titre:'Date', tel:'droite', garder:true, valeur:t => t.date ? t.date + ' ' + (t.heure || '99:99') : '',
       html:t => t.date ? `<span class="${estEnRetard(t) ? 'retard' : ''}">${esc(texteDateTache(t))}</span>` : '—'},
     ...(liste ? [{id:'liste', titre:'Liste', valeur:t => nomListe(t.liste), html:t => esc(nomListe(t.liste)) || '—'}] : []),
     dossier, tags],
   evenements:() => [
     {id:'titre', titre:'Rendez-vous', tel:'titre', valeur:e => e.titre, html:e => esc(e.titre) + (e.recurrence && e.recurrence.freq ? ` <span class="faible" title="Se répète">${ico('repeter', 13)}</span>` : '')},
-    {id:'date', titre:'Date', tel:'droite', garder:true, valeur:e => e.date + (e.heure || ''), html:e => quand(e.date)},
-    {id:'heure', titre:'Heure', html:e => e.heure ? esc(heureTexte(e.heure) + (e.fin ? ' – ' + heureTexte(e.fin) : '')) : '—'},
+    {id:'date', titre:'Date', tel:'droite', garder:true, valeur:e => e.date + ' ' + (e.heure || ''), html:e => quand(e.date)},
+    {id:'heure', titre:'Heure', html:e => e.heure ? esc(texteHeures(e, e.date)) : '—'},
     {id:'lieu', titre:'Lieu', valeur:e => e.lieu, html:e => esc(e.lieu) || '—'}, dossier, tags],
   notes:() => [
     {id:'titre', titre:'Titre', tel:'titre', valeur:n => n.titre, html:n => esc(n.titre)},
@@ -59,7 +59,7 @@ const COLONNES = {
       return esc(dateCourte(decaleJour(j))) + (j <= 60 ? ` <span class="${j <= 30 ? 'attention' : 'faible'}">${j === 0 ? 'aujourd’hui' : j === 1 ? 'demain' : 'J−' + j}</span>` : ''); }},
     dossier, {...tags, html:c => puceTags((c.tags || []).filter(t => t !== 'répondre')) || '—'}],
   journal:() => [
-    {id:'date', titre:'Date', garder:true, tel:'droite', valeur:j => j.date + (j.cree || ''), html:j => esc(majuscule(jourCourt(j.date)) + annee(j.date))},
+    {id:'date', titre:'Date', garder:true, tel:'droite', valeur:j => j.date + ' ' + (j.cree || ''), html:j => esc(majuscule(jourCourt(j.date)) + annee(j.date))},
     {id:'texte', titre:'Ce qui s’est passé', tel:'titre', valeur:j => j.texte, html:j => esc(j.texte)},
     {id:'personnes', titre:'Personnes', html:j => nomsContacts(j.contacts).map(n => `<span class="puce">@${esc(n)}</span>`).join('') || '—'},
     tags, dossier]

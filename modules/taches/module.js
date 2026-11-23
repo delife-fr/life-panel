@@ -11,8 +11,8 @@
 import {esc, jourCourt, jourDe, heureTexte, maintenant, pluriel, propreNom, cleNom, majuscule} from '../../noyau/outils.js';
 import {ico} from '../../noyau/icones.js';
 import {DB, ajouter, modifie, retirer} from '../../noyau/donnees.js';
-import {nomListe, listesTriees, estEnRetard, nomDossier, couleurDossier, cheminDossier, dossiersActifs, cocherTache, toucherDossier} from '../../noyau/calculs.js';
-import {puceDossier, puceTags} from '../../noyau/affichage.js';
+import {nomListe, listesTriees, estEnRetard, nomDossier, dossiersActifs, cocherTache, toucherDossier} from '../../noyau/calculs.js';
+import {puceTags, carreDossier} from '../../noyau/affichage.js';
 import {entete, champAjout, toast, ouvrirFiche, fermerFiche} from '../../noyau/interface.js';
 import {lien} from '../../noyau/adresses.js';
 import {tableau, choixTableau, viderChoix} from '../../noyau/tableau.js';
@@ -135,10 +135,10 @@ function choisirListe(ids){
 }
 function choisirDossier(ids){
   visees = ids;
-  const l = dossiersActifs().map(p => ({id:p.id, chemin:cheminDossier(p.id).join(' › ')})).sort((a, b) => a.chemin.localeCompare(b.chemin, 'fr'));
+  const l = dossiersActifs().slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
   ouvrirFiche({titre:'Dans quel dossier ? · ' + titreVisees(ids), html:`<div class="choix-colonne">${l.map(p =>
-      `<button type="button" class="btn choix" data-action="taches-mettre-dossier" data-dossier="${esc(p.id)}"><span class="pastille-dossier" style="--c:var(--c-${couleurDossier(p.id)})"></span><b>${esc(p.chemin)}</b></button>`).join('')}
-      <button type="button" class="btn choix" data-action="taches-mettre-dossier" data-dossier="">${ico('fermer', 16)}<b>Sans dossier</b></button></div>`});
+      `<button type="button" class="btn choix" data-action="taches-mettre-dossier" data-dossier="${esc(p.id)}">${carreDossier(p.id)}<b>${esc(p.nom)}</b></button>`).join('')}
+      <button type="button" class="btn choix" data-action="taches-mettre-dossier" data-dossier="">${ico('fermer', 16)}<b>Retirer du dossier</b></button></div>`});
 }
 
 /* --- Glisser une tâche (ou toutes celles choisies, si on glisse l'une d'elles) --- */

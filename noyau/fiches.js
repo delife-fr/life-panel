@@ -4,10 +4,10 @@
      « Ajouter ». Supprimer = corbeille (30 jours), avec « Annuler » dans le message.
    - Sur tout élément : son dossier (le « super tag »), ses tags et des attributs libres (un nom, une valeur inventés).
    Les sections enrichiront leur fiche dans leur lot ; celle-ci sert partout dès maintenant (capture, Idées, Aujourd'hui). */
-import {esc, dateISO, maintenant, aujourdhui, propreNom, cleNom, dateCourte} from './outils.js';
+import {esc, dateISO, maintenant, aujourdhui, propreNom, cleNom, dateCourte, versDate, iso} from './outils.js';
 import {ico} from './icones.js';
 import {DB, FORMES, ajouter, modifie, retirer, assurerCategorie, assurerCompte, TEINTES} from './donnees.js';
-import {dossiersActifs, cheminDossier, cheminDe, arbreChemins, lireChemin, couleurDossier, tousLesTags, listesTriees, categoriesFrequentes, compteParDefaut, toucherDossier, cocherTache} from './calculs.js';
+import {dossiersActifs, arbreChemins, lireChemin, couleurDossier, tousLesTags, listesTriees, categoriesFrequentes, compteParDefaut, toucherDossier, cocherTache, etatDocument, FUSEAUX, nomFuseau} from './calculs.js';
 import {ouvrirFiche, fermerFiche, toast} from './interface.js';
 import {actionNoyau} from './modules.js';
 
@@ -20,16 +20,20 @@ export const TYPES_ELEMENT = {
     {c:'freq', t:'Répétition', k:'choix', options:[['', 'Aucune'], ['semaine', 'Chaque semaine'], ['mois', 'Chaque mois'], ['an', 'Chaque année']], demi:true, lit:x => (x.recurrence || {}).freq || ''},
     {c:'jusqua', t:'Jusqu’au (si répété)', k:'date', demi:true, lit:x => (x.recurrence || {}).jusqua || ''},
     {c:'rappel', t:'Rappel', k:'choix', options:[['', 'Aucun'], ['15', '15 min avant'], ['60', '1 h avant'], ['1440', 'La veille']], demi:true},
-    {c:'lieu', t:'Lieu', k:'texte', demi:true}, {c:'lien', t:'Lien (visio, page web)', k:'url'}, {c:'note', t:'Note', k:'zone', lignes:3}, ...COMMUNS]},
+    {c:'fuseau', t:'Heure de', k:'choix', demi:true, options:x => [['', 'Là où je suis'], ...FUSEAUX, ...(x.fuseau && !FUSEAUX.some(f => f[0] === x.fuseau) ? [[x.fuseau, nomFuseau(x.fuseau)]] : [])]},
+    {c:'lieu', t:'Lieu', k:'texte', demi:true}, {c:'lien', t:'Lien (visio, page web)', k:'url'}, {c:'contacts', t:'Personnes', k:'personnes'}, {c:'note', t:'Note', k:'zone', lignes:3}, ...COMMUNS]},
   mouvements:{nom:'Dépense', une:'une dépense', champs:[{c:'type', t:'Type', k:'choix', options:[['depense', 'Dépense'], ['revenu', 'Entrée d’argent']], demi:true}, {c:'montant', t:'Montant (€)', k:'montant', demi:true},
     {c:'libelle', t:'Libellé', k:'texte'}, {c:'date', t:'Date', k:'date', demi:true}, {c:'compte', t:'Compte', k:'compte', demi:true}, {c:'categorie', t:'Catégorie', k:'categorie'},
-    {c:'note', t:'Note', k:'zone', lignes:2}, ...COMMUNS]},
+    {c:'note', t:'Note', k:'zone', lignes:2}, ...COMMUNS],
+    boutons:() => [['Répéter', 'mouvement-repeter']]},   /* la même, datée d'aujourd'hui (v4.9) */
   notes:{nom:'Note', une:'une note', champs:[{c:'titre', t:'Titre', k:'texte'}, {c:'contenu', t:'Contenu (Markdown)', k:'zone', lignes:10}, ...COMMUNS]},
   contacts:{nom:'Contact', une:'un contact', champs:[{c:'nom', t:'Nom', k:'texte'}, {c:'telephone', t:'Téléphone', k:'tel', demi:true}, {c:'autreTelephone', t:'Autre téléphone', k:'tel', demi:true},
     {c:'email', t:'E-mail', k:'email'}, {c:'anniversaire', t:'Anniversaire', k:'date', demi:true}, {c:'adresse', t:'Adresse', k:'zone', lignes:2},
     {c:'journal', t:'Journal', k:'journal'}, ...COMMUNS]},   /* v5 : plus de Nouvelles ni d'À lui dire, À répondre, Idées (gardés dans les données) */
   documents:{nom:'Document', une:'un document', champs:[{c:'titre', t:'Titre', k:'texte'}, {c:'url', t:'Lien (site ou drive:chemin)', k:'url'},
-    {c:'echeance', t:'Échéance', k:'date', demi:true}, {c:'preavis', t:'Préavis (jours)', k:'nombre', demi:true}, {c:'note', t:'Note', k:'zone', lignes:3}, ...COMMUNS]},
+    {c:'echeance', t:'Échéance', k:'date', demi:true}, {c:'preavis', t:'Préavis (jours)', k:'nombre', demi:true}, {c:'note', t:'Note', k:'zone', lignes:3}, ...COMMUNS],
+    /* comme la v4.9 : « Renouvelé » (nouvelle échéance en un clic), « Créer une tâche » quand l'échéance approche */
+    boutons:x => !x.echeance ? [] : [['Renouvelé', 'document-renouveler'], ...(['expire', 'preavis'].includes(etatDocument(x).etat) ? [['Créer une tâche', 'document-tache']] : [])]},
   projets:{nom:'Dossier', une:'un dossier', champs:[{c:'nom', t:'Nom', k:'texte'}, {c:'resume', t:'Pour quoi faire', k:'zone', lignes:2},
     {c:'chemin', t:'Chemin (ex. Perso › Maison)', k:'chemin'}, {c:'couleur', t:'Couleur', k:'couleur'},
     {c:'archive', t:'Fermé (le dossier reste visible dans « Fermés »)', k:'case'}, {c:'tags', t:'Tags', k:'tags'}, {c:'attributs', t:'Attributs', k:'attributs'}]},
@@ -58,9 +62,10 @@ export function deroulant(id, options, valeur, {vide = '— aucun —'} = {}){
   return `<div class="deroulant" id="${id}" data-valeur="${esc(valeur || '')}"><button type="button" class="deroulant-bouton" aria-haspopup="listbox" aria-expanded="false">${cur ? lab(cur) : `<span class="faible">${esc(vide)}</span>`}${ico('bas', 14)}</button>
     <ul class="deroulant-liste" role="listbox" hidden>${items}</ul></div>`;
 }
+/* Les dossiers, par leur nom seulement (le chemin prenait trop de place) */
 const optionsDossiers = courant => dossiersActifs().concat(DB.projets.filter(p => p.archive && p.id === courant))
-  .map(p => ({v:p.id, texte:p.nom + (p.archive ? ' (fermé)' : ''), couleur:couleurDossier(p.id), groupe:cheminDe(p).join(' › ')}))
-  .sort((a, b) => a.groupe.localeCompare(b.groupe, 'fr') || a.texte.localeCompare(b.texte, 'fr'));
+  .map(p => ({v:p.id, texte:p.nom + (p.archive ? ' (fermé)' : ''), couleur:couleurDossier(p.id)}))
+  .sort((a, b) => a.texte.localeCompare(b.texte, 'fr'));
 const optionsChemins = () => arbreChemins().map(c => ({v:c.join('/'), texte:c[c.length - 1], retrait:c.length - 1}));
 function fermerDeroulants(sauf = null){ document.querySelectorAll('.deroulant-liste:not([hidden])').forEach(l => { if(l.parentElement !== sauf){ l.hidden = true; l.previousElementSibling.setAttribute('aria-expanded', 'false'); } }); }
 function choisirDans(li){
@@ -109,7 +114,7 @@ function champ(f, d, x, liste){
     case 'email': html = `<input type="email" ${attrs} value="${esc(v || '')}">`; break;
     case 'url': html = `<input type="url" ${attrs} value="${esc(v || '')}" placeholder="https://…">`; break;
     case 'case': return `<label class="champ-case"><input type="checkbox" ${attrs}${v ? ' checked' : ''}> ${esc(d.t)}</label>`;
-    case 'choix': html = select(id, d.options, v); break;
+    case 'choix': html = select(id, typeof d.options === 'function' ? d.options(x) : d.options, v); break;
     case 'dossier': html = deroulant(id, optionsDossiers(v || ''), v || ''); break;
     case 'couleur': html = nuancier(id, TEINTES, v || ''); break;
     case 'chemin': html = deroulant(id, optionsChemins(), (v || []).join('/'), {vide:'— à la racine —'}); break;
@@ -179,7 +184,7 @@ export function ouvrirElement(liste, id, {nouveau = null, apresAjout = null, bou
   if(nouveau && liste === 'mouvements'){ if(!x.date) x.date = aujourdhui(); if(!('compte' in x)) x.compte = compteParDefaut(); }
   const f = 'e' + (++numero), champs = T.champs.map((d, i) => champ(f, i === 0 && nouveau ? {...d, autofocus:true} : d, x, liste)).join('');
   const titre = nouveau ? (FEMININ.has(liste) ? 'Nouvelle ' : 'Nouveau ') + nomDe(liste, x).toLowerCase() : nomDe(liste, x);
-  const extra = boutons.map(([t, a, o = {}]) => `<button type="button" class="btn${o.plein ? ' plein' : ''}" data-action="${esc(a)}" data-liste="${esc(liste)}" data-id="${esc(x.id || '')}">${esc(t)}</button>`).join('');
+  const extra = [...(T.boutons && !nouveau ? T.boutons(x) : []), ...boutons].map(([t, a, o = {}]) => `<button type="button" class="btn${o.plein ? ' plein' : ''}" data-action="${esc(a)}" data-liste="${esc(liste)}" data-id="${esc(x.id || '')}">${esc(t)}</button>`).join('');
   const pied = nouveau
     ? `<div class="droite"><button type="button" class="btn" data-action="fermer-fiche">Annuler</button><button type="button" class="btn plein" data-fiche-ajouter="${f}">${ico('plus', 15, 2)}<span>Ajouter</span></button></div>`
     : `<button type="button" class="btn discret" data-fiche-supprimer="${f}">${ico('corbeille', 15)}<span>Supprimer</span></button><div class="droite">${extra}<button type="button" class="btn" data-action="fermer-fiche">Fermer</button></div>`;
@@ -242,6 +247,24 @@ function brancher(boite, f, liste, x, {nouveau, apresAjout}){
 actionNoyau('ouvrir-element', el => ouvrirElement(el.dataset.liste, el.dataset.id));
 /* Cocher ou décocher une tâche, de partout (Aujourd'hui, Tâches, page d'un dossier…) */
 actionNoyau('tache-cocher', el => { const t = DB.taches.find(x => x.id === el.dataset.id); if(!t) return; cocherTache(t, !t.fait); modifie('cocher'); });
+
+/* --- Les boutons de la fiche d'un document et d'une dépense (v4.9) --- */
+const plusAns = (jour, n) => { const d = versDate(jour), m = d.getMonth(); d.setFullYear(d.getFullYear() + n);
+  if(d.getMonth() !== m) d.setDate(0);   /* 29 février → 28 février les années non bissextiles */
+  return iso(d); };
+actionNoyau('document-renouveler', el => { const x = DB.documents.find(d => d.id === el.dataset.id); if(!x) return;
+  const base = x.echeance && x.echeance > aujourdhui() ? x.echeance : aujourdhui();   /* avant l'échéance : on repart d'elle ; après : d'aujourd'hui */
+  ouvrirFiche({titre:'Renouvelé · ' + x.titre, html:`<p class="doux">Nouvelle échéance${x.echeance ? ' (l’ancienne : ' + esc(dateCourte(x.echeance)) + ' ' + x.echeance.slice(0, 4) + ')' : ''} :</p>
+    <div class="choix-colonne">${[1, 2, 5, 10].map(n => `<button type="button" class="btn choix" data-action="document-echeance" data-id="${esc(x.id)}" data-iso="${plusAns(base, n)}"><b>+${n} an${n > 1 ? 's' : ''}</b><span class="faible">${esc(dateCourte(plusAns(base, n)) + ' ' + plusAns(base, n).slice(0, 4))}</span></button>`).join('')}</div>`,
+    pied:`<div class="droite"><button type="button" class="btn" data-action="ouvrir-element" data-liste="documents" data-id="${esc(x.id)}">Retour</button></div>`}); });
+actionNoyau('document-echeance', el => { const x = DB.documents.find(d => d.id === el.dataset.id); if(!x || !el.dataset.iso) return;
+  const avant = x.echeance; x.echeance = el.dataset.iso; x.modif = maintenant(); toucherDossier(x.projet); modifie('renouveler'); ouvrirElement('documents', x.id);
+  toast('Nouvelle échéance : ' + dateCourte(x.echeance) + ' ' + x.echeance.slice(0, 4), [['Annuler', () => { x.echeance = avant; modifie('annuler'); }]]); });
+actionNoyau('document-tache', el => { const x = DB.documents.find(d => d.id === el.dataset.id); if(!x) return;
+  const t = ajouter('taches', {nom:'Renouveler : ' + x.titre, date:aujourdhui(), projet:x.projet || null, tags:x.tags || [], modif:maintenant()}); toucherDossier(t.projet); modifie('ajout');
+  toast('Tâche créée : ' + t.nom, [['Ouvrir', () => ouvrirElement('taches', t.id)], ['Annuler', () => { DB.taches = DB.taches.filter(y => y !== t); modifie('annuler'); }]]); });
+actionNoyau('mouvement-repeter', el => { const m = DB.mouvements.find(y => y.id === el.dataset.id); if(!m) return;
+  ouvrirElement('mouvements', null, {nouveau:{type:m.type, montant:m.montant, libelle:m.libelle, categorie:m.categorie, compte:m.compte, projet:m.projet, note:m.note, tags:[...(m.tags || [])], date:aujourdhui()}}); });
 
 /* --- Les tags proposés pendant la frappe, après chaque virgule (comme la v4.9) --- */
 let propositions = [], choisie = 0;

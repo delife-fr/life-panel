@@ -26,3 +26,20 @@
 
 .tableau .revenu{color:color-mix(in srgb, var(--c-herbe) 85%, var(--texte))}
 .tableau tr.hors-stats td{opacity:.55}
+/* Import d'un relevé (releve.js) */
+.releve-colonnes{margin:4px 0 12px}
+.releve-colonnes summary{cursor:pointer;color:var(--texte-2);font-size:13.5px;padding:4px 0}
+.releve-grille{display:grid;grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));gap:8px 12px;margin:8px 0}
+.releve-liste{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column}
+.releve-liste li{display:grid;grid-template-columns:20px 64px minmax(0, 1fr) minmax(120px, 200px) 96px;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid var(--bord);font-size:13.5px}
+.releve-liste li.doublon{opacity:.6}
+.releve-liste .r-date{color:var(--texte-3);font-variant-numeric:tabular-nums}
+.releve-liste .r-corps{display:flex;flex-direction:column;min-width:0;overflow-wrap:anywhere}
+.releve-liste select{min-width:0;min-height:32px;padding:4px 8px;font-size:13px}
+.releve-liste .r-montant{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.releve-liste .r-montant.entree{color:var(--ok)}
+@media (max-width:700px){
+  .releve-liste li{grid-template-columns:20px minmax(0, 1fr) auto;grid-template-areas:"c corps m" "c d sel"}
+  .releve-liste li > input{grid-area:c} .releve-liste .r-corps{grid-area:corps} .releve-liste .r-montant{grid-area:m}
+  .releve-liste .r-date{grid-area:d} .releve-liste li > select, .releve-liste li > .faible{grid-area:sel}
+}

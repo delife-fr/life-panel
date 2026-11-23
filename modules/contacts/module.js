@@ -2,7 +2,7 @@
    tags. Un filtre en bouton : anniversaires sous 60 jours (23/11 : plus de « dernier échange » ni « à relancer »).
    Téléphone et e-mail sont des liens directs ; un clic sur la ligne ouvre la fiche au centre : à la place des « Nouvelles »,
    les lignes du journal qui le citent (@Nom). Les contacts archivés en
-   v4.9 sont affichés comme les autres (plus d'archives en v5). */
+   v4.9 sont affichés comme les autres (plus d'archives en v5). « Importer (vCard) » : vcard.js. */
 import {esc, aujourdhui, decaleJour, dateCourte, ecartJours, pluriel, maintenant} from '../../noyau/outils.js';
 import {DB, modifie, TAG_REPONDRE} from '../../noyau/donnees.js';
 import {joursAvantAnniv, nomDossier, cheminDossier} from '../../noyau/calculs.js';
@@ -13,6 +13,8 @@ import {tableau} from '../../noyau/tableau.js';
 import {colonnes, recherche} from '../../noyau/colonnes.js';
 import {ouvrirElement} from '../../noyau/fiches.js';
 import {enregistrerCapture} from '../../noyau/capture.js';
+import {importerVcard, validerVcard} from './vcard.js';
+import {ico} from '../../noyau/icones.js';
 
 const ANNIV_PROCHES = 60;
 const annivProche = c => { const j = joursAvantAnniv(c.anniversaire); return j !== null && j <= ANNIV_PROCHES; };
@@ -22,7 +24,7 @@ function page(ctx){
   const actifs = DB.contacts, f = FILTRES.find(x => x[0] === (ctx.params.get('filtre') || '')) || FILTRES[0];
   const boutons = `<nav class="filtres" aria-label="Filtres">${FILTRES.map(([k, nom, test]) => { const n = k ? actifs.filter(test).length : 0, on = k === f[0];
     return `<a class="puce-choix${on ? ' actif' : ''}" href="${lien('contacts', '', k ? {filtre:k} : null)}"${on ? ' aria-current="true"' : ''}>${esc(nom)}${n ? ` <span class="n">${n}</span>` : ''}</a>`; }).join('')}</nav>`;
-  return entete('Contacts') + `<div class="page-contacts">${champAjout('contact-ajouter', 'Ajouter un contact (ex. Paul 06 12 34 56 78)…')}
+  return entete('Contacts', {actions:`<button type="button" class="btn" data-action="vcard-importer">${ico('importer', 16)}<span>Importer (vCard)</span></button>`}) + `<div class="page-contacts">${champAjout('contact-ajouter', 'Ajouter un contact (ex. Paul 06 12 34 56 78)…')}
     ${tableau({id:'contacts', lignes:actifs.filter(f[2]), toutes:actifs, cle:c => c.id, ouvrir:'contact-ouvrir', tri:{col:'nom', sens:1}, outils:boutons,
       recherche:recherche('contacts'),
       tags:c => c.tags, texteRecherche:'Chercher : nom, téléphone, e-mail, #tag', vide:f[0] ? 'Personne dans ce filtre.' : 'Aucun contact. Ajoute-en un juste au-dessus.',
@@ -40,5 +42,6 @@ export default {
   actions:{
     'contact-ajouter':texte => { enregistrerCapture(texte, 'contact'); },
     'contact-ouvrir':tr => ouvrir(tr.dataset.id),
+    'vcard-importer':() => importerVcard(), 'vcard-valider':() => validerVcard(),
   }
 };
