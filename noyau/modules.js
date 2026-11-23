@@ -2,11 +2,14 @@
    Le registre des rubriques. Chaque dossier de modules/ contient un module.js qui exporte, par défaut, sa description :
 
    export default {
-     id:'taches',                 nom du dossier (modules/taches/)
-     nom:'Tâches',                nom affiché dans le menu et les onglets
+     id:'taches',                 nom du dossier (modules/taches/) et de la page (#/taches)
+     nom:'Tâches',                nom affiché dans les sections et les onglets
      icone:'taches',              une clé de noyau/icones.js
-     menu:40,                     place dans le menu PC (petit = haut) ; absent = pas dans le menu
-     onglet:30,                   place dans les onglets du téléphone ; absent = pas d'onglet
+     couleur:'vert',              la couleur de la section (une teinte de jetons.css : --c-vert)
+     menu:40,                     place parmi les sections du haut (petit = à gauche) ; absent = pas une section
+     onglet:30,                   place dans les onglets du bas sur téléphone ; absent = dans « Plus »
+     sousMenu:[['', 'Par date'], ['listes', 'Listes']],   facultatif : le sous-menu (#/taches, #/taches/listes) ;
+                                  peut aussi être une fonction ctx => [...]
      styles:true,                 charge modules/taches/taches.css
      pages:{taches:ctx => html},  les pages de la rubrique : #/taches → pages.taches({nom, arg, params})
      apres:{taches:(ctx, vue) => …},   facultatif : après l'affichage d'une page (brancher un champ, un glisser…)

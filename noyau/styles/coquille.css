@@ -1,49 +1,65 @@
 /* LIFE PANEL v5 · noyau/styles/coquille.css
-   Le cadre : menu à gauche (PC), barre du haut, page, onglets et bouton + (téléphone, tablette), feuille, confirmation, messages.
-   À partir de 1 100 px : menu fixe à gauche ; en dessous : onglets en bas et bouton + flottant. */
+   Le cadre : barre des sections en haut, sous-menu de la section ouverte, page ; sur téléphone et tablette (moins de 1 100 px),
+   titre de la section en haut, sous-menu qui défile, onglets en bas et bouton + ; feuille, confirmation, messages.
+   --section (posée par interface.js) = la couleur de la section ouverte : elle teinte la barre, le sous-menu et l'onglet actif. */
 
-.app{display:grid;grid-template-columns:var(--rail) minmax(0, 1fr);min-height:100vh;min-height:100dvh}
-.principal{min-width:0;display:flex;flex-direction:column}
+:root{--section:var(--accent)}
 
-/* --- Menu de gauche --- */
-.rail{position:sticky;top:0;height:100vh;height:100dvh;display:flex;flex-direction:column;gap:2px;padding:14px 10px 12px;background:var(--fond-2);border-right:1px solid var(--bord);overflow-y:auto}
-.marque{display:flex;align-items:center;gap:10px;padding:4px 8px 18px}
-.marque b{display:block;font:700 19px/1 var(--titre);letter-spacing:.04em}
-.marque small{display:block;font-size:11px;color:var(--texte-3);margin-top:3px}
+/* --- Barre du haut et sous-menu, collés en haut de l'écran --- */
+.tete{position:sticky;top:0;z-index:20}
+.barre{height:var(--barre);display:flex;align-items:center;gap:6px;padding:0 20px;
+  background:color-mix(in srgb, var(--section) 18%, var(--fond-2));border-bottom:1px solid color-mix(in srgb, var(--section) 40%, var(--bord))}
+:root[data-theme="jour"] .barre{background:color-mix(in srgb, var(--section) 12%, var(--fond-2))}
+.marque{display:flex;align-items:center;gap:9px;margin-right:12px;flex-shrink:0}
+.marque b{font:700 19px/1 var(--titre);letter-spacing:.04em;white-space:nowrap}
 .logo{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;background:linear-gradient(160deg, var(--accent-haut), var(--accent-fonce));color:var(--sur-accent);flex-shrink:0}
-.menu{display:flex;flex-direction:column;gap:2px}
-.rail .nav{display:flex;align-items:center;gap:11px;width:100%;padding:8px 10px;border-radius:var(--r-petit);color:var(--texte-2);font-weight:500;font-size:14px;text-align:left;position:relative;transition:background .12s,color .12s}
-.rail .nav:hover{background:var(--panneau-2);color:var(--texte)}
-.rail .nav svg{color:var(--texte-3)}
-.rail .nav.actif{background:var(--accent-doux);color:var(--texte);font-weight:600}
-.rail .nav.actif svg{color:var(--accent-texte)}
-.rail .nav.actif::before{content:"";position:absolute;left:-10px;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--accent)}
-.nb-place{margin-left:auto;display:flex}
-.rail-bas{margin-top:auto;padding-top:10px;border-top:1px solid var(--bord);display:flex;flex-direction:column;gap:2px}
+.titre-section{display:none}
 
-/* --- Barre du haut --- */
-.barre{position:sticky;top:0;z-index:20;height:var(--barre);display:flex;align-items:center;gap:12px;padding:0 24px;
-  background:color-mix(in srgb, var(--fond) 86%, transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--bord)}
-.marque-tel{display:none;align-items:center;gap:9px}
-.marque-tel b{font:700 18px/1 var(--titre);letter-spacing:.04em}
-.marque-tel .logo{width:28px;height:28px}
-.recherche{display:flex;align-items:center;gap:10px;flex:1;max-width:440px;height:38px;padding:0 12px;border-radius:8px;background:var(--panneau);border:1px solid var(--bord);color:var(--texte-3);font-size:13.5px;text-align:left}
+.sections{display:flex;align-items:stretch;align-self:stretch;gap:2px;min-width:0}
+.sections a{display:flex;align-items:center;gap:7px;padding:0 11px;color:var(--texte-2);font-weight:500;font-size:13.5px;white-space:nowrap;position:relative;transition:color .12s}
+.sections a:hover{color:var(--texte)}
+.sections a svg{color:var(--texte-3);transition:color .12s}
+.sections a:hover svg{color:var(--c)}
+.sections a.actif{color:var(--texte);font-weight:600}
+.sections a.actif svg{color:var(--c)}
+.sections a.actif::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:3px;border-radius:3px 3px 0 0;background:var(--c)}
+.nb-place{display:flex}
+.sections .nb{margin-left:2px}
+
+.barre-droite{margin-left:auto;display:flex;align-items:center;gap:4px;flex-shrink:0}
+.recherche{display:flex;align-items:center;gap:9px;height:36px;padding:0 10px 0 11px;margin-right:6px;border-radius:8px;background:color-mix(in srgb, var(--fond) 55%, transparent);
+  border:1px solid var(--bord);color:var(--texte-3);font-size:13.5px}
 .recherche:hover{border-color:var(--bord-fort);color:var(--texte-2)}
-.recherche span{flex:1}
+.recherche span{min-width:90px;text-align:left}
 kbd{font:500 11px/1 var(--sans);padding:4px 6px;border-radius:4px;border:1px solid var(--bord-fort);color:var(--texte-3)}
-.barre-droite{margin-left:auto;display:flex;align-items:center;gap:6px}
+.barre .icone-btn.actif{color:var(--texte);background:color-mix(in srgb, var(--section) 22%, transparent)}
 .seul-tel{display:none!important}
 .avec-nb .nb-place{position:absolute;top:2px;right:0}
 .avec-nb .nb{min-width:17px;height:17px;font-size:10.5px;padding:0 4px}
 
+.sous-menu{display:flex;gap:2px;padding:6px 20px;background:color-mix(in srgb, var(--section) 6%, var(--fond));border-bottom:1px solid var(--bord);
+  overflow-x:auto;scrollbar-width:none}
+.sous-menu::-webkit-scrollbar{display:none}
+.sous-menu a{padding:6px 13px;border-radius:6px;color:var(--texte-2);font-weight:500;font-size:13.5px;white-space:nowrap;flex-shrink:0}
+.sous-menu a:hover{color:var(--texte);background:var(--panneau-2)}
+.sous-menu a.actif{color:var(--texte);background:color-mix(in srgb, var(--section) 24%, transparent)}
+
 /* --- La page --- */
-.page{width:100%;max-width:1200px;padding:30px 32px 64px;outline:none}
+.page{display:block;width:100%;max-width:1480px;padding:28px 20px 64px;outline:none}
 .page.anim{animation:apparait .22s var(--ease)}
 @keyframes apparait{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.entete .sur-titre{color:color-mix(in srgb, var(--section) 75%, var(--texte))}
 
 /* --- Onglets et bouton + (téléphone, tablette) --- */
 .onglets{display:none}
 .fab{display:none}
+
+/* --- « Plus » : les autres sections --- */
+.liste-plus{display:flex;flex-direction:column;gap:4px}
+.liste-plus a{display:flex;align-items:center;gap:14px;padding:10px 8px;border-radius:10px;font-weight:500;font-size:15px}
+.liste-plus a:hover{background:var(--panneau-2)}
+.liste-plus .nb{margin-left:auto}
+.pastille-section{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:var(--c);background:color-mix(in srgb, var(--c) 18%, transparent)}
 
 /* --- Feuille : panneau à droite (PC), en bas (téléphone) --- */
 .voile{position:fixed;inset:0;z-index:60;background:var(--voile);opacity:0;transition:opacity .2s}
@@ -69,21 +85,34 @@ kbd{font:500 11px/1 var(--sans);padding:4px 6px;border-radius:4px;border:1px sol
 .toast.on{opacity:1;transform:translate(-50%, 0);pointer-events:auto}
 .toast-btn{color:var(--accent-texte);font-weight:600;white-space:nowrap}
 
+/* --- PC moyen (1 100 à 1 399 px) : les sections sans icône, la recherche en icône --- */
+@media (min-width:1100px) and (max-width:1399px){
+  .sections a{padding:0 9px}
+  .sections a svg{display:none}
+  .recherche span,.recherche kbd{display:none}
+  .recherche{width:36px;padding:0;justify-content:center;margin-right:2px}
+}
+
 /* --- Téléphone et tablette (moins de 1 100 px) --- */
 @media (max-width:1099px){
-  .app{grid-template-columns:minmax(0, 1fr)}
-  .rail{display:none}
-  .barre{padding:0 8px 0 16px}
-  .marque-tel{display:flex}
-  .recherche,.masque-tel{display:none!important}
+  .barre{padding:0 6px 0 16px;gap:2px}
+  .marque,.sections,.masque-tel{display:none!important}
+  .titre-section{display:flex;align-items:center;gap:9px;margin:0;font:700 22px/1 var(--titre);letter-spacing:.02em;white-space:nowrap;overflow:hidden}
+  .titre-section svg{color:var(--section)}
+  .recherche{width:40px;height:40px;padding:0;margin:0;justify-content:center;border:0;background:none;color:var(--texte-2)}
+  .recherche span,.recherche kbd{display:none}
   .seul-tel{display:inline-grid!important}
+  .sous-menu{padding:6px 12px}
   .page{padding:20px 16px calc(var(--onglets) + 96px + env(safe-area-inset-bottom))}
   .entete h1{font-size:30px}
   .onglets{display:flex;position:fixed;z-index:30;left:0;right:0;bottom:0;height:calc(var(--onglets) + env(safe-area-inset-bottom));padding:0 4px env(safe-area-inset-bottom);
     background:color-mix(in srgb, var(--fond-2) 94%, transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--bord)}
-  .onglets a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--texte-3);font-size:11px;font-weight:500;position:relative}
-  .onglets a.actif{color:var(--accent-texte)}
-  .onglets a.actif::before{content:"";position:absolute;top:0;left:28%;right:28%;height:2px;border-radius:0 0 2px 2px;background:var(--accent)}
+  .onglets > *{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--texte-3);font-size:11px;font-weight:500;position:relative}
+  .onglets .actif{color:var(--texte)}
+  .onglets .actif svg{color:var(--section)}
+  .onglets .actif::before{content:"";position:absolute;top:0;left:28%;right:28%;height:2px;border-radius:0 0 2px 2px;background:var(--section)}
+  .onglets .nb-place{position:absolute;top:6px;left:calc(50% + 6px)}
+  .onglets .nb{min-width:17px;height:17px;font-size:10.5px;padding:0 4px}
   .fab{display:grid;place-items:center;position:fixed;z-index:31;right:16px;bottom:calc(var(--onglets) + 16px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:16px;
     background:var(--accent-plein);color:var(--sur-accent);box-shadow:0 10px 24px -8px rgba(31,102,240,.55)}
   .toast{bottom:calc(var(--onglets) + 16px + env(safe-area-inset-bottom))}

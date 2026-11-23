@@ -55,15 +55,9 @@ label{display:block;font-size:12.5px;font-weight:500;color:var(--texte-2);margin
 
 /* --- Ce qu'une rubrique contiendra (lot 0) --- */
 .bientot{border-style:dashed;box-shadow:none;background:transparent;max-width:640px}
-.bientot .sur-titre{color:var(--accent-texte)}
+.bientot .sur-titre{color:color-mix(in srgb, var(--section) 75%, var(--texte))}
 .bientot ul{margin:4px 0 0;padding:0 0 0 18px;color:var(--texte-2)}
 .bientot li{margin:4px 0}
-
-/* --- Rubriques d'une page (Notes · Documents · Contacts) --- */
-.segments{display:inline-flex;gap:2px;padding:3px;margin:0 0 18px;background:var(--panneau);border:1px solid var(--bord);border-radius:8px}
-.segments a{padding:6px 14px;border-radius:6px;color:var(--texte-2);font-weight:500;font-size:13.5px}
-.segments a:hover{color:var(--texte)}
-.segments a.actif{background:var(--accent-doux);color:var(--texte)}
 
 /* --- États vides et erreurs --- */
 .vide{padding:48px 20px;text-align:center;color:var(--texte-2);line-height:1.6}
