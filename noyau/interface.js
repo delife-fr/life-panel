@@ -78,6 +78,7 @@ export function fermerFiche({depuisHistorique = false} = {}){
   f.classList.remove('on'); $('#voile').classList.remove('on'); inerte(false);
   setTimeout(() => { if(!fiche.ouverte){ f.hidden = true; $('#voile').hidden = true; f.innerHTML = ''; } }, 180);
   if(!depuisHistorique && history.state && history.state.fiche) history.back();
+  window.dispatchEvent(new Event('lifepanel:fiche-fermee'));   /* la synchro attend la fermeture pour appliquer ce qui vient d'ailleurs */
   if(fiche.avant && document.contains(fiche.avant)) fiche.avant.focus();
 }
 
@@ -128,6 +129,7 @@ export function construireCoquille(){
       <button type="button" class="btn plein masque-tel" data-action="noter">${ico('plus', 16, 2.2)}<span>Noter</span></button>
       <button type="button" class="icone-btn" data-action="tags" aria-label="Tags" title="Tags (T)">${ico('tag', 19)}</button>
       <button type="button" class="icone-btn masque-tel" data-action="aide" aria-label="Aide" title="Aide : raccourcis et glisser-déposer (?)">${ico('info', 19)}</button>
+      <button type="button" class="icone-btn synchro" id="etat-synchro" data-action="synchro-maintenant" hidden>${ico('nuage', 19)}</button>
       <button type="button" class="icone-btn" data-action="theme"></button>
       ${reglages ? `<a class="icone-btn" href="${lien('reglages')}" data-nav="reglages" aria-label="Réglages" title="Réglages">${ico('reglages', 19)}</a>` : ''}
     </div>`;

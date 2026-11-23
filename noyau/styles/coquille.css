@@ -132,3 +132,8 @@ kbd{font:500 11px/1 var(--sans);padding:4px 6px;border-radius:4px;border:1px sol
   .fiche-corps{padding:16px 18px 20px}
   .fiche-pied{padding:10px 18px calc(12px + env(safe-area-inset-bottom))}
 }
+/* L'icône de la synchro GitHub (noyau/synchro.js) : discrète quand tout va bien */
+.icone-btn.synchro[data-etat="ok"]{color:var(--texte-3)}
+.icone-btn.synchro[data-etat="cours"]{color:var(--accent)}
+.icone-btn.synchro[data-etat="hors"]{color:var(--c-jaune)}
+.icone-btn.synchro[data-etat="erreur"]{color:var(--c-rouge)}

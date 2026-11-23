@@ -22,7 +22,13 @@ python3 -m http.server 8765
 
 puis http://127.0.0.1:8765/
 
-Aperçu en ligne de la bêta (en attendant une adresse à soi) : **toujours l'adresse figée sur un commit**,
+**La bêta en ligne** (décision du 23/11) : https://panel.alexishocini.fr/beta/ — une copie des fichiers de `beta` dans le
+dossier `beta/` de la branche `main` (index.html, app.js, noyau/, modules/, icons/ ; rien d'autre de `main` n'est touché).
+On la republie après chaque push sur `beta` (commit « Bêta v5 dans /beta (commit …) »). La v4.9 reste à la racine.
+La synchro GitHub n'y lit et n'écrit que `donnees-v5.json` (copie de `donnees.json` créée à la première connexion) ;
+elle reprend la clé GitHub de la v4.9 (même adresse, lue dans sa base « lifepanel », jamais écrite).
+
+Aperçu sans synchro : **toujours l'adresse figée sur un commit**,
 `https://raw.githack.com/delife-fr/life-panel/<commit complet>/index.html`, à donner après chaque push. L'adresse de branche
 (`…/beta/index.html`) sert des fichiers de versions différentes (cache de raw.githack) : les imports échouent, la page reste
 sur « Chargement… ».
@@ -81,6 +87,11 @@ sur « Chargement… ».
   import vCard (Contacts, modules/contacts/vcard.js), finances en CSV et retour à la copie de secours (Réglages › Données),
   « Renouvelé » et « Créer une tâche » dans la fiche d'un document, « Répéter » dans celle d'une dépense
   (`boutons` d'un type dans TYPES_ELEMENT). Choisir un fichier, en télécharger un : noyau/fichiers.js.
+- **Synchro GitHub** (lot 1, noyau/synchro.js) : celle de la v4.9 (lecture à l'ouverture, au retour, toutes les 30 s ;
+  écriture 2,5 s après une modification ; fusion à trois ; une fiche ouverte retarde ce qui vient d'ailleurs). Une icône
+  nuage dans la barre du haut quand elle est active (clic = synchroniser). Jamais sur raw.githack (adresse partagée),
+  jamais pendant les exemples (`reglages.demo`), jamais un envoi de données vides. Réglages › Données : se connecter
+  (avec la clé de la v4.9 en un clic), changer la clé, arrêter.
 - **Corbeille** gardée (Réglages › Corbeille, 30 jours) ; seules les archives sont parties.
 - **Aujourd'hui** : une tuile Finance (dépensé ce mois-ci, comptes pointés, anneau par catégorie), comme la v4.9.
 - **Couleurs** des catégories et des dossiers : 14 teintes (les 9 de la v4.9 + cyan, brun, olive, indigo, gris) et 13
@@ -150,6 +161,7 @@ noyau/
   affichage.js        dossier (carré de couleur + nom), tags, lien de document (Drive compris), téléphone, e-mail
   finance.js          comptes pointés, dépenses d'une période, l'anneau par catégorie (Finance et Aujourd'hui)
   fichiers.js         choisir un fichier sur l'appareil (texte décodé), en télécharger un, cellule CSV
+  synchro.js          la synchro GitHub de la v4.9 (donnees-v5.json pendant la bêta), l'icône nuage
   colonnes.js         les colonnes de chaque type d'élément et le texte où chercher, communs à tous les tableaux
   glisser.js          le glisser-déposer (souris et doigt) : glisserType(type, {depot}), [data-glisser], [data-depot]
   fiches.js           la fiche de chaque type d'élément (TYPES_ELEMENT), avec dossier, tags et attributs libres
@@ -180,7 +192,7 @@ Les modules ne s'importent **jamais** entre eux : ils passent par le noyau. Une 
   Vérifié : la v5 lit le vrai `donnees.json` exactement comme la v4.9.
 - **VERSION** des données : 23 pendant la bêta, 24 à la bascule (la v4.9 refuse alors de synchroniser un fichier plus récent).
 - **Bêta isolée** : `noyau/stockage.js` (`NOMS`) range les données sous d'autres noms que la v4.9 ; rien n'est envoyé à
-  GitHub avant le lot 1. À la bascule, `NOMS` reprend les noms de la v4.9 (base `lifepanel`, magasin `poignees`, copie `lifepanel`).
+  GitHub sans la synchro (Réglages), et pendant la bêta seulement dans `donnees-v5.json`. À la bascule, `NOMS` reprend les noms de la v4.9 (base `lifepanel`, magasin `poignees`, copie `lifepanel`).
 - **Jamais d'écriture avant la lecture** : tant que `etat.donnees !== 'pretes'`, `ecrire()` ne fait rien.
 - **Sécurité** : aucun script en ligne ni `onclick=` (la CSP n'autorise que les fichiers du site) ; toute donnée affichée
   passe par `esc()` ; un lien venu des données passe par `normaliserLien()`.

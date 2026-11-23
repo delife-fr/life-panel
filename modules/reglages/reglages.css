@@ -3,3 +3,6 @@
 .grille-reglages .bientot{max-width:none}
 .page-reglages{display:flex;flex-direction:column;gap:14px;max-width:1180px}
 .secours{margin-top:14px;padding-top:12px;border-top:1px solid var(--bord);display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.etat-synchro{margin:0 0 6px;font-weight:600}
+.etat-synchro[data-etat="erreur"]{color:var(--c-rouge)}
+.etat-synchro[data-etat="hors"]{color:var(--c-jaune)}

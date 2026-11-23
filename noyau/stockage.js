@@ -37,6 +37,12 @@ function idb(){
 async function idbLire(k){ const db = await idb(); return new Promise((ok, ko) => { const q = db.transaction(NOMS.magasin).objectStore(NOMS.magasin).get(k); q.onsuccess = () => ok(q.result ?? null); q.onerror = () => ko(q.error); }); }
 async function idbEcrire(k, v){ const db = await idb(); return new Promise((ok, ko) => { const tx = db.transaction(NOMS.magasin, 'readwrite'); tx.objectStore(NOMS.magasin).put(v, k); tx.oncomplete = () => ok(); tx.onerror = tx.onabort = () => ko(tx.error); }); }
 
+async function idbSupprimer(k){ const db = await idb(); return new Promise((ok, ko) => { const tx = db.transaction(NOMS.magasin, 'readwrite'); tx.objectStore(NOMS.magasin).delete(k); tx.oncomplete = () => ok(); tx.onerror = () => ko(tx.error); }); }
+/* D'autres choses à garder sur cet appareil, à côté des données (la clé GitHub et la base de la synchro) */
+export const garder = (k, v) => etat.idb ? sousDelai(idbEcrire(k, v), DELAI_DONNEES, 'Écriture') : Promise.reject(new Error('IndexedDB indisponible'));
+export const relire = k => etat.idb ? sousDelai(idbLire(k), DELAI_DONNEES, 'Lecture') : Promise.resolve(null);
+export const oublier = k => etat.idb ? idbSupprimer(k).catch(() => {}) : Promise.resolve();
+
 /* Lit les données gardées : la plus récente entre IndexedDB et la copie légère (null s'il n'y a rien). Ne lance jamais d'erreur :
    en cas d'échec complet, etat.donnees = 'bloquees' et etat.raison dit pourquoi. */
 export async function lire(){

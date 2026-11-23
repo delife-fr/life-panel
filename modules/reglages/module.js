@@ -14,8 +14,9 @@ import {tableau} from '../../noyau/tableau.js';
 import {ouvrirElement, titreElement, nomDe} from '../../noyau/fiches.js';
 import {lien} from '../../noyau/adresses.js';
 import {etat, faireSecours, lireSecours} from '../../noyau/stockage.js';
+import {gh, FICHIER, adressePartagee, etatSynchro, TEXTES, cleV49, connecter, changerCle, deconnecter, appareilParDefaut} from '../../noyau/synchro.js';
 import {ico} from '../../noyau/icones.js';
-import {entete, bientot, toast, confirmer, VERSION_APPLI, champAjout, ouvrirFiche, fermerFiche} from '../../noyau/interface.js';
+import {entete, bientot, toast, confirmer, VERSION_APPLI, champAjout, ouvrirFiche, fermerFiche, rendre} from '../../noyau/interface.js';
 
 const SOUS = [['', 'Données'], ['corbeille', 'Corbeille']];
 
@@ -41,7 +42,8 @@ function page(){
     <p class="doux">LIFE PANEL ${esc(VERSION_APPLI)}. La v4.9 reste l’appli en service jusqu’à la bascule.</p>
   </section>`;
   return entete('Réglages et données') + `<div class="grille-reglages">${donnees}
-    ${bientot(1, ['La synchro GitHub (les mêmes données sur le PC et le téléphone)', 'Les notifications', 'L’installation comme une appli'])}
+    ${sectionSynchro()}
+    ${bientot(1, ['Les notifications', 'L’installation comme une appli'])}
     ${apropos}</div>`;
 }
 
@@ -85,6 +87,49 @@ async function importer(fichier){
   remplacer(brut, {raison:'import'});
   toast('Données importées.', [['Annuler', () => { remplacer(avant, {raison:'annuler import'}); toast('Import annulé.'); }]]);
 }
+/* --- Synchronisation GitHub (noyau/synchro.js) : les mêmes données sur le PC et le téléphone --- */
+function sectionSynchro(){
+  const tete = '<h2>Synchronisation GitHub</h2>';
+  if(adressePartagee()) return `<section class="panneau">${tete}<p class="doux">Elle se règle à l’adresse de la bêta sur ton site (…/beta/) : sur cette adresse-ci, ta clé ne serait pas à l’abri.</p></section>`;
+  const c = gh.cfg;
+  if(c && c.jeton){ const e = etatSynchro();
+    return `<section class="panneau">${tete}<p class="etat-synchro" id="synchro-etat" data-etat="${e}">${esc(e === 'aucun' ? 'En pause pendant les exemples.' : TEXTES[e]())}</p>
+      <p class="doux">Dépôt <b>${esc(c.owner)}/${esc(c.repo)}</b>, fichier ${esc(c.chemin)} · cet appareil : ${esc(c.appareil || '?')}</p>
+      <div class="rangee"><button type="button" class="btn plein" data-action="synchro-maintenant">${ico('nuage', 16, 1.8)}<span>Synchroniser maintenant</span></button>
+        <button type="button" class="btn" data-action="synchro-cle">Changer la clé</button>
+        <a class="btn" href="https://github.com/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/commits" target="_blank" rel="noopener noreferrer">${ico('externe', 15)}<span>Historique</span></a>
+        <button type="button" class="btn discret" data-action="synchro-arreter">Arrêter sur cet appareil</button></div></section>`; }
+  const d = c || {};
+  return `<section class="panneau">${tete}<p class="doux">La bêta utilise ${esc(FICHIER)}, une copie de donnees.json créée à la première connexion : la v4.9 n’est pas touchée.</p>
+    <div id="synchro-v49"></div>
+    <div class="formulaire" id="synchro-form">
+      <div class="champ demi"><label for="sy-owner">Pseudo GitHub</label><input type="text" id="sy-owner" value="${esc(d.owner || '')}" spellcheck="false" autocomplete="off"></div>
+      <div class="champ demi"><label for="sy-repo">Dépôt privé</label><input type="text" id="sy-repo" value="${esc(d.repo || '')}" spellcheck="false" autocomplete="off"></div>
+      <div class="champ demi"><label for="sy-appareil">Nom de cet appareil</label><input type="text" id="sy-appareil" value="${esc(d.appareil || appareilParDefaut())}" autocomplete="off"></div>
+      <div class="champ demi"><label for="sy-jeton">Clé GitHub</label><input type="password" id="sy-jeton" spellcheck="false" autocomplete="off" placeholder="github_pat_…"></div>
+    </div>
+    <p class="attention" id="synchro-erreur" hidden></p>
+    <div class="rangee"><button type="button" class="btn plein" data-action="synchro-connecter">${ico('nuage', 16, 1.8)}<span>Se connecter</span></button></div></section>`;
+}
+/* La clé de la v4.9, déjà dans ce navigateur (même adresse) : un clic suffit */
+async function montrerCleV49(vue){
+  const z = vue.querySelector('#synchro-v49'); if(!z) return;
+  const v = await cleV49(); if(!v || !document.contains(z)) return;
+  cleTrouvee = v;
+  z.innerHTML = `<div class="secours"><p class="doux">Ta clé GitHub de la v4.9 est déjà sur cet appareil (dépôt ${esc(v.owner)}/${esc(v.repo)}).</p>
+    <button type="button" class="btn plein" data-action="synchro-v49">${ico('nuage', 16, 1.8)}<span>Se connecter avec elle</span></button></div>`;
+  ['owner', 'repo'].forEach(k => { const i = vue.querySelector('#sy-' + k); if(i && !i.value) i.value = v[k]; });
+  const a = vue.querySelector('#sy-appareil'); if(a && v.appareil) a.value = v.appareil;
+}
+let cleTrouvee = null;
+async function seConnecter(v, bouton){
+  const err = document.getElementById('synchro-erreur');
+  if(bouton){ bouton.disabled = true; bouton.lastElementChild.textContent = 'Connexion…'; }
+  const m = await connecter(v);
+  if(bouton && document.contains(bouton)){ bouton.disabled = false; bouton.lastElementChild.textContent = bouton.dataset.action === 'synchro-v49' ? 'Se connecter avec elle' : 'Se connecter'; }
+  if(m && err){ err.textContent = m; err.hidden = false; } else if(m) toast(m);
+}
+
 /* La copie de secours (gardée avant un import, les exemples, un effacement) : lue après l'affichage */
 const RAISONS = {import:'l’import d’un fichier', exemples:'le chargement des exemples', effacement:'l’effacement', restauration:'la restauration'};
 async function montrerSecours(vue){
@@ -115,7 +160,7 @@ export default {
   },
   apres:{
     reglages:(ctx, vue) => { const f = vue.querySelector('#fichier-donnees'); if(f) f.addEventListener('change', () => { if(f.files[0]) importer(f.files[0]); f.value = ''; });
-      if(ctx.arg !== 'corbeille') montrerSecours(vue); }
+      if(ctx.arg !== 'corbeille'){ montrerSecours(vue); montrerCleV49(vue); } }
   },
   actions:{
     'exemples-charger':async () => {
@@ -130,6 +175,16 @@ export default {
       DB.corbeille = DB.corbeille.filter(y => y !== e); modifie('effacer'); toast('Supprimé pour de bon.'); },
     'importer-donnees':() => { const f = document.getElementById('fichier-donnees'); if(f) f.click(); },
     'exporter-donnees':exporter,
+    'synchro-connecter':el => { const v = k => (document.getElementById('sy-' + k) || {}).value || '';
+      seConnecter({owner:v('owner'), repo:v('repo'), appareil:v('appareil'), jeton:v('jeton')}, el); },
+    'synchro-v49':el => { if(cleTrouvee) seConnecter({...cleTrouvee, appareil:(document.getElementById('sy-appareil') || {}).value || cleTrouvee.appareil}, el); },
+    'synchro-arreter':() => deconnecter(),
+    'synchro-cle':() => ouvrirFiche({titre:'Nouvelle clé GitHub', html:`<div class="formulaire"><div class="champ"><label for="sy-nouvelle">Clé de cet appareil</label>
+        <input type="password" id="sy-nouvelle" spellcheck="false" autocomplete="off" placeholder="github_pat_…"></div></div><p class="attention" id="sy-cle-erreur" hidden></p>`,
+      pied:`<div class="droite"><button type="button" class="btn" data-action="fermer-fiche">Annuler</button><button type="button" class="btn plein" data-action="synchro-cle-ok">Enregistrer</button></div>`}),
+    'synchro-cle-ok':async el => { el.disabled = true; const m = await changerCle((document.getElementById('sy-nouvelle') || {}).value || ''); el.disabled = false;
+      if(m){ const p = document.getElementById('sy-cle-erreur'); if(p){ p.textContent = m; p.hidden = false; } return; }
+      fermerFiche(); rendre(); toast('Nouvelle clé enregistrée.'); },
     'exporter-finances':() => { telecharger('finances-' + aujourdhui() + '.csv', csvFinances(), 'text/csv'); toast('Finances exportées en CSV.'); },
     'secours-restaurer':async () => {
       const s = await lireSecours(); if(!s || !s.data) return;
