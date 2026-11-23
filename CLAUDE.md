@@ -81,15 +81,21 @@ index.html            la coquille : conteneurs vides, règle de sécurité (CSP)
 app.js                le démarrage : actions et clavier, sections, coquille, lecture des données, premier affichage
 noyau/
   outils.js           texte, dates à l'heure locale, montants (repris de la v4.9)
-  donnees.js          FORMES, normaliser, DB, modifie(), remplacer(), ajouter(), corbeille, entretien
+  donnees.js          FORMES, normaliser, DB, modifie(), remplacer(), ajouter(), retirer() (corbeille), entretien
+  calculs.js          calculs partagés : tâches du jour, dates d'un événement, anniversaires, documents, catégories, dossiers
   stockage.js         IndexedDB + copie localStorage, délais maximum, copie de secours, autres onglets
   adresses.js         #/nom/arg?params, anciennes adresses traduites (ALIAS)
   modules.js          le registre des sections (format d'un module décrit en tête du fichier)
-  interface.js        coquille, rendre(), sous-menu, couleur de section, feuille, confirmer(), toast(), thème, clics, clavier
+  interface.js        coquille, rendre(), sous-menu, couleur de section, fiche au centre (ouvrirFiche), confirmer(), toast(),
+                      champAjout() (ligne « ajouter vite »), thème, clics, clavier
+  tableau.js          le tableau commun (recherche, tri, colonnes, paquets de 50, cartes sur téléphone)
+  glisser.js          le glisser-déposer (souris et doigt) : glisserType(type, {depot}), [data-glisser], [data-depot]
+  fiches.js           la fiche de chaque type d'élément (TYPES_ELEMENT), avec dossier, tags et attributs libres
+  capture.js          « Noter » en une phrase (bouton +, touche C), et le rangement d'une idée
   preferences.js      réglages de CET appareil (thème…), jamais synchronisés
   icones.js           ico('agenda', 18)
   theme-avant.js      pose le thème avant le premier affichage (script bloquant, seul script classique)
-  styles/             jetons.css (couleurs, thèmes, polices), base.css, coquille.css
+  styles/             jetons.css (couleurs, thèmes, polices), base.css, coquille.css, composants.css (pièces communes)
   polices/            Inter, Barlow Condensed (licence SIL OFL)
 modules/
   liste.js            les sections actives

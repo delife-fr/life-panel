@@ -1,0 +1,120 @@
+/* LIFE PANEL v5 · noyau/styles/composants.css
+   Les pièces communes à toutes les sections : blocs, puces (tags, dossiers), case à cocher, ligne « ajouter vite »,
+   tableau (cartes sur téléphone), formulaire des fiches, fenêtre « Noter », glisser-déposer. */
+
+/* --- Blocs d'une page --- */
+.bloc{background:var(--panneau);border:1px solid var(--bord);border-radius:var(--r);padding:16px 18px;min-width:0}
+.bloc-tete{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 10px}
+.bloc-tete h2{font:700 19px/1.1 var(--titre);letter-spacing:.01em}
+.bloc-tete a,.bloc-tete .lien{font-size:13px;color:var(--texte-2)}
+.bloc-tete a:hover{color:var(--texte)}
+.lien-texte{color:var(--accent-texte);font-weight:500}
+.lien-texte:hover{text-decoration:underline}
+
+/* --- Puces : tags, dossiers, types --- */
+.puces{display:flex;flex-wrap:wrap;gap:4px}
+.puce{display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:1px 8px;border-radius:999px;background:var(--panneau-2);border:1px solid var(--bord);
+  color:var(--texte-2);font-size:12px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.puce.dossier::before{content:"";width:7px;height:7px;border-radius:2px;background:var(--c, var(--c-gris));flex-shrink:0}
+.puce.type{border-color:transparent;background:color-mix(in srgb, var(--c, var(--accent)) 16%, transparent);color:var(--texte)}
+.retard{color:var(--critique)}
+
+/* --- Case à cocher ronde (tâche faite) --- */
+input.coche{appearance:none;-webkit-appearance:none;width:20px;height:20px;margin:0;border-radius:50%;border:1.6px solid var(--bord-fort);background:var(--champ);cursor:pointer;
+  display:inline-grid;place-items:center;flex-shrink:0;transition:background .12s,border-color .12s}
+input.coche:hover{border-color:var(--texte-3)}
+input.coche:checked{background:var(--ok);border-color:var(--ok)}
+input.coche:checked::after{content:"";width:9px;height:5px;border:2px solid var(--fond);border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg)}
+
+/* --- Ligne « ajouter vite » --- */
+.ajout{display:flex;align-items:center;gap:10px;padding:0 12px;min-height:44px;border:1px dashed var(--bord-fort);border-radius:var(--r-petit);background:var(--champ);color:var(--texte-3)}
+.ajout:focus-within{border-style:solid;border-color:color-mix(in srgb, var(--section) 70%, var(--bord));color:var(--texte-2)}
+.ajout input{flex:1;min-width:0;border:0;background:none;outline:none;padding:10px 0;box-shadow:none!important;min-height:0}
+
+/* --- Tableau --- */
+.tableau{display:flex;flex-direction:column;gap:10px;min-width:0}
+.tableau-barre{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tableau-recherche{display:flex;align-items:center;gap:8px;flex:1 1 240px;max-width:420px;margin:0;padding:0 10px;height:38px;border:1px solid var(--bord);border-radius:var(--r-petit);background:var(--champ);color:var(--texte-3)}
+.tableau-recherche:focus-within{border-color:var(--accent)}
+.tableau-recherche input{border:0;background:none;outline:none;padding:0;min-height:0;height:100%;box-shadow:none!important}
+.tableau-compte{font-size:12.5px;color:var(--texte-3)}
+.tableau-outils{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tableau-colonnes{position:relative}
+.tableau-colonnes summary{list-style:none}
+.tableau-colonnes summary::-webkit-details-marker{display:none}
+.menu-colonnes{position:absolute;right:0;top:calc(100% + 6px);z-index:15;min-width:200px;display:flex;flex-direction:column;gap:2px;padding:8px;
+  background:var(--panneau);border:1px solid var(--bord-fort);border-radius:var(--r-petit);box-shadow:var(--ombre-haute)}
+.menu-colonnes label{display:flex;align-items:center;gap:8px;margin:0;padding:6px 8px;border-radius:5px;color:var(--texte);font-size:13.5px;cursor:pointer}
+.menu-colonnes label:hover{background:var(--panneau-2)}
+.defile-tableau{overflow-x:auto;border:1px solid var(--bord);border-radius:var(--r);background:var(--panneau)}
+.tableau table{width:100%;border-collapse:collapse;font-size:13.5px}
+.tableau th{position:sticky;top:0;text-align:left;font-size:12px;font-weight:600;color:var(--texte-3);padding:9px 12px;border-bottom:1px solid var(--bord);background:var(--panneau);white-space:nowrap}
+.tableau th button{display:inline-flex;align-items:center;gap:4px;font:inherit;color:inherit}
+.tableau th button:hover,.tableau th[aria-sort="ascending"] button,.tableau th[aria-sort="descending"] button{color:var(--texte)}
+.tableau td{padding:9px 12px;border-bottom:1px solid var(--bord);vertical-align:middle}
+.tableau tbody tr:last-child td{border-bottom:0}
+.tableau tbody tr[tabindex]{cursor:pointer}
+.tableau tbody tr:hover{background:color-mix(in srgb, var(--panneau-2) 70%, transparent)}
+.tableau tbody tr:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:0}
+.tableau .num{text-align:right;white-space:nowrap}
+.tableau .t-coche{width:44px;padding-right:0}
+.tableau .t-saut{display:none}
+.tableau .col-titre,.tableau .t-titre{font-weight:500;color:var(--texte)}
+.tableau .t-sous,.tableau .t-droite{color:var(--texte-2)}
+.tableau tr.fait .t-titre{color:var(--texte-3);text-decoration:line-through}
+.tableau .extrait{display:block;color:var(--texte-3);font-size:12.5px;font-weight:400;max-width:560px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tableau-vide{padding:28px 16px;text-align:center;color:var(--texte-3);border:1px dashed var(--bord);border-radius:var(--r)}
+.tableau-plus{display:flex;justify-content:center}
+.actions-ligne{display:flex;gap:4px;justify-content:flex-end;align-items:center;flex-wrap:nowrap}
+.btn.petit,.btn.compact{min-height:30px;padding:0 10px;font-size:12.5px}
+.icone-btn.petit{width:30px;height:30px}
+
+/* Téléphone : une carte par ligne (titre en haut, à droite le montant ou la date, le reste en petit dessous) */
+@media (max-width:700px){
+  .tableau-recherche{max-width:none}
+  .defile-tableau{border:0;background:none;overflow:visible}
+  .tableau table,.tableau tbody{display:block}
+  .tableau thead{display:none}
+  .tableau tbody tr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:12px 14px;margin:0 0 8px;background:var(--panneau);border:1px solid var(--bord);border-radius:var(--r)}
+  .tableau td{display:block;padding:0;border:0}
+  .tableau .t-coche{order:0;width:auto}
+  .tableau .t-titre{order:1;flex:1 1 0;min-width:0}
+  .tableau .t-droite{order:2;margin-left:auto}
+  .tableau .t-saut{display:block;order:3;flex-basis:100%;height:0}
+  .tableau .t-sous{order:4;font-size:12.5px;color:var(--texte-3)}
+  .tableau .t-sous.t-vide,.tableau .t-cache{display:none}
+  .tableau .t-actions{order:5;flex-basis:100%}
+  .tableau .actions-ligne{justify-content:flex-start;flex-wrap:wrap}
+  .tableau .extrait{white-space:normal}
+}
+
+/* --- Formulaire des fiches --- */
+.formulaire{display:flex;flex-wrap:wrap;gap:14px 12px}
+.formulaire .champ{flex:1 1 100%;min-width:0}
+.formulaire .champ.demi{flex:1 1 calc(50% - 6px)}
+.formulaire .champ.quart{flex:1 1 calc(25% - 9px)}
+.champ-case{display:flex;align-items:center;gap:8px;flex:1 1 100%;margin:0;color:var(--texte);font-size:14px}
+.avec-vider{display:flex;gap:6px;align-items:center}
+.attributs{display:flex;flex-direction:column;gap:6px;margin:0 0 6px}
+.attribut{display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1.4fr) auto;gap:6px;align-items:center}
+@media (max-width:520px){ .formulaire .champ.demi,.formulaire .champ.quart{flex-basis:100%} }
+
+/* --- Fenêtre « Noter » --- */
+.capture{display:flex;flex-direction:column;gap:12px}
+.capture textarea{font-size:16px;min-height:64px}
+.capture-apercu{display:flex;align-items:flex-start;gap:8px;min-height:22px;color:var(--texte-2);font-size:13.5px}
+.capture-apercu svg{margin-top:2px;color:var(--section)}
+.puces-choix{display:flex;flex-wrap:wrap;gap:6px}
+.puce-choix{padding:5px 11px;border-radius:999px;border:1px solid var(--bord);background:var(--panneau-2);color:var(--texte-2);font-size:13px;font-weight:500}
+.puce-choix:hover{color:var(--texte);border-color:var(--bord-fort)}
+.puce-choix.actif{background:color-mix(in srgb, var(--section) 22%, transparent);border-color:color-mix(in srgb, var(--section) 55%, var(--bord));color:var(--texte)}
+
+/* --- Glisser-déposer --- */
+.en-glisse,.en-glisse *{user-select:none;-webkit-user-select:none;cursor:grabbing!important}
+.fantome{position:fixed;left:0;top:0;z-index:100;pointer-events:none;max-width:280px;padding:7px 12px;border-radius:8px;background:var(--panneau-3);border:1px solid var(--bord-fort);
+  box-shadow:var(--ombre-haute);font-size:13px;font-weight:500;color:var(--texte);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.glisse-source{opacity:.45}
+.depot-possible{outline:1.5px dashed color-mix(in srgb, var(--texte-3) 70%, transparent);outline-offset:-3px;border-radius:8px}
+.cible-active{outline:2px solid var(--accent)!important;outline-offset:-3px;background:var(--accent-doux)!important}
+.bloc-tete a{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.tableau .col-ajoutee,.tableau .col-date,.tableau .col-archivee{white-space:nowrap}

@@ -1,0 +1,27 @@
+/* LIFE PANEL v5 · modules/aujourdhui/aujourdhui.css */
+.grille-jour{display:grid;grid-template-columns:minmax(0, 1.6fr) minmax(280px, 1fr);gap:16px;align-items:start;max-width:1180px}
+.col-principale,.col-cote{display:flex;flex-direction:column;gap:16px;min-width:0}
+@media (max-width:900px){ .grille-jour{grid-template-columns:minmax(0, 1fr)} }
+
+.liste-jour{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column}
+.liste-jour + .liste-jour{border-top:1px solid var(--bord);padding-top:6px}
+.ligne-jour{display:flex;align-items:flex-start;gap:12px;padding:8px 4px;border-radius:var(--r-petit)}
+.ligne-jour:hover{background:color-mix(in srgb, var(--panneau-2) 70%, transparent)}
+.ligne-jour .corps{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;cursor:pointer}
+.ligne-jour.rdv{cursor:pointer}
+.ligne-jour .t{color:var(--texte);font-weight:500;overflow-wrap:anywhere}
+.ligne-jour .s{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px;color:var(--texte-3)}
+.ligne-jour .heure{flex:0 0 64px;font-weight:600;font-size:13px;color:color-mix(in srgb, var(--c-violet) 80%, var(--texte));padding-top:1px}
+.ligne-jour.passe{opacity:.55}
+.ligne-jour.tache .coche{margin-top:1px}
+.ligne-jour.fait .t{color:var(--texte-3);text-decoration:line-through}
+.calme{margin:4px 0 14px}
+
+.a-ranger p{color:var(--texte-2)}
+.liste-venir{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.liste-venir li{display:flex;align-items:flex-start;gap:10px;padding:7px 4px;border-radius:var(--r-petit);cursor:pointer;color:var(--texte-2);font-size:13.5px}
+.liste-venir li:hover{background:color-mix(in srgb, var(--panneau-2) 70%, transparent)}
+.liste-venir li svg{margin-top:2px;color:var(--c-rose);flex-shrink:0}
+.liste-venir li.preavis svg{color:var(--attention)}
+.liste-venir li.expire svg{color:var(--critique)}
+.liste-venir b{color:var(--texte);font-weight:600}

@@ -9,7 +9,7 @@ const CONTENU = {
 };
 
 export default {
-  id:'carnet', nom:'Carnet', icone:'carnet', couleur:'rose', menu:70, sousMenu:SOUS,
+  id:'carnet', nom:'Carnet', icone:'carnet', couleur:'rose', menu:70, depot:'idee', sousMenu:SOUS,
   titre:ctx => (SOUS.find(x => x[0] === ctx.arg) || SOUS[0])[1],
   pages:{
     carnet:ctx => { const r = CONTENU[ctx.arg] ? ctx.arg : 'notes';

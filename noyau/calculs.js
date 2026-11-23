@@ -1,0 +1,151 @@
+/* LIFE PANEL v5 · noyau/calculs.js
+   Les calculs dont plusieurs sections ont besoin (Aujourd'hui, Idées, Tâches, Calendrier, Finance…), repris de la v4.9
+   (section D) sans changement de sens : une seule définition de « aujourd'hui » pour les tâches, les dates d'un événement
+   qui se répète, les anniversaires, l'échéance des documents, les catégories de dépenses. */
+import {DB} from './donnees.js';
+import {aujourdhui, versDate, ecartJours, pad, joursDansMois, norm, cleNom, unique, maintenant, pluriel, hachage} from './outils.js';
+
+export const nonArchives = l => l.filter(x => !x.archive);
+export const parModif = (a, b) => (b.modif || '').localeCompare(a.modif || '');
+
+/* --- Dossiers (« projets » dans les données) --- */
+export const dossier = id => (id && DB.projets.find(p => p.id === id)) || null;
+export const nomDossier = id => { const p = dossier(id); return p ? p.nom : ''; };
+export const dossiersActifs = () => DB.projets.filter(p => !p.archive);
+/* Chemin d'un dossier rangé dans d'autres : « Perso › Finances » (champ « parent ») ; protégé contre une boucle */
+export function cheminDossier(id){
+  const noms = [], vus = new Set(); let p = dossier(id);
+  while(p && !vus.has(p.id)){ vus.add(p.id); noms.unshift(p.nom); p = dossier(p.parent); }
+  return noms;
+}
+/* Couleur d'un dossier : la sienne, sinon celle du dossier qui le contient */
+export function couleurDossier(id){
+  const vus = new Set(); let p = dossier(id);
+  while(p && !vus.has(p.id)){ if(p.couleur) return p.couleur; vus.add(p.id); p = dossier(p.parent); }
+  return 'gris';
+}
+export const toucherDossier = id => { const p = dossier(id); if(p) p.modif = maintenant(); };
+
+/* --- Tâches : UNE seule définition de « aujourd'hui » (v4.9) ---
+   À faire aujourd'hui = non terminées, datées d'aujourd'hui, en retard, ou sans date (sauf rangées dans une liste) */
+export const trierTaches = arr => arr.slice().sort((a, b) =>
+  (a.fait - b.fait) || (a.date || '9999-12-31').localeCompare(b.date || '9999-12-31') || (a.heure || '99:99').localeCompare(b.heure || '99:99'));
+export const estEnRetard = t => !t.fait && !!t.date && t.date < aujourdhui();
+export const tachesDuJour = () => trierTaches(DB.taches.filter(t => !t.fait && (t.date ? t.date <= aujourdhui() : !t.liste)));
+export const nomListe = id => { const l = id && DB.listes.find(x => x.id === id); return l ? l.nom : ''; };
+export const listesTriees = () => DB.listes.slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr', {sensitivity:'base', numeric:true}));
+export function cocherTache(t, fait){
+  t.fait = fait; t.faitLe = fait ? maintenant() : ''; t.modif = maintenant();
+  if(!fait){ t.archive = false; t.archiveLe = ''; }
+  toucherDossier(t.projet);
+}
+
+/* --- Événements : les dates d'un rendez-vous qui se répète (v4.9) ---
+   Chaque mois : le même jour, sauté les mois qui ne l'ont pas (un 31) ; chaque année : un 29 février tombe le 28. */
+const bissextile = a => (a % 4 === 0 && a % 100 !== 0) || a % 400 === 0;
+export const jourAnniv = (s, annee) => { const md = String(s || '').slice(5); return md === '02-29' && !bissextile(Number(annee)) ? '02-28' : md; };
+const jourUTC = ms => new Date(ms).toISOString().slice(0, 10);
+const msJour = j => Date.UTC(Number(j.slice(0, 4)), Number(j.slice(5, 7)) - 1, Number(j.slice(8, 10)));
+export function occurrences(ev, debut, fin){
+  const r = ev.recurrence || {}, res = [];
+  if(!['semaine', 'mois', 'an'].includes(r.freq)) return ev.date >= debut && ev.date <= fin ? [ev.date] : res;   /* une répétition inconnue : la première date seulement */
+  const borne = r.jusqua && r.jusqua < fin ? r.jusqua : fin, sautees = new Set(r.exceptions || []);
+  if(ev.date > borne) return res;
+  const prendre = j => { if(j >= debut && j <= borne && j >= ev.date && !sautees.has(j)) res.push(j); };
+  const [a, m, jr] = ev.date.split('-').map(Number);
+  if(r.freq === 'semaine'){
+    const d0 = msJour(ev.date), sem = 7 * 864e5;
+    for(let t = d0 + Math.max(0, Math.floor((msJour(debut) - d0) / sem)) * sem; jourUTC(t) <= borne; t += sem) prendre(jourUTC(t));
+  } else if(r.freq === 'mois'){
+    for(let k = Math.max(0, (Number(debut.slice(0, 4)) - a) * 12 + Number(debut.slice(5, 7)) - m); ; k++){
+      const ym = (a + Math.floor((m - 1 + k) / 12)) + '-' + pad((m - 1 + k) % 12 + 1);
+      if(ym + '-01' > borne) break;
+      if(jr <= joursDansMois(ym)) prendre(ym + '-' + pad(jr));
+    }
+  } else for(let y = Math.max(a, Number(debut.slice(0, 4))); y + '-01-01' <= borne; y++) prendre(y + '-' + jourAnniv(ev.date, y));
+  return res;
+}
+/* Les rendez-vous d'un jour, dans l'ordre des heures (journée entière d'abord) */
+export const evenementsDuJour = j => DB.evenements.filter(ev => occurrences(ev, j, j).length)
+  .sort((a, b) => (a.heure || '').localeCompare(b.heure || '') || a.titre.localeCompare(b.titre, 'fr'));
+
+/* --- Contacts : anniversaires (né un 29 février : fêté le 28 les années non bissextiles) --- */
+export function joursAvantAnniv(s){
+  if(!versDate(s)) return null;
+  const h = new Date(); h.setHours(0, 0, 0, 0);
+  const date = a => { const [m, j] = jourAnniv(s, a).split('-').map(Number); return new Date(a, m - 1, j); };
+  let p = date(h.getFullYear());
+  if(p < h) p = date(h.getFullYear() + 1);
+  return Math.round((p - h) / 86400000);
+}
+export const anniversaires = max => nonArchives(DB.contacts).map(c => ({c, j:joursAvantAnniv(c.anniversaire)}))
+  .filter(x => x.j !== null && x.j <= max).sort((a, b) => a.j - b.j);
+/* L'âge fêté, si l'année de naissance est connue (1904 = année inconnue, reprise des vCard) */
+export const ageFete = (s, j) => { const a = Number(String(s).slice(0, 4)); if(!a || a <= 1904) return null; const d = new Date(); d.setDate(d.getDate() + j); return d.getFullYear() - a; };
+
+/* --- Documents : échéance et préavis --- 'expire', 'preavis' (dans le préavis), 'plus-tard', 'sans' */
+export function etatDocument(x){
+  if(!x.echeance) return {etat:'sans', jours:null};
+  const ecart = ecartJours(x.echeance); if(ecart === null) return {etat:'sans', jours:null};
+  const jours = -ecart;
+  return {etat:jours < 0 ? 'expire' : jours <= x.preavis ? 'preavis' : 'plus-tard', jours};
+}
+export const documentsARenouveler = () => nonArchives(DB.documents).map(x => ({x, ...etatDocument(x)}))
+  .filter(e => e.etat === 'expire' || e.etat === 'preavis').sort((a, b) => a.jours - b.jours);
+export function texteEcheance(jours){
+  if(jours < -1) return 'expiré depuis ' + pluriel(-jours, 'jour');
+  if(jours === -1) return 'expiré depuis hier';
+  if(jours === 0) return 'expire aujourd’hui';
+  if(jours === 1) return 'expire demain';
+  return 'expire dans ' + pluriel(jours, 'jour');
+}
+
+/* --- Idées (l'Inbox) --- */
+export const ideesOuvertes = () => DB.inbox.filter(x => x.status !== 'archived');
+export const ideesArchivees = () => DB.inbox.filter(x => x.status === 'archived');
+
+/* --- Finance : catégories --- */
+export const sansCategorie = () => DB.mouvements.filter(m => m.type !== 'revenu' && !m.categorie);
+const TEINTES = ['bleu', 'orange', 'vert', 'jaune', 'rose', 'herbe', 'violet', 'rouge', 'prune'];
+export function couleurCategorie(nom){
+  const x = (DB.couleursCategories || []).find(c => c.nom === nom);
+  return x ? x.couleur : TEINTES[hachage(cleNom(nom)) % TEINTES.length];
+}
+/* Les catégories les plus utilisées d'abord */
+export function categoriesFrequentes(){
+  const n = {}; DB.mouvements.forEach(m => { if(m.type !== 'revenu' && m.categorie) n[m.categorie] = (n[m.categorie] || 0) + 1; });
+  return unique([...Object.keys(n).sort((a, b) => n[b] - n[a]), ...DB.categories]).filter(c => DB.categories.includes(c));
+}
+/* Mots-clés du libellé → catégorie (v4.9) : la première des catégories citées qui existe */
+const INDICES = [[['Restaurants et sorties', 'Restaurants'], /restau|dejeuner|diner|repas|cafe\b|bar\b|pizza|burger|brasserie/],
+  [['Courses alimentaires', 'Courses'], /course|supermarche|carrefour|lidl|auchan|leclerc|intermarche|aliment|marche\b/],
+  [['Transports et véhicule', 'Transport'], /essence|carburant|plein|bus\b|train|taxi|uber|peage|parking|transport|metro|navigo/],
+  [['Abonnements et télécoms', 'Abonnements'], /abonnement|netflix|spotify|deezer|claude|icloud|forfait|youtube|internet/],
+  [['Santé'], /pharmac|medecin|docteur|dentiste|sante|kine/], [['Hygiène et beauté', 'Soins perso'], /barbier|coiffeur|coiffure|parfum|cosmetique/],
+  [['Énergie et eau', 'Logement'], /electricite|edf|engie|gaz\b|veolia/], [['Assurances'], /assurance|mutuelle/], [['Logement'], /loyer|syndic|copro|assurance hab/],
+  [['Impôts et taxes'], /impot|taxe|tresor public|amende/], [['Vêtements et accessoires'], /vetement|chaussure/], [['Maison et entretien'], /ikea|leroy merlin|castorama|bricolage|pressing/],
+  [['High-tech et informatique'], /fnac|darty|informatique|ordinateur/], [['Frais professionnels', 'Formation'], /formation|cours\b|manuel|atpl|examen|ecole/],
+  [['Loisirs et culture', 'Loisirs'], /cinema|concert|sport|jeu\b|loisir|musee|theatre/], [['Voyages et vacances', 'Voyages'], /hotel|avion|billet|airbnb|voyage|vol\b/],
+  [['Cadeaux et dons', 'Cadeaux'], /cadeau|\bdons?\b|paroisse/], [['DAB', 'Divers'], /retrait|especes|\bdab\b/]];
+export function devinerCategorie(texte){ const t = norm(texte); for(const [cs, re] of INDICES) if(re.test(t)){ const c = cs.find(x => DB.categories.includes(x)); if(c) return c; } return ''; }
+/* Catégorie proposée pour une dépense : d'abord l'habitude (le même libellé déjà rangé, la catégorie la plus fréquente),
+   puis les mots-clés */
+let cacheHabitudes = null;
+export function categorieProposee(m){
+  if(!cacheHabitudes || cacheHabitudes.db !== DB || cacheHabitudes.n !== DB.mouvements.length){
+    const h = new Map();
+    DB.mouvements.forEach(x => { if(x.type === 'revenu' || !x.categorie || !x.libelle) return; const k = norm(x.libelle).trim(), c = h.get(k) || {};
+      c[x.categorie] = (c[x.categorie] || 0) + 1; h.set(k, c); });
+    cacheHabitudes = {db:DB, n:DB.mouvements.length, h};
+  }
+  const c = cacheHabitudes.h.get(norm(m.libelle || '').trim());
+  if(c){ const meilleure = Object.keys(c).sort((a, b) => c[b] - c[a])[0]; if(DB.categories.includes(meilleure)) return meilleure; }
+  return devinerCategorie(m.libelle || '');
+}
+/* Compte proposé pour une nouvelle dépense : celui de la dernière saisie, sinon le premier */
+export function compteParDefaut(){
+  let dernier = null;
+  DB.mouvements.forEach(m => { if(m.cree && (!dernier || m.cree > dernier.cree)) dernier = m; });
+  if(dernier && (!dernier.compte || DB.comptes.some(c => c.nom === dernier.compte))) return dernier.compte;
+  return DB.comptes[0] ? DB.comptes[0].nom : '';
+}

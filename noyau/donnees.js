@@ -117,6 +117,17 @@ export const FORMES = {
       'categorie'); }
 };
 
+/* v5 : sur tout élément, des attributs libres [{nom, valeur}] (un champ que l'appli ne prévoit pas, ex. « Téléphone pro ») ;
+   sur les idées et les mouvements, des tags ; sur les idées, un dossier. Vérifiés seulement s'ils existent : un élément qui
+   n'en a pas reste exactement comme la v4.9 l'écrit. */
+const attributsPropres = a => (Array.isArray(a) ? a : []).filter(x => x && typeof x === 'object')
+  .map(x => ({nom:propreNom(x.nom), valeur:txt(x.valeur).trim()})).filter(x => x.nom);
+Object.keys(FORMES).forEach(k => { const forme = FORMES[k]; FORMES[k] = x => { const r = forme(x);
+  if('attributs' in r) r.attributs = attributsPropres(r.attributs);
+  if((k === 'inbox' || k === 'mouvements') && 'tags' in r) r.tags = nettoyerTags(r.tags);
+  if(k === 'inbox' && 'projet' in r) r.projet = r.projet || null;
+  return r; }; });
+
 /* Couleur la moins utilisée par les projets, dans l'ordre fixe de la palette */
 export function couleurLibre(projets){
   const n = c => projets.filter(p => p.couleur === c).length;
@@ -228,7 +239,7 @@ export function normaliser(brut){
     'focusProjets', 'lastReview', 'budgetMensuel');   /* pages Aujourd'hui et Revue de la v3 ; budget unique repris ci-dessus */
   /* Plus de références fantômes vers un projet ou une liste supprimés */
   const ids = new Set(d.projets.map(p => p.id));
-  LIENS_PROJET.forEach(k => d[k].forEach(x => { if(x.projet && !ids.has(x.projet)) x.projet = null; }));
+  [...LIENS_PROJET, 'inbox'].forEach(k => d[k].forEach(x => { if(x.projet && !ids.has(x.projet)) x.projet = null; }));
   const idsListes = new Set(d.listes.map(l => l.id));
   d.taches.forEach(t => { if(t.liste && !idsListes.has(t.liste)) t.liste = null; });
   return d;
@@ -267,6 +278,28 @@ export function ajouter(liste, brut){
 export function mettreCorbeille(type, element, extra = {}){
   DB.corbeille.unshift({id:uid(), type, supprimeLe:maintenant(), element:JSON.parse(JSON.stringify(element)), ...extra});
 }
+/* Retire un élément de sa liste vers la corbeille ; renvoie de quoi l'y remettre (« Annuler ») */
+export function retirer(liste, x){
+  const i = DB[liste].indexOf(x); if(i < 0) return () => {};
+  mettreCorbeille(liste, x);
+  const entree = DB.corbeille[0];
+  DB[liste].splice(i, 1);
+  return () => { DB.corbeille = DB.corbeille.filter(e => e !== entree); if(!DB[liste].includes(x)) DB[liste].splice(Math.min(i, DB[liste].length), 0, x); };
+}
+/* Un nom tapé dans un formulaire : la catégorie ou le compte existant à la casse près, sinon il est créé */
+export function assurerCategorie(nom){
+  const k = cleNom(nom); if(!k) return '';
+  const c = DB.categories.find(x => cleNom(x) === k); if(c) return c;
+  const n = propreNom(nom); DB.categories.push(n);
+  DB.couleursCategories = colorerCategories(DB.categories, DB.couleursCategories, DB.mouvements);   /* la nouvelle prend une couleur libre */
+  return n;
+}
+export function assurerCompte(nom){
+  const k = cleNom(nom); if(!k) return '';
+  const c = DB.comptes.find(x => cleNom(x.nom) === k); if(c) return c.nom;
+  const n = formeCompte({nom}); DB.comptes.push(n); return n.nom;
+}
+
 /* Entretien : tâches terminées avant aujourd'hui archivées ; corbeille vidée de ce qui a plus de 30 jours */
 export function entretien(){
   const auj = aujourdhui();

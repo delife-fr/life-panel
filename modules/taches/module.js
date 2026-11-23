@@ -8,7 +8,7 @@ const CONTENU = {
 };
 
 export default {
-  id:'taches', nom:'Tâches', icone:'taches', couleur:'vert', menu:40, onglet:30, sousMenu:SOUS,
+  id:'taches', nom:'Tâches', icone:'taches', couleur:'vert', menu:40, onglet:30, depot:'idee', sousMenu:SOUS,
   pages:{
     taches:ctx => { const r = CONTENU[ctx.arg] ? ctx.arg : '';
       return entete('Tâches', {sur:SOUS.find(x => x[0] === r)[1]}) + bientot(3, CONTENU[r]); }

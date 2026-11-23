@@ -8,16 +8,23 @@ import {$} from './noyau/outils.js';
 import {remplacer, ecouterChangements} from './noyau/donnees.js';
 import {etat, lire, brancher} from './noyau/stockage.js';
 import {charger} from './noyau/modules.js';
-import {construireCoquille, rendre, brancherActions, brancherClavier, fermerFeuille, toast} from './noyau/interface.js';
+import {construireCoquille, rendre, brancherActions, brancherClavier, fermerFiche, toast} from './noyau/interface.js';
+import './noyau/capture.js';   /* « Noter » (bouton +, touche C) */
+import './noyau/glisser.js';
+import './noyau/tableau.js';
 import RUBRIQUES from './modules/liste.js';
 
 const echec = (etape, e) => { console.error(etape, e); const v = $('#vue'); if(v) v.innerHTML = `<div class="vide"><b>LIFE PANEL n’a pas pu démarrer (${etape}).</b><br><small>${String(e && e.message || e).replace(/[<>&]/g, '')}</small></div>`; };
 
-/* Redessiner sans déranger une saisie en cours : on attend que le champ soit quitté */
+/* Redessiner sans déranger une saisie en cours : on attend que le champ soit quitté. Exception : une ligne « ajouter vite »
+   qui vient d'être envoyée (vide) : on redessine tout de suite et le curseur y revient, pour enchaîner les ajouts. */
 let enAttente = false;
+const SAISIE = 'textarea, select, [contenteditable="true"], input:not([type="checkbox"]):not([type="radio"]):not([type="button"])';
 function redessiner(){
   const a = document.activeElement, vue = $('#vue');
-  if(a && vue && vue.contains(a) && a.matches('input, textarea, select, [contenteditable="true"]')){
+  const ajout = a && a.closest && a.closest('[data-ajout]');
+  if(ajout && vue.contains(ajout) && !a.value){ const cle = ajout.dataset.ajout; rendre(); const n = document.querySelector(`[data-ajout="${cle}"] input`); if(n) n.focus(); return; }
+  if(a && vue && vue.contains(a) && a.matches(SAISIE)){
     if(!enAttente){ enAttente = true; a.addEventListener('blur', () => { enAttente = false; rendre(); }, {once:true}); }
     return;
   }
@@ -35,7 +42,7 @@ async function demarrer(){
   } catch(e){ etat.donnees = 'bloquees'; etat.raison = 'la lecture a échoué (' + e.message + ').'; echec('données', e); }
   brancher(async () => { const brut = await lire(); if(etat.donnees === 'pretes'){ remplacer(brut, {enregistrer:false}); redessiner(); } });
   ecouterChangements(() => redessiner());
-  window.addEventListener('hashchange', () => { fermerFeuille({depuisHistorique:true}); rendre(); });
+  window.addEventListener('hashchange', () => { fermerFiche({depuisHistorique:true}); rendre(); });
   rendre();
 }
 demarrer();

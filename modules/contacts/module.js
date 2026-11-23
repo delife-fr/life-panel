@@ -4,7 +4,7 @@
 import {entete, bientot} from '../../noyau/interface.js';
 
 export default {
-  id:'contacts', nom:'Contacts', icone:'gens', couleur:'prune', menu:80,
+  id:'contacts', nom:'Contacts', icone:'gens', couleur:'prune', menu:80, depot:'idee',
   pages:{
     contacts:() => entete('Contacts') + bientot(6, [
       'Le tableau de la v4.8, triable : nom, téléphone, e-mail, anniversaire, dernier échange, tags',

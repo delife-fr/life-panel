@@ -11,7 +11,7 @@ const CONTENU = {
 };
 
 export default {
-  id:'finance', nom:'Finance', icone:'argent', couleur:'herbe', menu:60, onglet:40, sousMenu:SOUS,
+  id:'finance', nom:'Finance', icone:'argent', couleur:'herbe', menu:60, onglet:40, depot:'idee', sousMenu:SOUS,
   pages:{
     finance:ctx => { const r = CONTENU[ctx.arg] ? ctx.arg : '';
       return entete('Finance', {sur:SOUS.find(x => x[0] === r)[1]}) + bientot(5, CONTENU[r]); }
