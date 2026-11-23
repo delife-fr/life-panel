@@ -15,7 +15,8 @@
 .puces{display:flex;flex-wrap:wrap;gap:4px}
 .puce{display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:1px 8px;border-radius:999px;background:var(--panneau-2);border:1px solid var(--bord);
   color:var(--texte-2);font-size:12px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.puce.dossier::before{content:"";width:7px;height:7px;border-radius:2px;background:var(--c, var(--c-gris));flex-shrink:0}
+.puce.dossier{background:color-mix(in srgb, var(--c, var(--c-gris)) 22%, var(--panneau));border-color:color-mix(in srgb, var(--c, var(--c-gris)) 60%, var(--bord));color:var(--texte)}
+.puce.dossier::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c, var(--c-gris));flex-shrink:0}
 .puce.type{border-color:transparent;background:color-mix(in srgb, var(--c, var(--accent)) 16%, transparent);color:var(--texte)}
 .retard{color:var(--critique)}
 .attention{color:var(--attention)}
@@ -163,8 +164,26 @@ body:has(.tableau-choix) .toast{bottom:92px}
 .lien-externe span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lien-externe:hover{text-decoration:underline}
 a.puce.dossier{text-decoration:none;color:var(--texte)}
-a.puce.dossier:hover{border-color:var(--bord-fort);background:var(--panneau-3)}
+a.puce.dossier:hover{background:color-mix(in srgb, var(--c, var(--c-gris)) 36%, var(--panneau))}
 .journal-fiche{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto}
 .journal-fiche li{padding:7px 10px;border-radius:var(--r-petit);background:var(--panneau-2);font-size:13.5px;color:var(--texte)}
 .journal-fiche b{color:var(--texte-2);font-weight:600;margin-right:6px}
 .formulaire .etiquette{display:block;font-size:12.5px;font-weight:600;color:var(--texte-2);margin-bottom:6px}
+/* Choisir un dossier (puces en couleur, par chemin) et une couleur (pastilles) */
+.choix-dossiers{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.groupe-dossiers{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.groupe-dossiers .chemin{font-size:12px;color:var(--texte-3);margin-right:2px}
+.choix-dossiers .puce{cursor:pointer;padding:4px 11px;font-size:13px}
+.choix-dossiers .puce.choisie{outline:2px solid var(--accent);outline-offset:1px}
+.nuancier{display:flex;flex-wrap:wrap;gap:8px}
+.pastille-choix{width:28px;height:28px;border-radius:7px;border:2px solid transparent;background:var(--c);cursor:pointer;padding:0}
+.pastille-choix.raye{background:repeating-linear-gradient(45deg, var(--c) 0 4px, color-mix(in srgb, var(--c) 45%, var(--panneau)) 4px 7px)}
+.pastille-choix.choisie{border-color:var(--texte);box-shadow:0 0 0 2px var(--panneau)}
+.pastille-cat{display:inline-block;width:11px;height:11px;border-radius:3px;background:var(--c);flex-shrink:0;vertical-align:-1px}
+.pastille-cat.raye{background:repeating-linear-gradient(45deg, var(--c) 0 3px, color-mix(in srgb, var(--c) 45%, var(--panneau)) 3px 5px)}
+.tableau-plier{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;padding:4px 6px;border:0;background:none;color:var(--texte);font-weight:600;font-size:15px;cursor:pointer;border-radius:var(--r-petit)}
+.tableau-plier:hover{background:var(--panneau-2)}
+.tableau-plier svg{transition:transform .15s}
+.tableau-plier .n{font-size:12px;color:var(--texte-3);font-weight:600}
+.tableau.plie .tableau-plier svg{transform:rotate(-90deg)}
+.tableau.plie > .tableau-barre,.tableau.plie > .tableau-corps{display:none}

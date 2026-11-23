@@ -3,7 +3,7 @@
    (section D) sans changement de sens : une seule définition de « aujourd'hui » pour les tâches, les dates d'un événement
    qui se répète, les anniversaires, l'échéance des documents, les catégories de dépenses. */
 import {DB} from './donnees.js';
-import {aujourdhui, versDate, ecartJours, pad, joursDansMois, norm, cleNom, unique, maintenant, pluriel, hachage} from './outils.js';
+import {aujourdhui, versDate, ecartJours, pad, joursDansMois, norm, cleNom, unique, maintenant, pluriel, hachage, propreNom} from './outils.js';
 
 export const nonArchives = l => l.filter(x => !x.archive);
 export const parModif = (a, b) => (b.modif || '').localeCompare(a.modif || '');
@@ -12,18 +12,17 @@ export const parModif = (a, b) => (b.modif || '').localeCompare(a.modif || '');
 export const dossier = id => (id && DB.projets.find(p => p.id === id)) || null;
 export const nomDossier = id => { const p = dossier(id); return p ? p.nom : ''; };
 export const dossiersActifs = () => DB.projets.filter(p => !p.archive);
-/* Chemin d'un dossier rangé dans d'autres : « Perso › Finances » (champ « parent ») ; protégé contre une boucle */
-export function cheminDossier(id){
-  const noms = [], vus = new Set(); let p = dossier(id);
-  while(p && !vus.has(p.id)){ vus.add(p.id); noms.unshift(p.nom); p = dossier(p.parent); }
-  return noms;
+/* Le chemin d'un dossier (champ « chemin ») : où il est rangé, ex. ['Perso', 'Maison']. Ce ne sont que des noms pour s'y
+   retrouver, pas des dossiers : seuls les dossiers au bout du chemin contiennent des éléments. */
+export const cheminDe = p => (p && Array.isArray(p.chemin) ? p.chemin : []);
+export const cheminDossier = id => { const p = dossier(id); return p ? [...cheminDe(p), p.nom] : []; };
+export const lireChemin = t => String(t || '').split(/\s*(?:›|>|\/)\s*/).map(propreNom).filter(Boolean);
+/* Tous les chemins utilisés, et leurs débuts (« Perso », « Perso › Maison ») */
+export function chemins(){
+  const s = new Set(); DB.projets.forEach(p => cheminDe(p).forEach((_, i, a) => s.add(a.slice(0, i + 1).join(' › '))));
+  return [...s].sort((a, b) => a.localeCompare(b, 'fr', {sensitivity:'base'}));
 }
-/* Couleur d'un dossier : la sienne, sinon celle du dossier qui le contient */
-export function couleurDossier(id){
-  const vus = new Set(); let p = dossier(id);
-  while(p && !vus.has(p.id)){ if(p.couleur) return p.couleur; vus.add(p.id); p = dossier(p.parent); }
-  return 'gris';
-}
+export const couleurDossier = id => { const p = dossier(id); return (p && p.couleur) || 'gris'; };
 export const toucherDossier = id => { const p = dossier(id); if(p) p.modif = maintenant(); };
 
 /* --- Tâches : UNE seule définition de « aujourd'hui » (v4.9) ---

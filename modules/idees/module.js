@@ -30,14 +30,12 @@ function lecture(x){ const c = lireCapture(x.text); return {c, nom:TYPES_CAPTURE
 function pageARanger(){
   const l = ideesOuvertes().filter(x => x.text);
   const idees = tableau({id:'idees', lignes:l, cle:x => x.id, ouvrir:'idee-ouvrir', glisser:'idee',
-    recherche:x => [x.text, nomDossier(x.projet)], tags:x => x.tags || [], texteRecherche:'Chercher dans les idées', tri:{col:'ajoutee', sens:-1},
+    recherche:x => [x.text], texteRecherche:'Chercher dans les idées', tri:{col:'ajoutee', sens:-1},
     vide:'Aucune idée en attente. Note-en une ci-dessus, ou avec le bouton +.',
     colonnes:[
       {id:'idee', titre:'Idée', tel:'titre', valeur:x => x.text, html:x => esc(x.text)},
       {id:'lue', titre:'Deviendrait', html:x => { const {c, nom} = lecture(x);
         return `<span class="puce type" style="--c:var(--c-${COULEUR_TYPE[c.type]})">${esc(nom)}</span>${c.puces.length ? ` <span class="faible">${esc(c.puces.slice(0, 2).join(' · '))}</span>` : ''}`; }},
-      {id:'tags', titre:'Tags', html:x => puceTags(x)},
-      {id:'dossier', titre:'Dossier', valeur:x => nomDossier(x.projet), html:x => puceDossier(x.projet)},
       {id:'ajoutee', titre:'Notée', tel:'droite', valeur:x => x.created, html:x => esc(ilya(x.created))},
       {id:'actions', titre:'', tel:'actions', html:x => { const {c, nom} = lecture(x), d = `data-id="${esc(x.id)}"`;
         return `<div class="actions-ligne"><button type="button" class="btn plein compact" data-action="idee-ranger" ${d}>${ico('check', 14, 2)}<span>${esc(nom)}</span></button>

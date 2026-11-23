@@ -35,11 +35,11 @@ sur « Chargement… ».
 | Idées (l'Inbox de la v4.9, avec À trier) | `idees` | jaune | Plus (+ icône en haut) | À ranger · Archivées |
 | Calendrier | `calendrier` | violet | onglet | 2 semaines · Mois · Agenda |
 | Tâches | `taches` | vert | onglet | Par date · Listes |
-| Dossiers (les « projets » des données) | `dossiers` | orange | Plus | Ouverts · Fermés ; dans un dossier : ‹ Dossiers · Tâches · Rendez-vous · Notes · Documents · Dépenses · Contacts · Journal · Idées |
+| Dossiers (les « projets » des données) | `dossiers` | orange | Plus | Ouverts · Fermés ; dans un dossier : ‹ Dossiers · Tâches · Rendez-vous · Notes · Documents · Dépenses · Contacts · Journal |
 | Finance | `finance` | herbe | onglet | Mois · Année · Mouvements · Comptes · Catégories |
 | Carnet | `carnet` | rose | Plus | Notes · Journal · Documents |
 | Contacts | `contacts` | prune | Plus | — (filtres de la v4.8 en boutons au-dessus du tableau) |
-| Réglages (icône en haut à droite) | `reglages` | gris | Plus (+ icône en haut) | Données · Tags · Corbeille |
+| Réglages (icône en haut à droite) | `reglages` | gris | Plus (+ icône en haut) | Données · Corbeille |
 
 - **PC (à partir de 1 100 px)** : les sections en haut, le sous-menu de la section ouverte juste en dessous ; la barre prend
   la couleur de la section. À droite : Chercher (Ctrl K), Noter, l'icône jour/nuit, Réglages.
@@ -51,21 +51,31 @@ sur « Chargement… ».
 - Tout ce qui existe en v4.9 est gardé, sauf : priorités, Focus 25 min, tout budget (dossiers, comptes, catégories : les
   champs restent dans les données, jamais affichés), lien vers le Wiki (plus tard).
 - **Dossier = super tag** : un élément est dans un seul dossier (champ `projet`, gardé tel quel pour la compatibilité).
-  Tout élément peut y aller, idées et entrées du journal comprises. Couleur au choix.
-- **Dossiers rangés dans d'autres dossiers** (domaine › dossier › sous-dossier, ex. Perso › Finances › Assurances) :
-  champ `parent` (id du dossier qui le contient ; attention, le champ `dossier` des projets est le chemin Drive de la v3.13).
-  Affichage (23/11, comme Ontoplano) : un tableau dans l'ordre de la hiérarchie (sous-dossier en retrait) ; glisser un
-  dossier sur un autre l'y range. Un dossier ouvert : le sous-menu passe aux types, un tableau par type. Un sous-dossier
-  reprend la couleur de son domaine sauf choix contraire. Un dossier dont on n'a plus besoin est **fermé** (drapeau
-  `archive`) et reste visible dans « Fermés ». Plus de « Sans dossier ».
+  Tout élément peut y aller (entrées du journal comprises), sauf les idées. Couleur au choix.
+- **Chemin des dossiers** (23/11, 2e retour) : Perso, Aviation, Maison, Santé… ne sont **pas des dossiers**, seulement un
+  chemin (champ `chemin`, ex. ['Perso', 'Maison'] ; attention, le champ `dossier` des projets est le chemin Drive de la
+  v3.13, et `parent` n'est plus utilisé). Les vrais dossiers sont au bout du chemin, l'utilisateur choisit leur chemin
+  (fiche « Chemin », ou glisser le dossier sur une puce de chemin). Page Dossiers : les chemins en puces pour naviguer,
+  le tableau des dossiers de ce chemin. Un dossier ouvert : le sous-menu passe aux types, chacun le même tableau que dans
+  sa section. Un dossier dont on n'a plus besoin est **fermé** (drapeau `archive`) et reste visible dans « Fermés ».
+- **Idées** = l'Inbox : ni tags, ni dossier ; une idée ne va nulle part, elle devient une tâche, une note, une dépense…
+- **Tags** : la fenêtre Tags s'ouvre en haut à droite (étiquette) ou par la touche T, pas dans Réglages. Supprimer un tag
+  le retire des éléments, les éléments restent.
+- **Toutes les colonnes partout** : `noyau/colonnes.js` donne les colonnes de chaque type, les mêmes dans la section et dans
+  la page d'un dossier (étapes, lien, montant, attributs…). La puce d'un dossier est en couleur.
+- **Finance** : le grand tableau des mouvements se plie (flèche) ; Comptes : « Dans les totaux : oui / non » (la case de
+  la v4.9 qui exclut un compte, ex. l'épargne, des totaux) ; la couleur d'une catégorie se choisit sur des pastilles.
+- **Plus tard, dans une autre session** (ne rien faire avant) : un sous-menu « Google Drive » dans Documents ; ce jour-là,
+  déplacer tous les documents à la racine du Drive, l'utilisateur les renomme et les range ensuite selon ses chemins.
 - **Plus d'archives** (23/11) : pas de page Archives. Une tâche faite reste visible, barrée, en bas du tableau ; notes,
   documents et contacts archivés en v4.9 sont affichés comme les autres (le drapeau reste dans les données).
-- **Contacts** (23/11) : plus d'« À lui dire », « À répondre », « Idées de cadeaux » ni de « Nouvelles » à l'écran (gardés
-  dans les données) ; la fiche montre les lignes du journal qui citent le contact (@Nom).
+- **Contacts** (23/11) : plus d'« À lui dire », « À répondre », « Idées de cadeaux », « Nouvelles », « Dernier échange »,
+  « À relancer » ni « Je lui ai parlé aujourd'hui » à l'écran (gardés dans les données) ; la fiche montre les lignes du
+  journal qui citent le contact (@Nom).
 - **La puce d'un dossier** est un lien vers le dossier, partout.
 - **Exemples** : Réglages › Données › « Charger des exemples » (modules/reglages/exemples.js) remplace les données de la
   bêta par des données fictives ; à enrichir quand une fonction arrive.
-- **Tags sur tout élément**, idées comprises ; la fenêtre Tags de la v4.7 pour les gérer.
+- **Tags sur tout élément** sauf les idées ; la fenêtre Tags de la v4.7 pour les gérer (en haut à droite).
 - **Capture rapide dans chaque section** : une ligne, Entrée, c'est créé, les détails après. Le bouton + garde la phrase
   devinée de la v4.9 (« essence 45 » → une dépense).
 - **Journal** (Carnet) : une ou deux phrases datées ; « @ » ouvre la liste des contacts pendant la frappe, « # » les tags.
@@ -114,6 +124,7 @@ noyau/
   tableau.js          le tableau commun (recherche, tri, colonnes vides cachées, attributs en colonnes, paquets de 50,
                       sélection Ctrl + clic, cartes sur téléphone)
   affichage.js        puce de dossier, tags, lien de document (Drive compris), téléphone, e-mail
+  colonnes.js         les colonnes de chaque type d'élément et le texte où chercher, communs à tous les tableaux
   glisser.js          le glisser-déposer (souris et doigt) : glisserType(type, {depot}), [data-glisser], [data-depot]
   fiches.js           la fiche de chaque type d'élément (TYPES_ELEMENT), avec dossier, tags et attributs libres
   capture.js          « Noter » en une phrase (bouton +, touche C), et le rangement d'une idée
@@ -124,7 +135,8 @@ noyau/
   polices/            Inter, Barlow Condensed (licence SIL OFL)
 modules/
   liste.js            les sections actives
-  <section>/          module.js (+ <section>.css si styles:true) ; recherche/ = la page de résultats et Ctrl K (pas une section)
+  <section>/          module.js (+ <section>.css si styles:true) ; recherche/ (Ctrl K, résultats) et tags/ (la fenêtre Tags)
+                      ne sont pas des sections ; reglages/exemples.js = les données fictives
 sw.js, manifest.webmanifest   ceux de la v4.9, pas encore branchés : refaits au lot 1
 ```
 

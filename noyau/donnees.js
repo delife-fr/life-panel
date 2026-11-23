@@ -130,6 +130,7 @@ Object.keys(FORMES).forEach(k => { const forme = FORMES[k]; FORMES[k] = x => { c
   if('attributs' in r) r.attributs = attributsPropres(r.attributs);
   if((k === 'inbox' || k === 'mouvements') && 'tags' in r) r.tags = nettoyerTags(r.tags);
   if(k === 'inbox' && 'projet' in r) r.projet = r.projet || null;
+  if(k === 'projets' && 'chemin' in r) r.chemin = (Array.isArray(r.chemin) ? r.chemin : txt(r.chemin).split(/[›\/]/)).map(propreNom).filter(Boolean);   /* v5 : où le dossier est rangé */
   return r; }; });
 
 /* Couleur la moins utilisée par les projets, dans l'ordre fixe de la palette */
@@ -183,7 +184,7 @@ export function normaliser(brut){
   if(typeof brut.prenom === 'string') d.prenom = brut.prenom;
   LISTES_DONNEES.forEach(k => { d[k] = tab(k).map(FORMES[k]); });
   d.inbox = d.inbox.filter(x => x.text || x.vocal);
-  d.projets.forEach(p => { if(!p.couleur && !p.parent) p.couleur = couleurLibre(d.projets); });   /* un sous-dossier sans couleur prend celle de son dossier */
+  d.projets.forEach(p => { if(!p.couleur) p.couleur = couleurLibre(d.projets); });
   /* v3.4 à v3.7 : les documents étaient rangés dans leur projet → ils rejoignent la liste unique (projet conservé) */
   const dejaLa = new Set(d.documents.map(x => x.id));
   const reprendre = (liste, projetId) => (Array.isArray(liste) ? liste : []).filter(x => x && typeof x === 'object')

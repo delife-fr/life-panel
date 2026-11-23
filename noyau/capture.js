@@ -113,7 +113,7 @@ export function lireCapture(t, type = 'auto'){
    elle quitte Idées). S'il manque l'essentiel, la fiche s'ouvre pour compléter. Renvoie l'élément créé (ou null). */
 export function enregistrerCapture(t, type = 'auto', {idee = null, projet = null} = {}){
   const c = lireCapture(t, type);
-  if(projet) c.brut.projet = projet;   /* noté depuis la page d'un dossier */
+  if(projet && c.liste !== 'inbox') c.brut.projet = projet;   /* noté depuis la page d'un dossier (une idée ne va dans aucun dossier) */
   if(idee && c.liste !== 'inbox'){
     if(idee.tags && idee.tags.length) c.brut.tags = [...(c.brut.tags || []), ...idee.tags];
     if(idee.projet) c.brut.projet = idee.projet;

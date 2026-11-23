@@ -25,7 +25,8 @@
      selection:{un:'tâche choisie', plusieurs:'tâches choisies', actions:'<button…>'},
                                             PC : Ctrl + clic et Maj + clic choisissent des lignes ; une barre en bas propose
                                             les actions (elles lisent choixTableau(id), puis appellent viderChoix(id))
-     vide:'Aucune tâche.', texteRecherche:'Chercher dans les tâches', outils:'<button…>'
+     vide:'Aucune tâche.', texteRecherche:'Chercher dans les tâches', outils:'<button…>',
+     pliable:'Mouvements'                   un titre avec une flèche pour plier ou déplier tout le tableau (gardé sur cet appareil)
    })
    colonnesAttributs(lignes) : une colonne par attribut libre trouvé (un attribut devient ainsi une colonne). */
 import {$, esc, correspond, cleNom, propreNom, hachage} from './outils.js';
@@ -37,7 +38,7 @@ const PAQUET = 50;
 const CONFIGS = new Map();   /* le dernier tableau affiché sous ce nom */
 const ETATS = new Map();     /* recherche et nombre de lignes montrées, le temps de la visite */
 const etat = id => { if(!ETATS.has(id)) ETATS.set(id, {q:'', n:PAQUET, choix:new Set(), ancre:null}); return ETATS.get(id); };
-const reglage = cfg => { const r = pref('tableau.' + cfg.id, null) || {}; return {tri:r.tri || (cfg.tri || {}).col || '', sens:r.sens || (cfg.tri || {}).sens || 1}; };
+const reglage = cfg => { const r = pref('tableau.' + cfg.id, null) || {}; return {tri:r.tri || (cfg.tri || {}).col || '', sens:r.sens || (cfg.tri || {}).sens || 1, plie:!!r.plie}; };
 /* Les colonnes qui ont quelque chose à montrer sur au moins une ligne (calculé une fois par affichage du tableau) */
 const pleine = (c, lignes) => c.garder || lignes.some(x => { const h = c.html(x); return h !== '' && h !== '—' && h !== null && h !== undefined; });
 const visibles = cfg => cfg.visibles || cfg.colonnes;
@@ -69,7 +70,9 @@ export function tableau(cfg){
     ${cfg.recherche ? `<label class="tableau-recherche">${ico('chercher', 16)}<input type="search" data-tableau-q="${esc(cfg.id)}" value="${esc(e.q)}" placeholder="${esc(cfg.texteRecherche || 'Chercher')}" aria-label="${esc(cfg.texteRecherche || 'Chercher')}" autocomplete="off"></label>` : ''}
     <span class="tableau-compte" data-tableau-compte="${esc(cfg.id)}">${esc(c.compte)}</span>
     <div class="tableau-outils">${cfg.outils || ''}</div></div>` : '';
-  return `<div class="tableau" data-tableau="${esc(cfg.id)}">${barre}<div class="tableau-corps">${c.html}</div></div>`;
+  const plie = cfg.pliable && reglage(cfg).plie;
+  const titre = cfg.pliable ? `<button type="button" class="tableau-plier" data-tableau-plier="${esc(cfg.id)}" aria-expanded="${!plie}">${ico('bas', 16, 2)}<span>${esc(cfg.pliable)}</span><span class="n">${cfg.lignes.length}</span></button>` : '';
+  return `<div class="tableau${plie ? ' plie' : ''}" data-tableau="${esc(cfg.id)}">${titre}${barre}<div class="tableau-corps">${c.html}</div></div>`;
 }
 
 
@@ -135,6 +138,9 @@ document.addEventListener('click', e => {
     changerPref('tableau.' + id, {...(pref('tableau.' + id, null) || {}), tri:col, sens}); redessiner(id); return; }
   const plus = e.target.closest('[data-tableau-plus]');
   if(plus){ const s = etat(plus.dataset.tableauPlus); s.n += PAQUET; redessiner(plus.dataset.tableauPlus); return; }
+  const plier = e.target.closest('[data-tableau-plier]');
+  if(plier){ const id = plier.dataset.tableauPlier, boite = plier.closest('.tableau'), plie = !boite.classList.contains('plie');
+    boite.classList.toggle('plie', plie); plier.setAttribute('aria-expanded', !plie); changerPref('tableau.' + id, {...(pref('tableau.' + id, null) || {}), plie}); return; }
   const tout = e.target.closest('[data-tableau-tout]');
   if(tout){ const id = tout.dataset.tableauTout, cfg = CONFIGS.get(id); if(cfg) lignesFiltrees(cfg).forEach(x => etat(id).choix.add(String(cfg.cle(x)))); redessiner(id); return; }
   const aucun = e.target.closest('[data-tableau-aucun]');

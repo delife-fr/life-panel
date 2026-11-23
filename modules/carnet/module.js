@@ -9,6 +9,7 @@ import {nomDossier, cheminDossier, etatDocument, texteEcheance} from '../../noya
 import {puceDossier, puceTags, lienDocument} from '../../noyau/affichage.js';
 import {entete, champAjout, toast} from '../../noyau/interface.js';
 import {tableau} from '../../noyau/tableau.js';
+import {colonnes, recherche} from '../../noyau/colonnes.js';
 import {ouvrirElement} from '../../noyau/fiches.js';
 import {lireCapture, lireTags, noterJournal} from '../../noyau/capture.js';
 
@@ -22,14 +23,8 @@ const texteNote = n => extrait(String(n.contenu || '').replace(/[#*_>`~\[\]()-]+
 function pageNotes(){
   return entete('Notes', {sur:'Carnet'}) + `<div class="page-carnet">${champAjout('note-ajouter', 'Nouvelle note : son titre, puis Entrée…')}${tableau({id:'notes',
     lignes:DB.notes, cle:n => n.id, ouvrir:'note-ouvrir', tri:{col:'modif', sens:-1},
-    recherche:n => [n.titre, n.contenu, cheminDossier(n.projet).join(' ')], tags:n => n.tags, texteRecherche:'Chercher dans les notes',
-    vide:'Aucune note. Écris un titre juste au-dessus.', colonnes:[
-      {id:'titre', titre:'Titre', tel:'titre', valeur:n => n.titre, html:n => esc(n.titre)},
-      {id:'extrait', titre:'Extrait', html:n => texteNote(n) ? `<span class="extrait">${esc(texteNote(n))}</span>` : '—'},
-      {id:'tags', titre:'Tags', valeur:n => n.tags.join(' '), html:n => puceTags(n.tags) || '—'},
-      {id:'dossier', titre:'Dossier', valeur:n => nomDossier(n.projet), html:n => puceDossier(n.projet) || '—'},
-      {id:'modif', titre:'Modifiée', tel:'droite', valeur:n => n.modif, html:n => quand(n.modif)}
-    ]})}</div>`;
+    recherche:recherche('notes'), tags:n => n.tags, texteRecherche:'Chercher dans les notes',
+    vide:'Aucune note. Écris un titre juste au-dessus.', colonnes:colonnes('notes', DB.notes)})}</div>`;
 }
 
 /* --- Journal --- */
@@ -38,14 +33,8 @@ function pageJournal(){
   return entete('Journal', {sur:'Carnet'}) + `<div class="page-carnet"><div class="avec-suggestions">${champAjout('journal-ajouter', 'Ce qui s’est passé… (@ une personne, # un tag)', {id:'journal-saisie'})}
     <ul class="suggestions" id="journal-suggestions" role="listbox" hidden></ul></div>${tableau({id:'journal',
     lignes:DB.journal, cle:j => j.id, ouvrir:'journal-ouvrir', tri:{col:'date', sens:-1},
-    recherche:j => [j.texte, ...nomsContacts(j.contacts), cheminDossier(j.projet).join(' ')], tags:j => j.tags, texteRecherche:'Chercher dans le journal',
-    vide:'Le journal est vide. Écris une ou deux phrases juste au-dessus.', colonnes:[
-      {id:'date', titre:'Date', garder:true, tel:'droite', valeur:j => j.date + (j.cree || ''), html:j => esc(majuscule(jourCourt(j.date)) + annee(j.date))},
-      {id:'texte', titre:'Ce qui s’est passé', tel:'titre', valeur:j => j.texte, html:j => esc(j.texte)},
-      {id:'personnes', titre:'Personnes', html:j => nomsContacts(j.contacts).map(n => `<span class="puce">@${esc(n)}</span>`).join('') || '—'},
-      {id:'tags', titre:'Tags', html:j => puceTags(j.tags) || '—'},
-      {id:'dossier', titre:'Dossier', valeur:j => nomDossier(j.projet), html:j => puceDossier(j.projet) || '—'}
-    ]})}</div>`;
+    recherche:recherche('journal'), tags:j => j.tags, texteRecherche:'Chercher dans le journal',
+    vide:'Le journal est vide. Écris une ou deux phrases juste au-dessus.', colonnes:colonnes('journal', DB.journal)})}</div>`;
 }
 
 /* « @ » et « # » pendant la frappe : la liste des contacts ou des tags qui commencent par ce qui est tapé */
@@ -89,15 +78,8 @@ document.addEventListener('mousedown', e => { const li = e.target.closest && e.t
 function pageDocuments(){
   return entete('Documents', {sur:'Carnet'}) + `<div class="page-carnet">${champAjout('document-ajouter', 'Ajouter un document : son titre ou son lien…')}${tableau({id:'documents',
     lignes:DB.documents, cle:x => x.id, ouvrir:'document-ouvrir', tri:{col:'titre', sens:1},
-    recherche:x => [x.titre, x.url, x.note, cheminDossier(x.projet).join(' ')], tags:x => x.tags, texteRecherche:'Chercher dans les documents',
-    vide:'Aucun document. Ajoute-en un juste au-dessus.', colonnes:[
-      {id:'titre', titre:'Document', tel:'titre', valeur:x => x.titre, html:x => esc(x.titre)},
-      {id:'lien', titre:'Lien', html:x => lienDocument(x.url) || '—'},
-      {id:'echeance', titre:'Échéance', valeur:x => x.echeance, html:x => { if(!x.echeance) return '—'; const e = etatDocument(x);
-        return `<span class="${e.etat === 'expire' ? 'retard' : e.etat === 'preavis' ? 'attention' : ''}" title="${esc(texteEcheance(e.jours))}">${quand(x.echeance)}</span>`; }},
-      {id:'dossier', titre:'Dossier', valeur:x => nomDossier(x.projet), html:x => puceDossier(x.projet) || '—'},
-      {id:'tags', titre:'Tags', html:x => puceTags(x.tags) || '—'}
-    ]})}</div>`;
+    recherche:recherche('documents'), tags:x => x.tags, texteRecherche:'Chercher dans les documents',
+    vide:'Aucun document. Ajoute-en un juste au-dessus.', colonnes:colonnes('documents', DB.documents)})}</div>`;
 }
 
 export default {

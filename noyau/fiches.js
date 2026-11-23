@@ -6,14 +6,14 @@
    Les sections enrichiront leur fiche dans leur lot ; celle-ci sert partout dès maintenant (capture, Idées, Aujourd'hui). */
 import {esc, dateISO, maintenant, aujourdhui, propreNom, cleNom, dateCourte} from './outils.js';
 import {ico} from './icones.js';
-import {DB, FORMES, ajouter, modifie, retirer, assurerCategorie, assurerCompte} from './donnees.js';
-import {dossiersActifs, cheminDossier, listesTriees, categoriesFrequentes, compteParDefaut, toucherDossier, cocherTache} from './calculs.js';
+import {DB, FORMES, ajouter, modifie, retirer, assurerCategorie, assurerCompte, COULEURS} from './donnees.js';
+import {dossiersActifs, cheminDossier, cheminDe, chemins, lireChemin, couleurDossier, listesTriees, categoriesFrequentes, compteParDefaut, toucherDossier, cocherTache} from './calculs.js';
 import {ouvrirFiche, fermerFiche, toast} from './interface.js';
 import {actionNoyau} from './modules.js';
 
 const COMMUNS = [{c:'projet', t:'Dossier', k:'dossier'}, {c:'tags', t:'Tags', k:'tags'}, {c:'attributs', t:'Attributs', k:'attributs'}];
 export const TYPES_ELEMENT = {
-  inbox:{nom:'Idée', une:'une idée', champs:[{c:'text', t:'Idée', k:'zone', lignes:3}, ...COMMUNS]},
+  inbox:{nom:'Idée', une:'une idée', champs:[{c:'text', t:'Idée', k:'zone', lignes:3}]},   /* une idée ne va nulle part : elle devient autre chose */
   taches:{nom:'Tâche', une:'une tâche', champs:[{c:'nom', t:'Tâche', k:'texte'}, {c:'fait', t:'Faite', k:'case'}, {c:'date', t:'Date', k:'date', demi:true}, {c:'heure', t:'Heure', k:'heure', demi:true},
     {c:'liste', t:'Liste', k:'liste'}, {c:'etapes', t:'Étapes', k:'cases'}, ...COMMUNS]},
   evenements:{nom:'Rendez-vous', une:'un rendez-vous', champs:[{c:'titre', t:'Titre', k:'texte'}, {c:'date', t:'Date', k:'date', demi:true}, {c:'heure', t:'Début', k:'heure', quart:true}, {c:'fin', t:'Fin', k:'heure', quart:true},
@@ -26,12 +26,12 @@ export const TYPES_ELEMENT = {
     {c:'note', t:'Note', k:'zone', lignes:2}, ...COMMUNS]},
   notes:{nom:'Note', une:'une note', champs:[{c:'titre', t:'Titre', k:'texte'}, {c:'contenu', t:'Contenu (Markdown)', k:'zone', lignes:10}, ...COMMUNS]},
   contacts:{nom:'Contact', une:'un contact', champs:[{c:'nom', t:'Nom', k:'texte'}, {c:'telephone', t:'Téléphone', k:'tel', demi:true}, {c:'autreTelephone', t:'Autre téléphone', k:'tel', demi:true},
-    {c:'email', t:'E-mail', k:'email'}, {c:'anniversaire', t:'Anniversaire', k:'date', demi:true}, {c:'derniereConversation', t:'Dernier échange', k:'date', demi:true}, {c:'adresse', t:'Adresse', k:'zone', lignes:2},
+    {c:'email', t:'E-mail', k:'email'}, {c:'anniversaire', t:'Anniversaire', k:'date', demi:true}, {c:'adresse', t:'Adresse', k:'zone', lignes:2},
     {c:'journal', t:'Journal', k:'journal'}, ...COMMUNS]},   /* v5 : plus de Nouvelles ni d'À lui dire, À répondre, Idées (gardés dans les données) */
   documents:{nom:'Document', une:'un document', champs:[{c:'titre', t:'Titre', k:'texte'}, {c:'url', t:'Lien (site ou drive:chemin)', k:'url'},
     {c:'echeance', t:'Échéance', k:'date', demi:true}, {c:'preavis', t:'Préavis (jours)', k:'nombre', demi:true}, {c:'note', t:'Note', k:'zone', lignes:3}, ...COMMUNS]},
   projets:{nom:'Dossier', une:'un dossier', champs:[{c:'nom', t:'Nom', k:'texte'}, {c:'resume', t:'Pour quoi faire', k:'zone', lignes:2},
-    {c:'parent', t:'Rangé dans', k:'dossier'}, {c:'couleur', t:'Couleur', k:'choix', options:[['', '— celle du dossier qui le contient —'], ['bleu', 'Bleu'], ['vert', 'Vert'], ['jaune', 'Jaune'], ['rose', 'Rose'], ['violet', 'Violet'], ['orange', 'Orange']], demi:true},
+    {c:'chemin', t:'Chemin (ex. Perso › Maison)', k:'chemin'}, {c:'couleur', t:'Couleur', k:'couleur'},
     {c:'archive', t:'Fermé (le dossier reste visible dans « Fermés »)', k:'case'}, {c:'tags', t:'Tags', k:'tags'}, {c:'attributs', t:'Attributs', k:'attributs'}]},
   listes:{nom:'Liste', une:'une liste', champs:[{c:'nom', t:'Nom', k:'texte'}]},
   journal:{nom:'Entrée du journal', une:'une entrée', champs:[{c:'date', t:'Date', k:'date', demi:true}, {c:'texte', t:'Ce qui s’est passé', k:'zone', lignes:4},
@@ -46,11 +46,25 @@ export const nomDe = (liste, x) => liste === 'mouvements' && x && x.type === 're
 
 /* --- Les champs --- */
 const idChamp = (f, c) => `f-${f}-${c}`;
-const optionsDossiers = (courant, sauf = '') => {
-  const l = dossiersActifs().filter(p => p.id !== sauf).map(p => ({id:p.id, chemin:cheminDossier(p.id).join(' › ')})).sort((a, b) => a.chemin.localeCompare(b.chemin, 'fr'));
-  const p = courant && DB.projets.find(x => x.id === courant); if(p && p.archive) l.push({id:p.id, chemin:cheminDossier(p.id).join(' › ') + ' (archivé)'});
-  return [['', '— aucun —'], ...l.map(x => [x.id, x.chemin])];
-};
+/* Choisir un dossier : ses puces en couleur, rangées par chemin (un clic choisit, un clic sur « aucun » retire) */
+function choixDossier(id, courant){
+  const l = dossiersActifs().concat(DB.projets.filter(p => p.archive && p.id === courant)), groupes = new Map();
+  l.forEach(p => { const c = cheminDe(p).join(' › '); if(!groupes.has(c)) groupes.set(c, []); groupes.get(c).push(p); });
+  const puce = p => `<button type="button" class="puce dossier${p.id === courant ? ' choisie' : ''}" data-dossier-choix="${esc(p.id)}" style="--c:var(--c-${couleurDossier(p.id)})" aria-pressed="${p.id === courant}">${esc(p.nom)}</button>`;
+  return `<div class="choix-dossiers" id="${id}" data-valeur="${esc(courant || '')}"><button type="button" class="puce${courant ? '' : ' choisie'}" data-dossier-choix="" aria-pressed="${!courant}">aucun</button>
+    ${[...groupes.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr')).map(([c, ps]) => `<div class="groupe-dossiers">${c ? `<span class="chemin">${esc(c)}</span>` : ''}${ps.sort((a, b) => a.nom.localeCompare(b.nom, 'fr')).map(puce).join('')}</div>`).join('')}</div>`;
+}
+/* Choisir une couleur : les pastilles elles-mêmes (rayées pour les couleurs « -r » des catégories) */
+export const nuancier = (id, couleurs, courant) => `<div class="nuancier" id="${id}" data-valeur="${esc(courant || '')}">${couleurs.map(c =>
+  `<button type="button" class="pastille-choix${/-r$/.test(c) ? ' raye' : ''}${c === courant ? ' choisie' : ''}" data-couleur="${esc(c)}" style="--c:var(--c-${esc(c.replace(/-r$/, ''))})" aria-label="${esc(c)}" aria-pressed="${c === courant}"></button>`).join('')}</div>`;
+/* Un clic dans ces deux choix : la valeur change, le formulaire l'apprend (enregistrement automatique) */
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('[data-dossier-choix], [data-couleur]'); if(!b) return;
+  const boite = b.closest('.choix-dossiers, .nuancier'); if(!boite) return;
+  boite.dataset.valeur = b.dataset.dossierChoix ?? b.dataset.couleur;
+  boite.querySelectorAll('[data-dossier-choix], [data-couleur]').forEach(x => { const on = x === b; x.classList.toggle('choisie', on); x.setAttribute('aria-pressed', on); });
+  boite.dispatchEvent(new Event('change', {bubbles:true}));
+});
 const select = (id, options, v) => `<select id="${id}">${options.map(([o, t]) => `<option value="${esc(o)}"${String(v ?? '') === String(o) ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
 function champ(f, d, x, liste){
   const id = idChamp(f, d.c), v = d.lit ? d.lit(x) : x[d.c], attrs = `id="${id}"${d.autofocus ? ' autofocus' : ''}`;
@@ -66,7 +80,9 @@ function champ(f, d, x, liste){
     case 'url': html = `<input type="url" ${attrs} value="${esc(v || '')}" placeholder="https://…">`; break;
     case 'case': return `<label class="champ-case"><input type="checkbox" ${attrs}${v ? ' checked' : ''}> ${esc(d.t)}</label>`;
     case 'choix': html = select(id, d.options, v); break;
-    case 'dossier': html = select(id, optionsDossiers(v, liste === 'projets' ? x.id : ''), v || ''); break;
+    case 'dossier': html = choixDossier(id, v || ''); break;
+    case 'couleur': html = nuancier(id, COULEURS, v || ''); break;
+    case 'chemin': html = `<input type="text" ${attrs} value="${esc((v || []).join(' › '))}" list="${id}-l" placeholder="vide = à la racine"><datalist id="${id}-l">${chemins().map(c => `<option value="${esc(c)}">`).join('')}</datalist>`; break;
     case 'liste': html = select(id, [['', '— aucune —'], ...listesTriees().map(l => [l.id, l.nom])], v || ''); break;
     case 'categorie': html = `<input type="text" ${attrs} value="${esc(v || '')}" list="${id}-l" placeholder="— sans catégorie —"><datalist id="${id}-l">${categoriesFrequentes().map(c => `<option value="${esc(c)}">`).join('')}</datalist>`; break;
     case 'compte': html = `<input type="text" ${attrs} value="${esc(v || '')}" list="${id}-l"><datalist id="${id}-l">${DB.comptes.map(c => `<option value="${esc(c.nom)}">`).join('')}</datalist>`; break;
@@ -101,7 +117,10 @@ function lire(f, liste, x){
       case 'date': r[d.c] = dateISO(e.value); break;
       case 'montant': r[d.c] = Number(String(e.value).replace(/\s/g, '').replace(',', '.')) || 0; break;
       case 'nombre': r[d.c] = e.value === '' ? null : Number(e.value); break;
-      case 'dossier': case 'liste': r[d.c] = e.value || null; break;
+      case 'dossier': r[d.c] = e.dataset.valeur || null; break;
+      case 'couleur': r[d.c] = e.dataset.valeur || ''; break;
+      case 'chemin': r[d.c] = lireChemin(e.value); break;
+      case 'liste': r[d.c] = e.value || null; break;
       case 'categorie': r[d.c] = propreNom(e.value) ? assurerCategorie(e.value) : ''; break;
       case 'compte': r[d.c] = propreNom(e.value) ? assurerCompte(e.value) : ''; break;
       case 'personnes': r[d.c] = e.value.split(',').map(n => DB.contacts.find(c => cleNom(c.nom) === cleNom(n))).filter(Boolean).map(c => c.id); break;

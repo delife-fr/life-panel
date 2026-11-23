@@ -15,7 +15,8 @@ import {nomListe, listesTriees, estEnRetard, nomDossier, couleurDossier, cheminD
 import {puceDossier, puceTags} from '../../noyau/affichage.js';
 import {entete, champAjout, toast, ouvrirFiche, fermerFiche} from '../../noyau/interface.js';
 import {lien} from '../../noyau/adresses.js';
-import {tableau, colonnesAttributs, choixTableau, viderChoix} from '../../noyau/tableau.js';
+import {tableau, choixTableau, viderChoix} from '../../noyau/tableau.js';
+import {colonnes, recherche} from '../../noyau/colonnes.js';
 import {glisserType} from '../../noyau/glisser.js';
 import {lireCapture} from '../../noyau/capture.js';
 import {ouvrirElement} from '../../noyau/fiches.js';
@@ -36,22 +37,10 @@ const actionsChoix = id => [['taches-choix-cocher', 'Cocher', 'check'], ['taches
   ['taches-choix-dossier', 'Dossier…', 'dossier'], ['taches-choix-supprimer', 'Supprimer', 'corbeille']]
   .map(([a, t, i]) => `<button type="button" class="btn petit" data-action="${a}" data-tableau="${esc(id)}">${ico(i, 14)}<span>${t}</span></button>`).join('');
 
-function tableTaches({id, lignes, toutes = null, liste = true, faites = false, vide, outils = ''}){
-  const colonnes = [
-    {id:'nom', titre:'Tâche', tel:'titre', valeur:t => t.nom, html:t => { const n = t.etapes.length, f = t.etapes.filter(e => e.ok).length;
-      return esc(t.nom) + (n ? ` <span class="etapes-compte${f === n ? ' fini' : ''}" title="Étapes faites">${f}/${n}</span>` : ''); }},
-    {id:'date', titre:'Date', tel:'droite', garder:true, valeur:t => t.date ? t.date + (t.heure || '99:99') : '',
-      html:t => t.date ? `<span class="${estEnRetard(t) ? 'retard' : ''}">${esc(texteDate(t))}</span>` : '—'},
-    ...(faites ? [{id:'faite', titre:'Faite', valeur:t => t.faitLe || '', html:t => t.faitLe ? esc(majuscule(jourCourt(jourDe(t.faitLe)))) : '—'}] : []),
-    ...(liste ? [{id:'liste', titre:'Liste', valeur:t => nomListe(t.liste), html:t => t.liste ? esc(nomListe(t.liste)) : '—'}] : []),
-    {id:'dossier', titre:'Dossier', valeur:t => cheminDossier(t.projet).join(' › '), html:t => puceDossier(t.projet) || '—'},
-    {id:'tags', titre:'Tags', valeur:t => (t.tags || []).join(' '), html:t => puceTags(t.tags) || '—'},
-    ...colonnesAttributs(toutes || lignes)
-  ];
-  return tableau({id, lignes, toutes, cle:t => t.id, colonnes, ouvrir:'tache-ouvrir', glisser:'tache',
-    coche:{action:'tache-cocher', etat:t => t.fait, titre:'Faite'}, enBas:faites ? null : t => t.fait, classe:t => t.fait ? 'fait' : '',
-    recherche:t => [t.nom, texteDate(t), nomListe(t.liste), cheminDossier(t.projet).join(' '), ...t.etapes.map(e => e.t), ...(t.attributs || []).map(a => a.valeur)],
-    tags:t => t.tags, tri:faites ? {col:'faite', sens:-1} : liste && id === 'taches-listes' ? {col:'liste', sens:1} : {col:'date', sens:1},
+function tableTaches({id, lignes, toutes = null, liste = true, vide, outils = ''}){
+  return tableau({id, lignes, toutes, cle:t => t.id, colonnes:colonnes('taches', toutes || lignes, {liste}), ouvrir:'tache-ouvrir', glisser:'tache',
+    coche:{action:'tache-cocher', etat:t => t.fait, titre:'Faite'}, enBas:t => t.fait, classe:t => t.fait ? 'fait' : '',
+    recherche:recherche('taches'), tags:t => t.tags, tri:liste && id === 'taches-listes' ? {col:'liste', sens:1} : {col:'date', sens:1},
     selection:{un:'tâche choisie', plusieurs:'tâches choisies', actions:actionsChoix(id)},
     texteRecherche:'Chercher dans les tâches', vide, outils});
 }

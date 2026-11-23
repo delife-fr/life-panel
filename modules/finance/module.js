@@ -13,6 +13,8 @@ import {puceDossier, puceTags} from '../../noyau/affichage.js';
 import {entete, champAjout, toast, ouvrirFiche, fermerFiche, confirmer, rendre} from '../../noyau/interface.js';
 import {lien} from '../../noyau/adresses.js';
 import {tableau} from '../../noyau/tableau.js';
+import {colonnes, recherche} from '../../noyau/colonnes.js';
+import {nuancier} from '../../noyau/fiches.js';
 import {enregistrerCapture} from '../../noyau/capture.js';
 import {ouvrirElement} from '../../noyau/fiches.js';
 import {pref, changerPref} from '../../noyau/preferences.js';
@@ -64,8 +66,8 @@ function parCategorie(liste, periode){
 function casesComptes(){
   const sans = DB.mouvements.some(m => !m.compte);
   if(DB.comptes.length + (sans ? 1 : 0) < 2) return '';
-  const puce = (nom, on, attr) => `<button type="button" class="puce-choix case-compte${on ? ' actif' : ''}" data-action="compte-stats" ${attr} aria-pressed="${on}" title="${on ? 'Compté dans les statistiques' : 'Pas compté'}">${on ? ico('check', 13, 2.4) : ''}${esc(nom)}</button>`;
-  return `<div class="cases-comptes" role="group" aria-label="Comptes comptés dans les statistiques">${DB.comptes.map(c => puce(c.nom, c.stats, `data-nom="${esc(c.nom)}"`)).join('')}
+  const puce = (nom, on, attr) => `<button type="button" class="puce-choix case-compte${on ? ' actif' : ''}" data-action="compte-stats" ${attr} aria-pressed="${on}" title="${on ? 'Compté dans les totaux : un clic pour l’enlever' : 'Pas compté dans les totaux : un clic pour l’ajouter'}">${on ? ico('check', 13, 2.4) : ''}${esc(nom)}</button>`;
+  return `<div class="cases-comptes" role="group" aria-label="Comptes comptés dans les totaux"><span class="faible">Comptés dans les totaux :</span>${DB.comptes.map(c => puce(c.nom, c.stats, `data-nom="${esc(c.nom)}"`)).join('')}
     ${sans ? puce('Sans compte', DB.reglages.sansCompteStats !== false, 'data-sans="1"') : ''}</div>`;
 }
 const chiffre = (titre, valeur, note = '', cls = '') => `<div class="chiffre"><span class="titre">${esc(titre)}</span><b class="${cls}">${esc(valeur)}</b>${note ? `<small>${esc(note)}</small>` : ''}</div>`;
@@ -73,22 +75,9 @@ const navigation = (titre, prec, suiv, ici) => `<div class="cal-nav"><a class="i
   <h2>${esc(titre)}</h2><a class="icone-btn" href="${suiv}" aria-label="Après">${ico('fleche', 18)}</a>${ici ? `<a class="btn petit" href="${ici}">Aujourd’hui</a>` : ''}</div>`;
 
 /* --- Le tableau des mouvements (le même partout) --- */
-function tableMouvements(id, lignes, {toutes = null, vide = 'Aucun mouvement.'} = {}){
-  const an = aujourdhui().slice(0, 4);
-  return tableau({id, lignes, toutes, cle:m => m.id, ouvrir:'mouvement-ouvrir', tri:{col:'date', sens:-1}, classe:m => dansStats(m) ? '' : 'hors-stats',
-    recherche:m => [m.libelle, m.categorie, m.compte, m.note, nomDossier(m.projet), String(m.montant).replace('.', ','), dateCourte(m.date)], tags:m => m.tags || [],
-    texteRecherche:'Chercher : libellé, catégorie, montant, #tag', vide,
-    colonnes:[
-      {id:'date', titre:'Date', garder:true, tel:'sous', valeur:m => m.date, html:m => esc(dateCourte(m.date) + (m.date.slice(0, 4) !== an ? ' ' + m.date.slice(0, 4) : ''))},
-      {id:'libelle', titre:'Libellé', tel:'titre', valeur:m => m.libelle, html:m => esc(m.libelle || '—')},
-      {id:'categorie', titre:'Catégorie', valeur:m => m.type === 'revenu' ? '' : m.categorie,
-        html:m => m.type === 'revenu' ? '<span class="faible">entrée</span>' : m.categorie ? `<span class="puce" style="--c:${teinte(couleurCategorie(m.categorie))}"><i class="pastille-cat" style="--c:${teinte(couleurCategorie(m.categorie))}"></i>${esc(m.categorie)}</span>` : '<span class="faible">à catégoriser</span>'},
-      {id:'compte', titre:'Compte', valeur:m => m.compte, html:m => esc(m.compte) || '—'},
-      {id:'dossier', titre:'Dossier', valeur:m => nomDossier(m.projet), html:m => puceDossier(m.projet) || '—'},
-      {id:'tags', titre:'Tags', html:m => puceTags(m.tags) || '—'},
-      {id:'montant', titre:'Montant', num:true, garder:true, tel:'droite', valeur:m => (m.type === 'revenu' ? 1 : -1) * (Number(m.montant) || 0),
-        html:m => `<span class="${m.type === 'revenu' ? 'revenu' : ''}">${m.type === 'revenu' ? '+' : '−'}${esc(eur(m.montant))}</span>`}
-    ]});
+function tableMouvements(id, lignes, {toutes = null, vide = 'Aucun mouvement.', pliable = ''} = {}){
+  return tableau({id, lignes, toutes, cle:m => m.id, ouvrir:'mouvement-ouvrir', tri:{col:'date', sens:-1}, classe:m => dansStats(m) ? '' : 'hors-stats', pliable,
+    recherche:recherche('mouvements'), tags:m => m.tags || [], texteRecherche:'Chercher : libellé, catégorie, montant, #tag', vide, colonnes:colonnes('mouvements', toutes || lignes)});
 }
 
 /* --- Mois --- */
@@ -103,7 +92,7 @@ function pageMois(ctx){
     <div class="chiffres">${chiffre('Dépensé', eur(t))}${chiffre('Entrées', eur(r), 'solde ' + (r - t >= 0 ? '+' : '−') + eur(Math.abs(r - t)), r - t >= 0 ? 'bien' : '')}
       ${troisieme}${chiffre(an === cour.slice(0, 4) ? 'Cette année' : 'Année ' + an, eur(ta), 'depuis le 1er janvier')}</div>
     <section class="bloc"><div class="bloc-tete"><h2>Par catégorie</h2></div>${parCategorie(depenses(dans(ym)), ym)}</section>
-    ${tableMouvements('finance-mois', DB.mouvements.filter(m => dans(ym)(m) && dansStats(m)), {vide:'Aucun mouvement ce mois-ci.'})}</div>`;
+    ${tableMouvements('finance-mois', DB.mouvements.filter(m => dans(ym)(m) && dansStats(m)), {vide:'Aucun mouvement ce mois-ci.', pliable:'Mouvements'})}</div>`;
 }
 
 /* --- Année --- */
@@ -122,7 +111,7 @@ function pageAnnee(ctx){
       ${chiffre('Moyenne par mois', moisFaits ? eur(ta / moisFaits) : '—')}${chiffre('Mois le plus dépensier', ta ? eur(max) : '—', ta ? nomMois(an + '-' + pad(iMax + 1)) : '')}</div>
     <section class="bloc"><div class="bloc-tete"><h2>Mois par mois</h2></div><div class="barres-mois">${barres}</div></section>
     <section class="bloc"><div class="bloc-tete"><h2>Par catégorie</h2></div>${parCategorie(dep, an)}</section>
-    ${tableMouvements('finance-annee', DB.mouvements.filter(m => dans(an)(m) && dansStats(m)), {vide:'Aucun mouvement cette année-là.'})}</div>`;
+    ${tableMouvements('finance-annee', DB.mouvements.filter(m => dans(an)(m) && dansStats(m)), {vide:'Aucun mouvement cette année-là.', pliable:'Mouvements'})}</div>`;
 }
 
 /* --- Mouvements, Comptes, Catégories --- */
@@ -133,7 +122,7 @@ function pageComptes(){
   return entete('Comptes', {sur:'Finance'}) + `<div class="page-finance">${champAjout('compte-ajouter', 'Ajouter un compte…')}${tableau({id:'comptes', lignes:DB.comptes, cle:c => c.nom, ouvrir:'compte-ouvrir',
     tri:{col:'nom', sens:1}, vide:'Aucun compte.', colonnes:[
       {id:'nom', titre:'Compte', tel:'titre', valeur:c => c.nom, html:c => esc(c.nom)},
-      {id:'stats', titre:'Statistiques', html:c => `<button type="button" class="puce-choix case-compte${c.stats ? ' actif' : ''}" data-action="compte-stats" data-nom="${esc(c.nom)}" aria-pressed="${c.stats}">${c.stats ? ico('check', 13, 2.4) + 'comptées' : 'pas comptées'}</button>`},
+      {id:'stats', titre:'Dans les totaux', html:c => `<button type="button" class="puce-choix case-compte${c.stats ? ' actif' : ''}" data-action="compte-stats" data-nom="${esc(c.nom)}" aria-pressed="${c.stats}" title="Un clic pour changer">${c.stats ? ico('check', 13, 2.4) + 'oui' : 'non'}</button>`},
       {id:'n', titre:'Mouvements', num:true, valeur:c => DB.mouvements.filter(m => m.compte === c.nom).length, html:c => String(DB.mouvements.filter(m => m.compte === c.nom).length)},
       {id:'mois', titre:'Dépensé ce mois-ci', num:true, valeur:c => somme(DB.mouvements.filter(m => m.compte === c.nom && m.type !== 'revenu' && dans(mois)(m))),
         html:c => esc(eur(somme(DB.mouvements.filter(m => m.compte === c.nom && m.type !== 'revenu' && dans(mois)(m)))))},
@@ -167,14 +156,13 @@ function ouvrirCompte(nom){
 function ouvrirCategorie(nom){
   if(!DB.categories.includes(nom)) return;
   const couleur = couleurCategorie(nom), n = DB.mouvements.filter(m => m.categorie === nom).length;
-  const noms = {bleu:'Bleu', orange:'Orange', vert:'Vert', jaune:'Jaune', rose:'Rose', herbe:'Herbe', violet:'Violet', rouge:'Rouge', prune:'Prune'};
   ouvrirFiche({titre:'Catégorie', html:`<form class="formulaire" novalidate><div class="champ"><label for="nom-cat">Nom</label><input type="text" id="nom-cat" value="${esc(nom)}"></div>
-      <div class="champ"><label for="couleur-cat">Couleur</label><select id="couleur-cat">${COULEURS_CAT.map(c => `<option value="${c}"${c === couleur ? ' selected' : ''}>${noms[c.replace(/-r$/, '')]}${/-r$/.test(c) ? ' rayé' : ''}</option>`).join('')}</select></div>
+      <div class="champ"><span class="etiquette">Couleur</span>${nuancier('couleur-cat', COULEURS_CAT, couleur)}</div>
       <p class="faible">${esc(pluriel(n, 'dépense'))}. Un nom déjà pris réunit les deux catégories.</p></form>`,
     pied:`<button type="button" class="btn discret" data-action="categorie-supprimer" data-nom="${esc(nom)}">${ico('corbeille', 15)}<span>Supprimer</span></button><div class="droite"><button type="button" class="btn" data-action="fermer-fiche">Fermer</button></div>`,
     apres:b => b.querySelector('form').addEventListener('submit', e => { e.preventDefault(); fermerFiche(); }),
     aLaFermeture:() => {
-      const ch = document.getElementById('nom-cat'), co = document.getElementById('couleur-cat'); if(!ch || !DB.categories.includes(nom)) return;
+      const ch = document.getElementById('nom-cat'), nu = document.getElementById('couleur-cat'), co = nu ? {value:nu.dataset.valeur} : null; if(!ch || !DB.categories.includes(nom)) return;
       let change = false, cible = nom;
       const v = propreNom(ch.value);
       if(v && v !== nom){

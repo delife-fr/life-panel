@@ -120,6 +120,7 @@ export function construireCoquille(){
       <button type="button" class="recherche" data-action="chercher" aria-label="Chercher" title="Chercher (Ctrl K)">${ico('chercher', 17)}<span>Chercher</span><kbd>Ctrl K</kbd></button>
       ${idees ? `<a class="icone-btn seul-tel avec-nb" href="${lien('idees')}" aria-label="Idées">${ico(idees.icone, 20)}${placeCompteur('idees')}</a>` : ''}
       <button type="button" class="btn plein masque-tel" data-action="noter">${ico('plus', 16, 2.2)}<span>Noter</span></button>
+      <button type="button" class="icone-btn" data-action="tags" aria-label="Tags" title="Tags (T)">${ico('tag', 19)}</button>
       <button type="button" class="icone-btn" data-action="theme"></button>
       ${reglages ? `<a class="icone-btn" href="${lien('reglages')}" data-nav="reglages" aria-label="Réglages" title="Réglages">${ico('reglages', 19)}</a>` : ''}
     </div>`;
@@ -203,7 +204,7 @@ export function brancherActions(){
   actionNoyau('chercher', () => toast('La recherche arrive au lot 7.'));
 }
 
-/* --- Clavier : Ctrl K ou / chercher · C noter · 1 à 8 les sections · Échap ferme --- */
+/* --- Clavier : Ctrl K ou / chercher · C noter · T les tags · 1 à 8 les sections · Échap ferme --- */
 export function brancherClavier(){
   document.addEventListener('keydown', e => {
     if(e.key === 'Escape' && fiche.ouverte){ e.preventDefault(); fermerFiche(); return; }
@@ -213,6 +214,7 @@ export function brancherClavier(){
     if(champ || e.ctrlKey || e.metaKey || e.altKey || fiche.ouverte || !$('#dialogue').hidden) return;
     if(e.key === '/') return action('chercher');
     if(e.key === 'c' || e.key === 'C') return action('noter');
+    if(e.key === 't' || e.key === 'T') return action('tags');
     if(/^[1-9]$/.test(e.key)){ const m = dansLeMenu()[Number(e.key) - 1]; if(m){ e.preventDefault(); location.hash = lien(m.id); } }
   });
 }
