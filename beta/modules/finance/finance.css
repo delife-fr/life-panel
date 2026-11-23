@@ -1,0 +1,45 @@
+/* LIFE PANEL v5 · modules/finance/finance.css */
+.page-finance{display:flex;flex-direction:column;gap:14px;max-width:1180px}
+.page-finance > .ajout{max-width:640px}
+.cal-nav{display:flex;align-items:center;gap:8px}
+.cal-nav h2{margin:0 6px;font-size:18px}
+.cal-nav .btn{margin-left:8px}
+.cases-comptes{display:flex;flex-wrap:wrap;gap:6px}
+.case-compte{display:inline-flex;align-items:center;gap:5px}
+.chiffres{display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:10px}
+.chiffre{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid var(--bord);border-radius:var(--r);background:var(--panneau);min-width:0}
+.chiffre .titre{font-size:12.5px;color:var(--texte-3);font-weight:500}
+.chiffre b{font-size:22px;font-weight:700;color:var(--texte);font-variant-numeric:tabular-nums}
+.chiffre b.bien{color:color-mix(in srgb, var(--c-herbe) 85%, var(--texte))}
+.chiffre small{font-size:12px;color:var(--texte-3)}
+@media (max-width:900px){ .chiffres{grid-template-columns:repeat(2, minmax(0, 1fr))} }
+
+/* Mois par mois (vue Année) */
+.barres-mois{display:grid;grid-template-columns:repeat(12, minmax(0, 1fr));gap:6px;height:190px;align-items:end}
+.barre-mois{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%;text-decoration:none;color:var(--texte-3);min-width:0}
+.barre-mois .colonne{width:100%;max-width:42px;border-radius:5px 5px 2px 2px;background:color-mix(in srgb, var(--section) 70%, var(--panneau))}
+.barre-mois:hover .colonne{background:var(--section)}
+.barre-mois.cour .nom{color:var(--texte);font-weight:600}
+.barre-mois .val{font-size:10.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.barre-mois .nom{font-size:11.5px}
+@media (max-width:700px){ .barre-mois .val{display:none} }
+
+.tableau .revenu{color:color-mix(in srgb, var(--c-herbe) 85%, var(--texte))}
+.tableau tr.hors-stats td{opacity:.55}
+/* Import d'un relevé (releve.js) */
+.releve-colonnes{margin:4px 0 12px}
+.releve-colonnes summary{cursor:pointer;color:var(--texte-2);font-size:13.5px;padding:4px 0}
+.releve-grille{display:grid;grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));gap:8px 12px;margin:8px 0}
+.releve-liste{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column}
+.releve-liste li{display:grid;grid-template-columns:20px 64px minmax(0, 1fr) minmax(120px, 200px) 96px;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid var(--bord);font-size:13.5px}
+.releve-liste li.doublon{opacity:.6}
+.releve-liste .r-date{color:var(--texte-3);font-variant-numeric:tabular-nums}
+.releve-liste .r-corps{display:flex;flex-direction:column;min-width:0;overflow-wrap:anywhere}
+.releve-liste select{min-width:0;min-height:32px;padding:4px 8px;font-size:13px}
+.releve-liste .r-montant{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.releve-liste .r-montant.entree{color:var(--ok)}
+@media (max-width:700px){
+  .releve-liste li{grid-template-columns:20px minmax(0, 1fr) auto;grid-template-areas:"c corps m" "c d sel"}
+  .releve-liste li > input{grid-area:c} .releve-liste .r-corps{grid-area:corps} .releve-liste .r-montant{grid-area:m}
+  .releve-liste .r-date{grid-area:d} .releve-liste li > select, .releve-liste li > .faible{grid-area:sel}
+}

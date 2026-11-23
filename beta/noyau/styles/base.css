@@ -1,0 +1,64 @@
+/* LIFE PANEL v5 · noyau/styles/base.css
+   La base commune : remise à zéro, texte, boutons, champs, panneaux, états vides. Les modules s'en servent tels quels. */
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{margin:0;padding:0}
+body{background:var(--fond);color:var(--texte);font:400 14px/1.5 var(--sans);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  min-height:100vh;min-height:100dvh;overflow-x:hidden;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0;-webkit-tap-highlight-color:transparent}
+a{color:inherit;text-decoration:none;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+::selection{background:var(--accent-moyen)}
+[hidden]{display:none!important}
+*{scrollbar-width:thin;scrollbar-color:var(--bord-fort) transparent}
+svg.ic{flex-shrink:0;display:block}
+h1,h2,h3{margin:0;font-weight:600}
+p{margin:0}
+.doux{color:var(--texte-2)} .faible{color:var(--texte-3)} .petit{font-size:12.5px}
+.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+
+/* --- En-tête d'une page --- */
+.entete{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 22px}
+.entete h1{font:700 34px/1.05 var(--titre);letter-spacing:.01em}
+.sur-titre{font-size:12.5px;font-weight:500;color:var(--texte-3);margin:0 0 6px}
+.entete-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* --- Boutons --- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:0 14px;border-radius:var(--r-petit);
+  background:var(--panneau-2);border:1px solid var(--bord);color:var(--texte);font-weight:500;font-size:13.5px;white-space:nowrap;transition:background .15s,border-color .15s}
+.btn:hover{background:var(--panneau-3);border-color:var(--bord-fort)}
+.btn.plein{background:var(--accent-plein);border-color:transparent;color:var(--sur-accent)}
+.btn.plein:hover{background:var(--accent-haut)}
+.btn.plein.danger{background:var(--critique);color:#fff}
+.btn.discret{background:none;border-color:transparent;color:var(--texte-2)}
+.btn.discret:hover{background:var(--panneau-2);color:var(--texte)}
+.icone-btn{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:var(--r-petit);color:var(--texte-2);position:relative}
+.icone-btn:hover{background:var(--panneau-2);color:var(--texte)}
+.rangee{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* --- Champs --- */
+input[type=text],input[type=search],input[type=date],input[type=time],input[type=number],input[type=email],input[type=tel],input[type=url],select,textarea{
+  width:100%;min-height:38px;padding:8px 11px;background:var(--champ);border:1px solid var(--bord);border-radius:var(--r-petit);color:var(--texte);outline:none;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-doux)}
+textarea{min-height:96px;resize:vertical;line-height:1.5}
+label{display:block;font-size:12.5px;font-weight:500;color:var(--texte-2);margin:0 0 5px}
+
+/* --- Panneaux --- */
+.panneau{background:var(--panneau);border:1px solid var(--bord);border-radius:var(--r);padding:18px 20px;box-shadow:var(--ombre)}
+.panneau h2{font-size:15px;font-weight:600;margin:0 0 10px}
+.panneau > p + p, .panneau > p + .rangee, .panneau > dl + .rangee, .panneau > .choix + p{margin-top:12px}
+.panneau > p + dl{margin-top:14px}
+.compteur, .nb{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--attention-doux);color:var(--attention);font-size:11.5px;font-weight:600}
+
+/* --- Ce qu'une rubrique contiendra (lot 0) --- */
+.bientot{border-style:dashed;box-shadow:none;background:transparent;max-width:640px}
+.bientot .sur-titre{color:color-mix(in srgb, var(--section) 75%, var(--texte))}
+.bientot ul{margin:4px 0 0;padding:0 0 0 18px;color:var(--texte-2)}
+.bientot li{margin:4px 0}
+
+/* --- États vides et erreurs --- */
+.vide{padding:48px 20px;text-align:center;color:var(--texte-2);line-height:1.6}
+.vide small{color:var(--texte-3)}
