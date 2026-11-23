@@ -33,7 +33,7 @@ puis http://127.0.0.1:8765/
 | Dossiers (les « projets » des données) | `dossiers` | orange | Plus | Tous les dossiers · Sans dossier |
 | Finance | `finance` | herbe | onglet | Mois · Année · Mouvements · Comptes · Catégories |
 | Carnet | `carnet` | rose | Plus | Notes · Journal · Documents |
-| Contacts | `contacts` | prune | Plus | Tous · Anniversaires · À répondre · À relancer |
+| Contacts | `contacts` | prune | Plus | — (filtres de la v4.8 en boutons au-dessus du tableau) |
 | Réglages (icône en haut à droite) | `reglages` | gris | Plus (+ icône en haut) | Données · Archives · Corbeille |
 
 - **PC (à partir de 1 100 px)** : les sections en haut, le sous-menu de la section ouverte juste en dessous ; la barre prend
@@ -46,7 +46,12 @@ puis http://127.0.0.1:8765/
 - Tout ce qui existe en v4.9 est gardé, sauf : priorités, Focus 25 min, tout budget (dossiers, comptes, catégories : les
   champs restent dans les données, jamais affichés), lien vers le Wiki (plus tard).
 - **Dossier = super tag** : un élément est dans un seul dossier (champ `projet`, gardé tel quel pour la compatibilité).
-  Tout élément peut y aller, idées et entrées du journal comprises. Couleur au choix, sous-dossiers.
+  Tout élément peut y aller, idées et entrées du journal comprises. Couleur au choix.
+- **Dossiers rangés dans d'autres dossiers** (domaine › dossier › sous-dossier, ex. Perso › Finances › Assurances) :
+  champ `parent` (id du dossier qui le contient ; attention, le champ `dossier` des projets est le chemin Drive de la v3.13).
+  Affichage par défaut : petites cartes comme en v4.9, toutes à plat, avec le chemin sur la carte ; l'arborescence est
+  une option. Un sous-dossier reprend la couleur de son domaine sauf choix contraire. « À trier » = Sans dossier,
+  « Archives » = dossiers archivés.
 - **Tags sur tout élément**, idées comprises ; la fenêtre Tags de la v4.7 pour les gérer.
 - **Capture rapide dans chaque section** : une ligne, Entrée, c'est créé, les détails après. Le bouton + garde la phrase
   devinée de la v4.9 (« essence 45 » → une dépense).
