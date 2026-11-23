@@ -1,0 +1,11 @@
+/* LIFE PANEL v5 · modules/reglages/reglages.css */
+.grille-reglages{display:grid;grid-template-columns:repeat(auto-fill, minmax(min(100%, 360px), 1fr));gap:14px;align-items:start}
+.grille-reglages .bientot{max-width:none}
+.chiffres-donnees{display:grid;grid-template-columns:repeat(auto-fill, minmax(104px, 1fr));gap:8px;margin:0}
+.chiffres-donnees div{padding:8px 10px;border-radius:8px;background:var(--panneau-2)}
+.chiffres-donnees dt{font-size:12px;color:var(--texte-3)}
+.chiffres-donnees dd{margin:2px 0 0;font:700 22px/1.1 var(--titre)}
+.choix{display:grid;grid-template-columns:repeat(3, 1fr);gap:6px}
+.choix-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border-radius:8px;border:1px solid var(--bord);background:var(--panneau-2);color:var(--texte-2);font-weight:500;font-size:13px}
+.choix-btn:hover{border-color:var(--bord-fort);color:var(--texte)}
+.choix-btn.actif{border-color:var(--accent);background:var(--accent-doux);color:var(--texte)}
