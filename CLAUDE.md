@@ -92,6 +92,8 @@ sur « Chargement… ».
   nuage dans la barre du haut quand elle est active (clic = synchroniser). Jamais sur raw.githack (adresse partagée),
   jamais pendant les exemples (`reglages.demo`), jamais un envoi de données vides. Réglages › Données : se connecter
   (avec la clé de la v4.9 en un clic), changer la clé, arrêter.
+  Pendant la bêta, rappels et notifications viennent toujours de la v4.9 (le robot lit donnees.json) ; ceux de la v5,
+  le service worker (hors ligne, installation) et les raccourcis Android `?action=` se font à la bascule.
 - **Corbeille** gardée (Réglages › Corbeille, 30 jours) ; seules les archives sont parties.
 - **Aujourd'hui** : une tuile Finance (dépensé ce mois-ci, comptes pointés, anneau par catégorie), comme la v4.9.
 - **Couleurs** des catégories et des dossiers : 14 teintes (les 9 de la v4.9 + cyan, brun, olive, indigo, gris) et 13
