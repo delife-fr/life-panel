@@ -8,7 +8,7 @@ import {txt, num, uid, unique, maintenant, aujourdhui, dateISO, heureValide, jou
 /* VERSION des données : 23 comme la v4.9 pendant la bêta (les données de la bêta restent dans ce navigateur).
    Elle passera à 24 à la bascule (lot 8) : la v4.9 refuse alors de synchroniser un fichier plus récent qu'elle. */
 export const VERSION = 23;
-export const LISTES_DONNEES = ['projets', 'taches', 'notes', 'documents', 'mouvements', 'contacts', 'inbox', 'evenements', 'listes'];
+export const LISTES_DONNEES = ['projets', 'taches', 'notes', 'documents', 'mouvements', 'contacts', 'inbox', 'evenements', 'listes', 'journal'];   /* journal : nouveau en v5 */
 export const LIENS_PROJET = ['taches', 'notes', 'documents', 'mouvements', 'contacts', 'evenements'];   /* ce qu'un projet peut rassembler */
 export const JOURS_CORBEILLE = 30;
 export const PREAVIS_DEFAUT = 30;   /* jours avant l'échéance d'un document où il passe « à renouveler » */
@@ -114,7 +114,11 @@ export const FORMES = {
       recurrence:{...r, freq, jusqua:freq ? dateISO(r.jusqua) : '', exceptions:freq && Array.isArray(r.exceptions) ? unique(r.exceptions.map(dateISO).filter(Boolean)).sort() : []},
       lieu:txt(e.lieu).trim(), lien:e.lien ? normaliserLien(e.lien) : '', contacts:Array.isArray(e.contacts) ? unique(e.contacts.filter(v => typeof v === 'string' && v)) : [],
       projet:e.projet || null, tags:nettoyerTags(e.tags), note:txt(e.note), rappel:RAPPELS_EVT.includes(Number(e.rappel)) ? Number(e.rappel) : null, cree, modif:txt(e.modif) || cree},
-      'categorie'); }
+      'categorie'); },
+  /* v5 : le journal du Carnet, une ou deux phrases datées ; contacts = les personnes citées par « @ » */
+  journal:j => { const cree = txt(j.cree) || maintenant();
+    return {...j, id:txt(j.id) || uid(), date:dateISO(j.date) || jourDe(cree) || aujourdhui(), texte:txt(j.texte).trim(),
+      contacts:Array.isArray(j.contacts) ? unique(j.contacts.filter(v => typeof v === 'string' && v)) : [], tags:nettoyerTags(j.tags), projet:j.projet || null, cree, modif:txt(j.modif) || cree}; }
 };
 
 /* v5 : sur tout élément, des attributs libres [{nom, valeur}] (un champ que l'appli ne prévoit pas, ex. « Téléphone pro ») ;
@@ -161,7 +165,7 @@ function colorerCategories(categories, ancien, mouvements = []){
 
 export const DBVide = () => ({
   version:VERSION, prenom:'',
-  projets:[], taches:[], notes:[], documents:[], mouvements:[], contacts:[], inbox:[], evenements:[], listes:[], corbeille:[],
+  projets:[], taches:[], notes:[], documents:[], mouvements:[], contacts:[], inbox:[], evenements:[], listes:[], journal:[], corbeille:[],
   categories:CATEGORIES_DEFAUT.slice(),
   tags:[],                  /* VERSION 23 : tags créés dans la fenêtre « Tags », même sans élément qui les porte */
   couleursCategories:[],    /* {nom, couleur} */
@@ -239,7 +243,7 @@ export function normaliser(brut){
     'focusProjets', 'lastReview', 'budgetMensuel');   /* pages Aujourd'hui et Revue de la v3 ; budget unique repris ci-dessus */
   /* Plus de références fantômes vers un projet ou une liste supprimés */
   const ids = new Set(d.projets.map(p => p.id));
-  [...LIENS_PROJET, 'inbox'].forEach(k => d[k].forEach(x => { if(x.projet && !ids.has(x.projet)) x.projet = null; }));
+  [...LIENS_PROJET, 'inbox', 'journal'].forEach(k => d[k].forEach(x => { if(x.projet && !ids.has(x.projet)) x.projet = null; }));
   const idsListes = new Set(d.listes.map(l => l.id));
   d.taches.forEach(t => { if(t.liste && !idsListes.has(t.liste)) t.liste = null; });
   return d;

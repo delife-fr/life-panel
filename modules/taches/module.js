@@ -6,12 +6,13 @@
    - Partout : une ligne pour ajouter vite (« appeler Paul demain 15h #perso » garde la date, l'heure et le tag) ; un clic
      sur une ligne ouvre la fiche au centre (date, liste, étapes, dossier, tags, attributs).
    - PC : Ctrl + clic ou Maj + clic choisit plusieurs tâches ; une barre propose Cocher, Date, Liste, Dossier, Supprimer.
-   - Glisser une tâche (ou celles choisies) : sur un jour ou une liste, dans la bande qui apparaît en haut ; sur l'onglet
-     Aujourd'hui (pour aujourd'hui), Calendrier (choisir le jour) ou Dossiers (choisir le dossier). */
-import {esc, aujourdhui, decaleJour, jourCourt, jourDe, heureTexte, maintenant, pluriel, propreNom, cleNom, majuscule, dateCourte} from '../../noyau/outils.js';
+   - Glisser une tâche (ou celles choisies) : sur une liste (page Listes), sur un jour du Calendrier, ou sur l'onglet
+     Calendrier (choisir le jour). */
+import {esc, jourCourt, jourDe, heureTexte, maintenant, pluriel, propreNom, cleNom, majuscule} from '../../noyau/outils.js';
 import {ico} from '../../noyau/icones.js';
 import {DB, ajouter, modifie, retirer} from '../../noyau/donnees.js';
 import {nomListe, listesTriees, estEnRetard, nomDossier, couleurDossier, cheminDossier, dossiersActifs, cocherTache, toucherDossier} from '../../noyau/calculs.js';
+import {puceDossier, puceTags} from '../../noyau/affichage.js';
 import {entete, champAjout, toast, ouvrirFiche, fermerFiche} from '../../noyau/interface.js';
 import {lien} from '../../noyau/adresses.js';
 import {tableau, colonnesAttributs, choixTableau, viderChoix} from '../../noyau/tableau.js';
@@ -25,18 +26,10 @@ const tache = id => DB.taches.find(t => t.id === id);
 const uneListe = id => (id && DB.listes.find(l => l.id === id)) || null;
 /* À faire, ou cochée aujourd'hui (pas encore partie aux archives) */
 const visible = t => !t.fait || !t.archive;
-const puceDossier = id => id ? `<span class="puce dossier" style="--c:var(--c-${couleurDossier(id)})">${esc(nomDossier(id))}</span>` : '';
-const puceTags = tags => (tags || []).map(t => `<span class="puce">#${esc(t)}</span>`).join('');
 const texteDate = t => t.date ? majuscule(jourCourt(t.date)) + (t.heure ? ' · ' + heureTexte(t.heure) : '') : '';
 const nomCourt = t => '« ' + (t.nom.length > 40 ? t.nom.slice(0, 39) + '…' : t.nom) + ' »';
 const quoi = ts => ts.length > 1 ? pluriel(ts.length, 'tâche') : nomCourt(ts[0]);
 
-/* Les jours proposés pour glisser ou choisir : aujourd'hui, demain, samedi, lundi, dans une semaine (sans doublon) */
-function jours(){
-  const j = new Date().getDay(), vus = new Set();
-  return [['Aujourd’hui', 0], ['Demain', 1], ['Samedi', (6 - j + 7) % 7 || 7], ['Lundi', (1 - j + 7) % 7 || 7], ['Dans une semaine', 7]]
-    .map(([nom, n]) => ({nom, date:decaleJour(n)})).filter(q => !vus.has(q.date) && vus.add(q.date));
-}
 
 /* --- Le tableau des tâches (le même partout : Par date, Faites, Listes) --- */
 const actionsChoix = id => [['taches-choix-cocher', 'Cocher', 'check'], ['taches-choix-date', 'Date…', 'agenda'], ['taches-choix-liste', 'Liste…', 'liste'],
@@ -47,13 +40,12 @@ function tableTaches({id, lignes, toutes = null, liste = true, faites = false, v
   const colonnes = [
     {id:'nom', titre:'Tâche', tel:'titre', valeur:t => t.nom, html:t => { const n = t.etapes.length, f = t.etapes.filter(e => e.ok).length;
       return esc(t.nom) + (n ? ` <span class="etapes-compte${f === n ? ' fini' : ''}" title="Étapes faites">${f}/${n}</span>` : ''); }},
-    {id:'date', titre:'Date', tel:'droite', valeur:t => t.date ? t.date + (t.heure || '99:99') : '',
+    {id:'date', titre:'Date', tel:'droite', garder:true, valeur:t => t.date ? t.date + (t.heure || '99:99') : '',
       html:t => t.date ? `<span class="${estEnRetard(t) ? 'retard' : ''}">${esc(texteDate(t))}</span>` : '—'},
     ...(faites ? [{id:'faite', titre:'Faite', valeur:t => t.faitLe || '', html:t => t.faitLe ? esc(majuscule(jourCourt(jourDe(t.faitLe)))) : '—'}] : []),
     ...(liste ? [{id:'liste', titre:'Liste', valeur:t => nomListe(t.liste), html:t => t.liste ? esc(nomListe(t.liste)) : '—'}] : []),
     {id:'dossier', titre:'Dossier', valeur:t => cheminDossier(t.projet).join(' › '), html:t => puceDossier(t.projet) || '—'},
     {id:'tags', titre:'Tags', valeur:t => (t.tags || []).join(' '), html:t => puceTags(t.tags) || '—'},
-    {id:'modif', titre:'Modifiée', facultative:true, valeur:t => t.modif || '', html:t => t.modif ? esc(dateCourte(t.modif)) : '—'},
     ...colonnesAttributs(toutes || lignes)
   ];
   return tableau({id, lignes, toutes, cle:t => t.id, colonnes, ouvrir:'tache-ouvrir', glisser:'tache',
@@ -63,14 +55,7 @@ function tableTaches({id, lignes, toutes = null, liste = true, faites = false, v
     selection:{un:'tâche choisie', plusieurs:'tâches choisies', actions:actionsChoix(id)},
     texteRecherche:'Chercher dans les tâches', vide, outils});
 }
-const aide = () => `<p class="aide masque-tel">Ctrl + clic ou Maj + clic : choisir plusieurs tâches. Glisser une tâche : lui donner un jour ou une liste.</p>`;
 
-/* La bande qui apparaît pendant un glisser : les jours, puis les listes */
-function zones(){
-  const listes = listesTriees(), z = (attr, v, nom) => `<span class="zone" data-depot="tache" ${attr}="${esc(v)}">${esc(nom)}</span>`;
-  return `<div class="zones-taches" aria-hidden="true">${jours().map(q => z('data-quand', q.date, q.nom)).join('')}${z('data-quand', '', 'Sans date')}
-    ${listes.length ? `<span class="zones-sep"></span>${listes.map(l => z('data-liste-id', l.id, l.nom)).join('')}${z('data-liste-id', '', 'Sans liste')}` : ''}</div>`;
-}
 
 /* --- Par date --- */
 function pageDate(ctx){
@@ -82,7 +67,7 @@ function pageDate(ctx){
     : tableTaches({id:'taches', lignes:DB.taches.filter(x => visible(x) && (x.date || !x.liste)), toutes:DB.taches.filter(visible), outils:filtres,
       vide:'Rien à faire. Écris une tâche juste au-dessus, puis Entrée.'});
   return entete('Tâches') + `<div class="page-taches">${faites ? '' : champAjout('tache-ajouter', 'Ajouter une tâche (ex. appeler Paul demain 15h)…')}
-    ${t}${DB.taches.length ? aide() : ''}</div>${zones()}`;
+    ${t}</div>`;
 }
 
 /* --- Listes --- */
@@ -102,7 +87,7 @@ function pageListes(ctx){
   else if(!listes.length) corps = `<div class="vide">Aucune liste pour l’instant. Une liste rassemble des tâches qui n’ont pas besoin de date
     (Courses, Voyage, Déménagement…) : donne-lui un nom ci-dessus, puis Entrée.</div>`;
   else corps = tableTaches({id:'taches-listes', lignes:DB.taches.filter(t => t.liste && visible(t)), vide:'Aucune tâche dans tes listes.'});
-  return entete('Listes', {sur:'Tâches'}) + `<div class="page-taches">${puces}${corps}${l || listes.length ? aide() : ''}</div>${zones()}`;
+  return entete('Listes', {sur:'Tâches'}) + `<div class="page-taches">${puces}${corps}</div>`;
 }
 
 /* --- Créer, renommer, supprimer une liste --- */
@@ -167,10 +152,8 @@ let visees = [];
 const titreVisees = ids => ids.length > 1 ? pluriel(ids.length, 'tâche') : nomCourt(tache(ids[0]) || {nom:''});
 function choisirDate(ids){
   visees = ids;
-  ouvrirFiche({titre:'Quel jour ? · ' + titreVisees(ids), html:`<div class="choix-grille">${jours().map(q =>
-      `<button type="button" class="btn choix" data-action="taches-mettre-date" data-date="${q.date}"><b>${esc(q.nom)}</b><small>${esc(dateCourte(q.date))}</small></button>`).join('')}
-      <button type="button" class="btn choix" data-action="taches-mettre-date" data-date=""><b>Sans date</b><small>—</small></button></div>
-    <form class="autre-jour" data-autre-jour><label for="autre-jour">Un autre jour</label><input type="date" id="autre-jour"><button type="submit" class="btn plein">OK</button></form>`,
+  ouvrirFiche({titre:'Quel jour ? · ' + titreVisees(ids), html:`<form class="autre-jour seul" data-autre-jour><input type="date" id="autre-jour" aria-label="Jour"><button type="submit" class="btn plein">OK</button>
+      <button type="button" class="btn discret" data-action="taches-mettre-date" data-date="">Sans date</button></form>`,
     apres:b => b.querySelector('[data-autre-jour]').addEventListener('submit', e => { e.preventDefault(); const v = b.querySelector('#autre-jour').value; if(v) mettreDate(visees, v); })});
 }
 function choisirListe(ids){
@@ -192,15 +175,11 @@ function choisirDossier(ids){
 const glissees = c => { const choix = choixTableau(c.d.tableauLigne || ''); return choix.includes(c.d.id) ? choix : [c.d.id]; };
 glisserType('tache', {
   etiquette:c => { const ids = glissees(c); return ids.length > 1 ? pluriel(ids.length, 'tâche') : (tache(c.d.id) || {}).nom || ''; },
-  /* La bande des jours et des listes s'ouvre juste sous la barre du haut */
-  debut:() => { const z = document.querySelector('.zones-taches'), t = document.getElementById('tete'); if(z && t) z.style.top = Math.round(t.getBoundingClientRect().bottom + 10) + 'px'; },
   depot:c => {
     const ids = glissees(c), z = c.cible.dataset;
-    if('quand' in z) return mettreDate(ids, z.quand);
-    if('listeId' in z) return mettreListe(ids, z.listeId || null);
-    if(z.section === 'aujourdhui') return mettreDate(ids, aujourdhui());
-    if(z.section === 'calendrier') return choisirDate(ids);
-    if(z.section === 'dossiers') return choisirDossier(ids);
+    if('jour' in z) return mettreDate(ids, z.jour);                 /* un jour du Calendrier */
+    if('listeId' in z) return mettreListe(ids, z.listeId || null);   /* une liste (page Listes) */
+    if(z.section === 'calendrier') return choisirDate(ids);         /* l'onglet Calendrier : choisir le jour */
     return false;
   }
 });

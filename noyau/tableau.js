@@ -2,8 +2,8 @@
    Le tableau commun à toutes les sections (tâches, dépenses, notes, documents, contacts, dossiers, idées) :
    - un champ de recherche au-dessus (même syntaxe que la grande barre : tous les mots, « #tag »), qui redessine seulement
      le tableau (le curseur reste dans le champ) ;
-   - des colonnes triables d'un clic (nouveau clic : sens inverse ; les cases vides toujours en dernier), et un bouton
-     « Colonnes » pour afficher les colonnes facultatives ; tri et colonnes gardés sur cet appareil ;
+   - des colonnes triables d'un clic (nouveau clic : sens inverse ; les cases vides toujours en dernier), tri gardé sur cet
+     appareil ; une colonne vide sur toutes les lignes n'est pas affichée (sauf garder:true) ;
    - une case à cocher par ligne si la section en a besoin (tâche faite), un clic sur la ligne ouvre l'élément ;
    - les lignes s'affichent par paquets de 50 ; sur téléphone, chaque ligne devient une carte.
 
@@ -12,7 +12,7 @@
      lignes:[…], cle:x => x.id,
      colonnes:[{id, titre, html:x => '…', valeur:x => …,   valeur = ce qui sert au tri (absent : pas de tri)
                 num:true,                   chiffres alignés à droite
-                facultative:true,           masquée tant qu'on ne la choisit pas dans « Colonnes »
+                garder:true,                affichée même vide partout (ex. la Date des tâches, avec ses tirets)
                 tel:'titre'|'droite'|'sous'|'cache'}],   place sur téléphone (par défaut : 'sous')
      recherche:x => ['textes', …], tags:x => x.tags,      facultatif : le champ de recherche
      tri:{col:'date', sens:1},              le tri de départ
@@ -26,7 +26,7 @@
                                             les actions (elles lisent choixTableau(id), puis appellent viderChoix(id))
      vide:'Aucune tâche.', texteRecherche:'Chercher dans les tâches', outils:'<button…>'
    })
-   colonnesAttributs(lignes) : une colonne facultative par attribut libre trouvé (un attribut peut ainsi devenir une colonne). */
+   colonnesAttributs(lignes) : une colonne par attribut libre trouvé (un attribut devient ainsi une colonne). */
 import {$, esc, correspond, cleNom, propreNom, hachage} from './outils.js';
 import {ico} from './icones.js';
 import {ACTIONS} from './modules.js';
@@ -36,8 +36,10 @@ const PAQUET = 50;
 const CONFIGS = new Map();   /* le dernier tableau affiché sous ce nom */
 const ETATS = new Map();     /* recherche et nombre de lignes montrées, le temps de la visite */
 const etat = id => { if(!ETATS.has(id)) ETATS.set(id, {q:'', n:PAQUET, choix:new Set(), ancre:null}); return ETATS.get(id); };
-const reglage = cfg => { const r = pref('tableau.' + cfg.id, null) || {}; return {tri:r.tri || (cfg.tri || {}).col || '', sens:r.sens || (cfg.tri || {}).sens || 1, colonnes:Array.isArray(r.colonnes) ? r.colonnes : null}; };
-const visibles = cfg => { const r = reglage(cfg); return cfg.colonnes.filter(c => !c.facultative || (r.colonnes ? r.colonnes.includes(c.id) : false)); };
+const reglage = cfg => { const r = pref('tableau.' + cfg.id, null) || {}; return {tri:r.tri || (cfg.tri || {}).col || '', sens:r.sens || (cfg.tri || {}).sens || 1}; };
+/* Les colonnes qui ont quelque chose à montrer sur au moins une ligne (calculé une fois par affichage du tableau) */
+const pleine = (c, lignes) => c.garder || lignes.some(x => { const h = c.html(x); return h !== '' && h !== '—' && h !== null && h !== undefined; });
+const visibles = cfg => cfg.visibles || cfg.colonnes;
 export const rechercheTableau = id => etat(id).q;
 /* Les lignes choisies (Ctrl + clic), parmi celles qui existent encore */
 export function choixTableau(id){
@@ -47,31 +49,28 @@ export function choixTableau(id){
 }
 export function viderChoix(id){ const s = etat(id); s.choix.clear(); s.ancre = null; }
 
-/* Une colonne facultative par attribut libre (nom tapé dans une fiche), dans l'ordre alphabétique */
+/* Une colonne par attribut libre (nom tapé dans une fiche), dans l'ordre alphabétique */
 export function colonnesAttributs(lignes){
   const noms = new Map();
   lignes.forEach(x => (x.attributs || []).forEach(a => { const k = cleNom(a.nom); if(k && !noms.has(k)) noms.set(k, propreNom(a.nom)); }));
   return [...noms.entries()].sort((a, b) => a[1].localeCompare(b[1], 'fr', {sensitivity:'base'})).map(([k, nom]) => {
     const v = x => { const a = (x.attributs || []).find(y => cleNom(y.nom) === k); return a ? propreNom(a.valeur) : ''; };
-    return {id:'attr' + hachage(k), titre:nom, html:x => esc(v(x)) || '—', valeur:v, facultative:true};
+    return {id:'attr' + hachage(k), titre:nom, html:x => esc(v(x)) || '—', valeur:v};
   });
 }
 
 export function tableau(cfg){
+  const toutes = cfg.toutes ? [...new Set([...cfg.toutes, ...cfg.lignes])] : cfg.lignes;
+  cfg.visibles = cfg.colonnes.filter(c => pleine(c, toutes));
   CONFIGS.set(cfg.id, cfg);
-  const e = etat(cfg.id), facultatives = cfg.colonnes.filter(c => c.facultative), c = corps(cfg);
-  const barre = (cfg.recherche || facultatives.length || cfg.outils) ? `<div class="tableau-barre">
+  const e = etat(cfg.id), c = corps(cfg);
+  const barre = (cfg.recherche || cfg.outils) ? `<div class="tableau-barre">
     ${cfg.recherche ? `<label class="tableau-recherche">${ico('chercher', 16)}<input type="search" data-tableau-q="${esc(cfg.id)}" value="${esc(e.q)}" placeholder="${esc(cfg.texteRecherche || 'Chercher')}" aria-label="${esc(cfg.texteRecherche || 'Chercher')}" autocomplete="off"></label>` : ''}
     <span class="tableau-compte" data-tableau-compte="${esc(cfg.id)}">${esc(c.compte)}</span>
-    <div class="tableau-outils">${cfg.outils || ''}${facultatives.length ? choixColonnes(cfg, facultatives) : ''}</div></div>` : '';
+    <div class="tableau-outils">${cfg.outils || ''}</div></div>` : '';
   return `<div class="tableau" data-tableau="${esc(cfg.id)}">${barre}<div class="tableau-corps">${c.html}</div></div>`;
 }
 
-function choixColonnes(cfg, facultatives){
-  const v = new Set(visibles(cfg).map(c => c.id));
-  return `<details class="tableau-colonnes"><summary class="btn discret">${ico('tableau', 16)}<span>Colonnes</span></summary><div class="menu-colonnes">${
-    facultatives.map(c => `<label><input type="checkbox" data-tableau-colonne="${esc(cfg.id)}" value="${esc(c.id)}"${v.has(c.id) ? ' checked' : ''}> ${esc(c.titre)}</label>`).join('')}</div></details>`;
-}
 
 function lignesFiltrees(cfg){
   const e = etat(cfg.id), r = reglage(cfg);
@@ -128,12 +127,6 @@ document.addEventListener('input', e => {
   const q = e.target.closest && e.target.closest('[data-tableau-q]'); if(!q) return;
   const s = etat(q.dataset.tableauQ); s.q = q.value; s.n = PAQUET; redessiner(q.dataset.tableauQ);
 });
-document.addEventListener('change', e => {
-  const c = e.target.closest && e.target.closest('[data-tableau-colonne]'); if(!c) return;
-  const cfg = CONFIGS.get(c.dataset.tableauColonne); if(!cfg) return;
-  const r = pref('tableau.' + cfg.id, null) || {}, choisies = [...document.querySelectorAll(`[data-tableau-colonne="${CSS.escape(cfg.id)}"]:checked`)].map(x => x.value);
-  changerPref('tableau.' + cfg.id, {...r, colonnes:choisies}); redessiner(cfg.id);
-});
 document.addEventListener('click', e => {
   const tri = e.target.closest('[data-tableau-tri]');
   if(tri){ const id = tri.dataset.tableauTri, cfg = CONFIGS.get(id); if(!cfg) return;
@@ -145,7 +138,6 @@ document.addEventListener('click', e => {
   if(tout){ const id = tout.dataset.tableauTout, cfg = CONFIGS.get(id); if(cfg) lignesFiltrees(cfg).forEach(x => etat(id).choix.add(String(cfg.cle(x)))); redessiner(id); return; }
   const aucun = e.target.closest('[data-tableau-aucun]');
   if(aucun){ viderChoix(aucun.dataset.tableauAucun); redessiner(aucun.dataset.tableauAucun); return; }
-  if(!e.target.closest('details.tableau-colonnes')) document.querySelectorAll('details.tableau-colonnes[open]').forEach(d => d.removeAttribute('open'));
   const tr = e.target.closest('tr[data-tableau-ligne]');
   if(!tr || e.target.closest('a, button, input, select, textarea, label, [data-action]')) return;
   const cfg = CONFIGS.get(tr.dataset.tableauLigne);

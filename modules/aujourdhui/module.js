@@ -56,7 +56,7 @@ function page(){
 }
 
 export default {
-  id:'aujourdhui', nom:'Aujourd’hui', icone:'grille', couleur:'bleu', menu:10, onglet:10, depot:'tache', styles:true,
+  id:'aujourdhui', nom:'Aujourd’hui', icone:'grille', couleur:'bleu', menu:10, onglet:10, styles:true,
   titre:() => 'Aujourd’hui',
   pages:{aujourdhui:page},
   actions:{

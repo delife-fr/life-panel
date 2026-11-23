@@ -33,7 +33,7 @@ sur « Chargement… ».
 | --- | --- | --- | --- | --- |
 | Aujourd'hui | `aujourdhui` | bleu | onglet | — |
 | Idées (l'Inbox de la v4.9, avec À trier) | `idees` | jaune | Plus (+ icône en haut) | À ranger · Archivées |
-| Calendrier | `calendrier` | violet | onglet | Semaine · Mois · Liste |
+| Calendrier | `calendrier` | violet | onglet | 2 semaines · Mois · Agenda |
 | Tâches | `taches` | vert | onglet | Par date · Listes |
 | Dossiers (les « projets » des données) | `dossiers` | orange | Plus | Tous les dossiers · Sans dossier |
 | Finance | `finance` | herbe | onglet | Mois · Année · Mouvements · Comptes · Catégories |
@@ -61,11 +61,15 @@ sur « Chargement… ».
 - **Capture rapide dans chaque section** : une ligne, Entrée, c'est créé, les détails après. Le bouton + garde la phrase
   devinée de la v4.9 (« essence 45 » → une dépense).
 - **Journal** (Carnet) : une ou deux phrases datées ; « @ » ouvre la liste des contacts pendant la frappe, « # » les tags.
-- **Attributs libres** sur tout élément : un nom et une valeur inventés, visibles dans la fiche, pas en colonne.
-- **Des tableaux partout** (tâches, dépenses, documents, contacts) : un seul composant de tableau dans le noyau, avec sa
-  recherche (même syntaxe que la grande barre : `#tag`…), ses colonnes triables et choisies (un attribut libre peut devenir
-  une colonne), un affichage par paquets de 50 ; sur téléphone, une carte par ligne. Les notes restent une liste de lignes
-  avec leurs tags.
+- **Attributs libres** sur tout élément : un nom et une valeur inventés, dans la fiche ; un attribut utilisé apparaît aussi
+  comme colonne du tableau.
+- **Des tableaux partout** (tâches, dépenses, notes, journal, documents, contacts, dossiers, agenda, archives, corbeille,
+  recherche) : un seul composant de tableau dans le noyau, avec sa recherche (même syntaxe que la grande barre : `#tag`…),
+  ses colonnes triables, un affichage par paquets de 50 ; sur téléphone, une carte par ligne (tant pis si c'est chargé).
+  **Pas de bouton « Colonnes »** (décision du 23/11) : une colonne s'affiche si au moins une ligne a quelque chose à y
+  montrer (`garder:true` pour l'afficher quand même, ex. la Date des tâches).
+- **Ne rien ajouter qui n'a pas été demandé** (23/11) : pas de raccourcis « Aujourd'hui, Demain, Samedi », pas de bande
+  de dépôt, pas de texte d'aide en plus. La date d'une tâche se donne dans sa fiche ou en la glissant sur le Calendrier.
 - **Tâches au plus simple** : un tableau, une colonne Date (un tiret sans date), aucun regroupement par jour, ni statut,
   ni notation. Fait au lot 3 : « Par date » montre les tâches à faire sauf celles d'une liste sans date (elles restent dans
   leur liste, comme en v4.9 ; la recherche les trouve) ; cochée aujourd'hui = barrée en bas jusqu'à demain ; « Faites » à
@@ -75,7 +79,10 @@ sur « Chargement… ».
 - **Fiches au centre** : une grande tuile au milieu de l'écran, le site en arrière-plan (comme la modale de la v4.9) ;
   pas de panneau à droite. Sur téléphone, plein écran depuis le bas.
 - **Glisser-déposer partout où c'est naturel** (moteur du prototype, souris et doigt), toujours doublé d'un bouton.
-- **Documents et Drive** : « Mon Drive » dans le sous-menu de Documents, même tableau, « Suivre l'échéance ».
+- **Documents et Drive** : « Mon Drive » dans le sous-menu de Documents, même tableau, « Suivre l'échéance » (à faire :
+  il faut la connexion à Drive). En attendant, un lien `drive:PERSO/…` ouvre la recherche de Google Drive sur ce nom.
+- **Journal** : nouvelle liste `journal` dans les données ({date, texte, contacts, tags, projet}) ; la seule différence avec
+  la lecture de la v4.9 (vérifié par compare.js).
 - **Téléphone** : à décider par Claude, l'utilisateur pense d'abord au PC.
 - **Recherche** : pour chercher, pas pour créer ; Entrée ouvre la page de résultats de la v4.9, tous types, #tag compris.
 - **Finance** : celle de la v4.9, dont le graphique par catégorie et le clic qui retire une catégorie du calcul.
@@ -97,8 +104,9 @@ noyau/
   modules.js          le registre des sections (format d'un module décrit en tête du fichier)
   interface.js        coquille, rendre(), sous-menu, couleur de section, fiche au centre (ouvrirFiche), confirmer(), toast(),
                       champAjout() (ligne « ajouter vite »), thème, clics, clavier
-  tableau.js          le tableau commun (recherche, tri, colonnes, attributs en colonnes, paquets de 50, sélection Ctrl + clic,
-                      cartes sur téléphone)
+  tableau.js          le tableau commun (recherche, tri, colonnes vides cachées, attributs en colonnes, paquets de 50,
+                      sélection Ctrl + clic, cartes sur téléphone)
+  affichage.js        puce de dossier, tags, lien de document (Drive compris), téléphone, e-mail
   glisser.js          le glisser-déposer (souris et doigt) : glisserType(type, {depot}), [data-glisser], [data-depot]
   fiches.js           la fiche de chaque type d'élément (TYPES_ELEMENT), avec dossier, tags et attributs libres
   capture.js          « Noter » en une phrase (bouton +, touche C), et le rangement d'une idée
@@ -109,7 +117,7 @@ noyau/
   polices/            Inter, Barlow Condensed (licence SIL OFL)
 modules/
   liste.js            les sections actives
-  <section>/          module.js (+ <section>.css si styles:true)
+  <section>/          module.js (+ <section>.css si styles:true) ; recherche/ = la page de résultats et Ctrl K (pas une section)
 sw.js, manifest.webmanifest   ceux de la v4.9, pas encore branchés : refaits au lot 1
 ```
 

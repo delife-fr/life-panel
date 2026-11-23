@@ -1,0 +1,47 @@
+/* LIFE PANEL v5 · modules/finance/finance.css */
+.page-finance{display:flex;flex-direction:column;gap:14px;max-width:1180px}
+.page-finance > .ajout{max-width:640px}
+.cal-nav{display:flex;align-items:center;gap:8px}
+.cal-nav h2{margin:0 6px;font-size:18px}
+.cal-nav .btn{margin-left:8px}
+.cases-comptes{display:flex;flex-wrap:wrap;gap:6px}
+.case-compte{display:inline-flex;align-items:center;gap:5px}
+.chiffres{display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:10px}
+.chiffre{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid var(--bord);border-radius:var(--r);background:var(--panneau);min-width:0}
+.chiffre .titre{font-size:12.5px;color:var(--texte-3);font-weight:500}
+.chiffre b{font-size:22px;font-weight:700;color:var(--texte);font-variant-numeric:tabular-nums}
+.chiffre b.bien{color:color-mix(in srgb, var(--c-herbe) 85%, var(--texte))}
+.chiffre small{font-size:12px;color:var(--texte-3)}
+@media (max-width:900px){ .chiffres{grid-template-columns:repeat(2, minmax(0, 1fr))} }
+
+/* L'anneau par catégorie et sa légende */
+.par-categorie{display:grid;grid-template-columns:200px minmax(0, 1fr);gap:24px;align-items:start}
+.anneau{width:200px;height:200px}
+.anneau circle{transition:stroke-dasharray .25s, stroke-dashoffset .25s}
+.anneau-total{font-size:19px;font-weight:700;fill:var(--texte)}
+.anneau-sous{font-size:11px;fill:var(--texte-3)}
+.legende{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));gap:2px 18px}
+.legende li{display:grid;grid-template-columns:12px minmax(0, 1fr) auto auto;align-items:center;gap:10px;padding:6px 6px;border-radius:var(--r-petit);cursor:pointer;font-size:13.5px}
+.legende li:hover{background:var(--panneau-2)}
+.legende .nom{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--texte)}
+.legende .part{color:var(--texte-3);font-size:12px;font-variant-numeric:tabular-nums}
+.legende .val{font-variant-numeric:tabular-nums;color:var(--texte-2)}
+.legende li.retiree .nom,.legende li.retiree .val{color:var(--texte-3);text-decoration:line-through}
+.legende li.retiree .pastille-cat{opacity:.35}
+.pastille-cat{display:inline-block;width:11px;height:11px;border-radius:3px;background:var(--c);flex-shrink:0;vertical-align:-1px}
+.pastille-cat.raye{background:repeating-linear-gradient(45deg, var(--c) 0 3px, color-mix(in srgb, var(--c) 45%, var(--panneau)) 3px 5px)}
+.tableau .puce .pastille-cat{margin-right:5px;width:8px;height:8px}
+@media (max-width:700px){ .par-categorie{grid-template-columns:minmax(0, 1fr);justify-items:center} .legende{width:100%} }
+
+/* Mois par mois (vue Année) */
+.barres-mois{display:grid;grid-template-columns:repeat(12, minmax(0, 1fr));gap:6px;height:190px;align-items:end}
+.barre-mois{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%;text-decoration:none;color:var(--texte-3);min-width:0}
+.barre-mois .colonne{width:100%;max-width:42px;border-radius:5px 5px 2px 2px;background:color-mix(in srgb, var(--section) 70%, var(--panneau))}
+.barre-mois:hover .colonne{background:var(--section)}
+.barre-mois.cour .nom{color:var(--texte);font-weight:600}
+.barre-mois .val{font-size:10.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.barre-mois .nom{font-size:11.5px}
+@media (max-width:700px){ .barre-mois .val{display:none} }
+
+.tableau .revenu{color:color-mix(in srgb, var(--c-herbe) 85%, var(--texte))}
+.tableau tr.hors-stats td{opacity:.55}

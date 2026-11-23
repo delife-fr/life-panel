@@ -1,3 +1,4 @@
 /* LIFE PANEL v5 · modules/reglages/reglages.css */
 .grille-reglages{display:grid;grid-template-columns:repeat(auto-fill, minmax(min(100%, 360px), 1fr));gap:14px;align-items:start}
 .grille-reglages .bientot{max-width:none}
+.page-reglages{display:flex;flex-direction:column;gap:14px;max-width:1180px}

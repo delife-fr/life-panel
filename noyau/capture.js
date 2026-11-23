@@ -104,10 +104,11 @@ export function lireCapture(t, type = 'auto'){
   return {type:'note', liste:'notes', complet:true, brut:{titre, contenu:t.includes('\n') || t.length > 80 ? t : '', cree:maintenant()}, titre, puces:['dans le Carnet']};
 }
 
-/* Enregistre ce qui a été compris. idee = l'idée d'où vient la phrase (ses tags, son dossier et ses attributs suivent ;
+/* Enregistre ce qui a été compris. projet = le dossier où le ranger ; idee = l'idée d'où vient la phrase (ses tags, son dossier et ses attributs suivent ;
    elle quitte Idées). S'il manque l'essentiel, la fiche s'ouvre pour compléter. Renvoie l'élément créé (ou null). */
-export function enregistrerCapture(t, type = 'auto', {idee = null} = {}){
+export function enregistrerCapture(t, type = 'auto', {idee = null, projet = null} = {}){
   const c = lireCapture(t, type);
+  if(projet && c.liste !== 'inbox') c.brut.projet = projet;   /* noté depuis la page d'un dossier */
   if(idee && c.liste !== 'inbox'){
     if(idee.tags && idee.tags.length) c.brut.tags = [...(c.brut.tags || []), ...idee.tags];
     if(idee.projet) c.brut.projet = idee.projet;

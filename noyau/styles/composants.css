@@ -18,6 +18,7 @@
 .puce.dossier::before{content:"";width:7px;height:7px;border-radius:2px;background:var(--c, var(--c-gris));flex-shrink:0}
 .puce.type{border-color:transparent;background:color-mix(in srgb, var(--c, var(--accent)) 16%, transparent);color:var(--texte)}
 .retard{color:var(--critique)}
+.attention{color:var(--attention)}
 
 /* --- Case à cocher ronde (tâche faite) --- */
 input.coche{appearance:none;-webkit-appearance:none;width:20px;height:20px;margin:0;border-radius:50%;border:1.6px solid var(--bord-fort);background:var(--champ);cursor:pointer;
@@ -151,8 +152,13 @@ input.coche:checked::after{content:"";width:9px;height:5px;border:2px solid var(
 .autre-jour{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--bord)}
 .autre-jour label{color:var(--texte-2);font-size:13px;margin-right:4px}
 .autre-jour input{width:auto}
+.autre-jour.seul{margin:0;padding:0;border:0}
 .fiche .ajout{margin-top:14px}
 /* Un message en bas de l'écran passe au-dessus de la barre de sélection au lieu de la cacher */
 body:has(.tableau-choix) .toast{bottom:92px}
 @media (max-width:1099px){ body:has(.tableau-choix) .toast{bottom:calc(var(--onglets) + 84px + env(safe-area-inset-bottom))} }
 @media (max-width:700px){ .tableau .t-droite.t-vide{display:none} }
+/* Liens vers l'extérieur dans un tableau (document, téléphone, e-mail) : cliquables sans ouvrir la ligne */
+.lien-externe{display:inline-flex;align-items:center;gap:5px;color:var(--accent-texte);text-decoration:none;max-width:100%;overflow:hidden}
+.lien-externe span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lien-externe:hover{text-decoration:underline}

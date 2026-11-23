@@ -15,9 +15,3 @@
 .liste-tete{display:flex;align-items:center;gap:8px}
 .liste-tete h2{margin:0;font-size:18px}
 
-/* La bande qui apparaît pendant un glisser : les jours, puis les listes */
-.zones-taches{display:none}
-body.en-glisse .zones-taches{position:fixed;z-index:45;left:50%;top:120px;transform:translateX(-50%);display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;
-  width:max-content;max-width:calc(100vw - 32px);padding:8px;border-radius:12px;background:var(--panneau-3);border:1px solid var(--bord-fort);box-shadow:var(--ombre-haute)}
-.zones-taches .zone{padding:8px 14px;border-radius:8px;background:var(--panneau-2);border:1px solid var(--bord);color:var(--texte);font-size:13px;font-weight:500;white-space:nowrap}
-.zones-taches .zones-sep{width:1px;align-self:stretch;margin:2px 4px;background:var(--bord-fort)}

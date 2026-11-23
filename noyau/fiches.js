@@ -4,7 +4,7 @@
      « Ajouter ». Supprimer = corbeille (30 jours), avec « Annuler » dans le message.
    - Sur tout élément : son dossier (le « super tag »), ses tags et des attributs libres (un nom, une valeur inventés).
    Les sections enrichiront leur fiche dans leur lot ; celle-ci sert partout dès maintenant (capture, Idées, Aujourd'hui). */
-import {esc, dateISO, maintenant, aujourdhui, propreNom} from './outils.js';
+import {esc, dateISO, maintenant, aujourdhui, propreNom, cleNom} from './outils.js';
 import {ico} from './icones.js';
 import {DB, FORMES, ajouter, modifie, retirer, assurerCategorie, assurerCompte} from './donnees.js';
 import {dossiersActifs, cheminDossier, listesTriees, categoriesFrequentes, compteParDefaut, toucherDossier, cocherTache} from './calculs.js';
@@ -15,25 +15,34 @@ const COMMUNS = [{c:'projet', t:'Dossier', k:'dossier'}, {c:'tags', t:'Tags', k:
 export const TYPES_ELEMENT = {
   inbox:{nom:'Idée', une:'une idée', champs:[{c:'text', t:'Idée', k:'zone', lignes:3}, ...COMMUNS]},
   taches:{nom:'Tâche', une:'une tâche', champs:[{c:'nom', t:'Tâche', k:'texte'}, {c:'fait', t:'Faite', k:'case'}, {c:'date', t:'Date', k:'date', demi:true}, {c:'heure', t:'Heure', k:'heure', demi:true},
-    {c:'liste', t:'Liste', k:'liste'}, {c:'etapes', t:'Étapes', k:'etapes'}, ...COMMUNS]},
+    {c:'liste', t:'Liste', k:'liste'}, {c:'etapes', t:'Étapes', k:'cases'}, ...COMMUNS]},
   evenements:{nom:'Rendez-vous', une:'un rendez-vous', champs:[{c:'titre', t:'Titre', k:'texte'}, {c:'date', t:'Date', k:'date', demi:true}, {c:'heure', t:'Début', k:'heure', quart:true}, {c:'fin', t:'Fin', k:'heure', quart:true},
-    {c:'lieu', t:'Lieu', k:'texte'}, {c:'note', t:'Note', k:'zone', lignes:3}, ...COMMUNS]},
+    {c:'freq', t:'Répétition', k:'choix', options:[['', 'Aucune'], ['semaine', 'Chaque semaine'], ['mois', 'Chaque mois'], ['an', 'Chaque année']], demi:true, lit:x => (x.recurrence || {}).freq || ''},
+    {c:'jusqua', t:'Jusqu’au (si répété)', k:'date', demi:true, lit:x => (x.recurrence || {}).jusqua || ''},
+    {c:'rappel', t:'Rappel', k:'choix', options:[['', 'Aucun'], ['15', '15 min avant'], ['60', '1 h avant'], ['1440', 'La veille']], demi:true},
+    {c:'lieu', t:'Lieu', k:'texte', demi:true}, {c:'lien', t:'Lien (visio, page web)', k:'url'}, {c:'note', t:'Note', k:'zone', lignes:3}, ...COMMUNS]},
   mouvements:{nom:'Dépense', une:'une dépense', champs:[{c:'type', t:'Type', k:'choix', options:[['depense', 'Dépense'], ['revenu', 'Entrée d’argent']], demi:true}, {c:'montant', t:'Montant (€)', k:'montant', demi:true},
     {c:'libelle', t:'Libellé', k:'texte'}, {c:'date', t:'Date', k:'date', demi:true}, {c:'compte', t:'Compte', k:'compte', demi:true}, {c:'categorie', t:'Catégorie', k:'categorie'},
     {c:'note', t:'Note', k:'zone', lignes:2}, ...COMMUNS]},
   notes:{nom:'Note', une:'une note', champs:[{c:'titre', t:'Titre', k:'texte'}, {c:'contenu', t:'Contenu (Markdown)', k:'zone', lignes:10}, ...COMMUNS]},
-  contacts:{nom:'Contact', une:'un contact', champs:[{c:'nom', t:'Nom', k:'texte'}, {c:'telephone', t:'Téléphone', k:'tel', demi:true}, {c:'email', t:'E-mail', k:'email', demi:true},
-    {c:'anniversaire', t:'Anniversaire', k:'date', demi:true}, {c:'derniereConversation', t:'Dernier échange', k:'date', demi:true}, {c:'adresse', t:'Adresse', k:'zone', lignes:2},
-    {c:'nouvelles', t:'Nouvelles', k:'zone', lignes:3}, ...COMMUNS]},
+  contacts:{nom:'Contact', une:'un contact', champs:[{c:'nom', t:'Nom', k:'texte'}, {c:'telephone', t:'Téléphone', k:'tel', demi:true}, {c:'autreTelephone', t:'Autre téléphone', k:'tel', demi:true},
+    {c:'email', t:'E-mail', k:'email'}, {c:'anniversaire', t:'Anniversaire', k:'date', demi:true}, {c:'derniereConversation', t:'Dernier échange', k:'date', demi:true}, {c:'adresse', t:'Adresse', k:'zone', lignes:2},
+    {c:'nouvelles', t:'Nouvelles', k:'zone', lignes:3}, {c:'aDire', t:'À lui dire', k:'cases'}, {c:'aRepondre', t:'À répondre', k:'cases'}, {c:'idees', t:'Idées de cadeaux', k:'cases'}, ...COMMUNS]},
   documents:{nom:'Document', une:'un document', champs:[{c:'titre', t:'Titre', k:'texte'}, {c:'url', t:'Lien (site ou drive:chemin)', k:'url'},
     {c:'echeance', t:'Échéance', k:'date', demi:true}, {c:'preavis', t:'Préavis (jours)', k:'nombre', demi:true}, {c:'note', t:'Note', k:'zone', lignes:3}, ...COMMUNS]},
   projets:{nom:'Dossier', une:'un dossier', champs:[{c:'nom', t:'Nom', k:'texte'}, {c:'resume', t:'Pour quoi faire', k:'zone', lignes:2},
     {c:'parent', t:'Rangé dans', k:'dossier'}, {c:'couleur', t:'Couleur', k:'choix', options:[['', '— celle du dossier qui le contient —'], ['bleu', 'Bleu'], ['vert', 'Vert'], ['jaune', 'Jaune'], ['rose', 'Rose'], ['violet', 'Violet'], ['orange', 'Orange']], demi:true},
-    {c:'tags', t:'Tags', k:'tags'}, {c:'attributs', t:'Attributs', k:'attributs'}]}
+    {c:'archive', t:'Archivé', k:'case'}, {c:'tags', t:'Tags', k:'tags'}, {c:'attributs', t:'Attributs', k:'attributs'}]},
+  listes:{nom:'Liste', une:'une liste', champs:[{c:'nom', t:'Nom', k:'texte'}]},
+  journal:{nom:'Entrée du journal', une:'une entrée', champs:[{c:'date', t:'Date', k:'date', demi:true}, {c:'texte', t:'Ce qui s’est passé', k:'zone', lignes:4},
+    {c:'contacts', t:'Personnes', k:'personnes'}, ...COMMUNS]}
 };
 
-const FEMININ = new Set(['inbox', 'taches', 'notes', 'mouvements']);
-export const nomDe = (liste, x) => liste === 'mouvements' && x && x.type === 'revenu' ? 'Entrée d’argent' : TYPES_ELEMENT[liste].nom;
+const FEMININ = new Set(['inbox', 'taches', 'notes', 'mouvements', 'journal', 'listes']);
+/* Le titre d'un élément, quel que soit son type (tableaux des dossiers, archives, corbeille, recherche) */
+export const titreElement = (l, x) => ({taches:x.nom, evenements:x.titre, mouvements:x.libelle, notes:x.titre, documents:x.titre, contacts:x.nom,
+  journal:x.texte, inbox:x.text, projets:x.nom, listes:x.nom})[l] || '';
+export const nomDe = (liste, x) => liste === 'mouvements' && x && x.type === 'revenu' ? 'Entrée d’argent' : (TYPES_ELEMENT[liste] || {nom:liste}).nom;
 
 /* --- Les champs --- */
 const idChamp = (f, c) => `f-${f}-${c}`;
@@ -44,7 +53,7 @@ const optionsDossiers = (courant, sauf = '') => {
 };
 const select = (id, options, v) => `<select id="${id}">${options.map(([o, t]) => `<option value="${esc(o)}"${String(v ?? '') === String(o) ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
 function champ(f, d, x, liste){
-  const id = idChamp(f, d.c), v = x[d.c], attrs = `id="${id}"${d.autofocus ? ' autofocus' : ''}`;
+  const id = idChamp(f, d.c), v = d.lit ? d.lit(x) : x[d.c], attrs = `id="${id}"${d.autofocus ? ' autofocus' : ''}`;
   let html;
   switch(d.k){
     case 'zone': html = `<textarea ${attrs} rows="${d.lignes || 4}">${esc(v || '')}</textarea>`; break;
@@ -62,8 +71,10 @@ function champ(f, d, x, liste){
     case 'categorie': html = `<input type="text" ${attrs} value="${esc(v || '')}" list="${id}-l" placeholder="— sans catégorie —"><datalist id="${id}-l">${categoriesFrequentes().map(c => `<option value="${esc(c)}">`).join('')}</datalist>`; break;
     case 'compte': html = `<input type="text" ${attrs} value="${esc(v || '')}" list="${id}-l"><datalist id="${id}-l">${DB.comptes.map(c => `<option value="${esc(c.nom)}">`).join('')}</datalist>`; break;
     case 'tags': html = `<input type="text" ${attrs} value="${esc((v || []).join(', '))}" placeholder="séparés par des virgules">`; break;
-    case 'etapes': html = `<div class="etapes" id="${id}">${(v || []).map(ligneEtape).join('')}</div>
-      <button type="button" class="btn discret petit" data-etape-ajouter="${id}">${ico('plus', 14)}<span>Ajouter une étape</span></button>`; break;
+    case 'cases': html = `<div class="etapes" id="${id}">${(v || []).map(ligneEtape).join('')}</div>
+      <button type="button" class="btn discret petit" data-etape-ajouter="${id}">${ico('plus', 14)}<span>Ajouter</span></button>`; break;
+    case 'personnes': html = `<input type="text" ${attrs} value="${esc((v || []).map(i => (DB.contacts.find(c => c.id === i) || {}).nom).filter(Boolean).join(', '))}" list="${id}-l" placeholder="noms séparés par des virgules">
+      <datalist id="${id}-l">${DB.contacts.filter(c => !c.archive).map(c => `<option value="${esc(c.nom)}">`).join('')}</datalist>`; break;
     case 'attributs': html = `<div class="attributs" id="${id}">${(v || []).map(ligneAttribut).join('')}</div>
       <button type="button" class="btn discret petit" data-attribut-ajouter="${id}">${ico('plus', 14)}<span>Ajouter un attribut</span></button>`; break;
     default: html = `<input type="text" ${attrs} value="${esc(v || '')}">`;
@@ -73,9 +84,9 @@ function champ(f, d, x, liste){
 const ligneAttribut = (a = {nom:'', valeur:''}) => `<div class="attribut"><input type="text" class="a-nom" value="${esc(a.nom)}" placeholder="Nom (ex. Téléphone pro)" aria-label="Nom de l’attribut">
   <input type="text" class="a-valeur" value="${esc(a.valeur)}" placeholder="Valeur" aria-label="Valeur"><button type="button" class="icone-btn petit" data-attribut-retirer aria-label="Retirer cet attribut">${ico('fermer', 14)}</button></div>`;
 
-/* Une étape d'une tâche : une case et un texte (Entrée ajoute la suivante) */
-const ligneEtape = (e = {t:'', ok:false}) => `<div class="etape"><input type="checkbox" class="coche e-ok"${e.ok ? ' checked' : ''} aria-label="Étape faite">
-  <input type="text" class="e-t" value="${esc(e.t)}" placeholder="Une étape" aria-label="Étape"><button type="button" class="icone-btn petit" data-etape-retirer aria-label="Retirer cette étape">${ico('fermer', 14)}</button></div>`;
+/* Une ligne à cocher (étape d'une tâche, À lui dire…) : une case et un texte (Entrée ajoute la suivante) */
+const ligneEtape = (e = {t:'', ok:false}) => `<div class="etape"><input type="checkbox" class="coche e-ok"${e.ok ? ' checked' : ''} aria-label="Fait">
+  <input type="text" class="e-t" value="${esc(e.t)}" aria-label="Texte"><button type="button" class="icone-btn petit" data-etape-retirer aria-label="Retirer cette étape">${ico('fermer', 14)}</button></div>`;
 
 /* Lit le formulaire → les valeurs, au format attendu par FORMES */
 function lire(f, liste, x){
@@ -90,12 +101,18 @@ function lire(f, liste, x){
       case 'dossier': case 'liste': r[d.c] = e.value || null; break;
       case 'categorie': r[d.c] = propreNom(e.value) ? assurerCategorie(e.value) : ''; break;
       case 'compte': r[d.c] = propreNom(e.value) ? assurerCompte(e.value) : ''; break;
-      case 'etapes': r[d.c] = [...e.querySelectorAll('.etape')].map(l => ({t:propreNom(l.querySelector('.e-t').value), ok:l.querySelector('.e-ok').checked})).filter(x => x.t); break;
+      case 'personnes': r[d.c] = e.value.split(',').map(n => DB.contacts.find(c => cleNom(c.nom) === cleNom(n))).filter(Boolean).map(c => c.id); break;
+      case 'cases': r[d.c] = [...e.querySelectorAll('.etape')].map(l => ({t:propreNom(l.querySelector('.e-t').value), ok:l.querySelector('.e-ok').checked})).filter(x => x.t); break;
       case 'attributs': r[d.c] = [...e.querySelectorAll('.attribut')].map(l => ({nom:l.querySelector('.a-nom').value, valeur:l.querySelector('.a-valeur').value})); break;
       default: r[d.c] = e.value;
     }
   });
   if('attributs' in r && !r.attributs.some(a => propreNom(a.nom)) && !(x && 'attributs' in x)) delete r.attributs;   /* pas d'attribut : pas de champ vide dans les données */
+  if(liste === 'evenements'){   /* la répétition est rangée dans recurrence, le rappel est un nombre de minutes */
+    const avant = (x && x.recurrence) || {};
+    r.recurrence = {...avant, freq:r.freq, jusqua:r.freq ? r.jusqua : '', exceptions:r.freq ? avant.exceptions || [] : []};
+    r.rappel = r.rappel ? Number(r.rappel) : null; delete r.freq; delete r.jusqua;
+  }
   return r;
 }
 
