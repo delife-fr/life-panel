@@ -22,6 +22,11 @@ python3 -m http.server 8765
 
 puis http://127.0.0.1:8765/
 
+Aperçu en ligne de la bêta (en attendant une adresse à soi) : **toujours l'adresse figée sur un commit**,
+`https://raw.githack.com/delife-fr/life-panel/<commit complet>/index.html`, à donner après chaque push. L'adresse de branche
+(`…/beta/index.html`) sert des fichiers de versions différentes (cache de raw.githack) : les imports échouent, la page reste
+sur « Chargement… ».
+
 ## Les sections (décidées au tour 1)
 
 | Section | Dossier | Couleur | Téléphone | Sous-menu |
