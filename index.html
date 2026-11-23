@@ -6,7 +6,7 @@
 <!-- Sécurité : la page ne peut se connecter qu'à elle-même et à l'API GitHub (ta clé ne peut partir nulle part ailleurs),
      aucun script ni style venu d'un autre site, aucune page intégrée (iframe), aucun plug-in. -->
 <!-- CSP : seul le script dont l'empreinte figure ici peut s'exécuter (à recalculer après chaque modification du script, avec l'outil csp.js des tests) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-Bjubay3GQr/+jzSLcXRIc19jh0jqM+mU4B3NFcbYMBI='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-L3aCPSRhSa3qVHzVABer1bZzUWpTAjuID0/pEhpe25s=' 'sha256-H0vZkawybFNfcY8g0jsmn3SlpYChU4Zfw2tr7J5YzyY='; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <title>Life Panel</title>
 <meta name="theme-color" content="#1b1b1d">
 <!-- Thème clair choisi sur cet appareil : appliqué avant le premier affichage (pas d'éclair sombre au chargement) -->
@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <!--
   ============================================================================
-  LIFE PANEL — v4.7.1
+  LIFE PANEL — v4.8
   ============================================================================
   Un seul fichier : structure (HTML) + style (CSS) + comportement (JS).
   Aucune bibliothèque externe. Seule connexion possible (v3.13, si tu l'actives) : ton
@@ -243,6 +243,11 @@
   tag choisi reste alors visible ; choix gardé sur chaque appareil). Données VERSION 23 : « tags », les tags créés dans la fenêtre.
   v4.7.1 : sur PC (à partir de 1 100 px), les suggestions de la recherche du haut partent du bord gauche du champ : accrochées à son
   bord droit, elles s'étendaient vers la gauche et le volet en cachait le début. Téléphone et tablette : inchangés. Mêmes données (VERSION 23).
+  v4.8 : Contacts en tableau, comme dans le prototype : nom, téléphone, e-mail, anniversaire (« J−12 » sous 60 jours), dernier échange
+  (en rose au-delà de 90 jours), tags. Un clic sur un en-tête trie (nouveau clic : sens inverse ; gardé sur l'appareil, cases vides en
+  dernier) ; filtres rapides « Anniversaires sous 60 j », « À répondre », « À relancer » ; le résumé en haut compte tout cela. Un clic sur
+  la ligne (ou Entrée) ouvre la fiche en grand, inchangée ; téléphone et e-mail restent des liens directs. Sur téléphone, une carte par
+  fiche, avec « Trier : » en tête. L'annuaire par lettre et « Tout déplier » sont retirés. Mêmes données (VERSION 23).
   Après toute modification du script : recalculer l'empreinte avec l'outil csp.js des tests, rangés à part (sinon la page ne démarre pas).
 
   v3.3 = fusion de life-panel-v3.2.html et de life-panel.html, réécrite en une
@@ -674,15 +679,49 @@ a.puce.lien-tel:hover{border-color:var(--i-bleu)}
 .carte-note .depliable-tete{gap:10px}
 .date-t{font-size:var(--t2);color:var(--texte-faible);white-space:nowrap}
 .md-extrait{font-size:var(--t4);max-height:260px;overflow:auto;padding-right:4px}
-/* Contacts : anniversaires proches en tête, puis l'annuaire par lettre ; une ligne par fiche, sans cadre */
-.annuaire{display:flex;flex-direction:column;gap:16px}
-.groupe-contacts > .lettre{display:flex;align-items:center;gap:8px;margin:0 0 8px 4px;font-size:var(--t5);font-weight:650;color:var(--texte-doux)}
-.grille-contacts{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));column-gap:24px;align-items:start;padding:0 12px;overflow:hidden}
-.grille-contacts > .depliable{background:none;border:0;border-top:1px solid var(--trait-doux);border-radius:0;box-shadow:none;margin-top:-1px;overflow:visible}
-.grille-contacts .depliable-tete{padding:8px 2px}
-.grille-contacts .depliable-tete:hover{background:none}
-.grille-contacts .depliable-corps{padding:4px 2px 14px;border-top:0}
-.grille-contacts .avatar{width:32px;height:32px;font-size:var(--t2)}
+/* Contacts (v4.8) : un tableau triable ; un clic sur la ligne ouvre la fiche ; sur téléphone, une carte par fiche */
+.carte-contacts{padding:6px 8px}
+.carte-contacts .defile{margin:0}
+.table-contacts td{padding:8px 10px}
+.table-contacts tbody tr.ligne-contact{cursor:pointer}
+.table-contacts tbody tr.ligne-contact:hover{background:rgb(var(--sur) / 0.035)}
+.table-contacts tbody tr.ligne-contact:focus-visible{outline:2px solid var(--i-bleu);outline-offset:-2px}
+.table-contacts .nom-contact{display:flex;align-items:center;gap:10px;min-width:0}
+.table-contacts .avatar{width:30px;height:30px;font-size:var(--t1)}
+.table-contacts .nom-lien{font-size:var(--t4);font-weight:550}
+.table-contacts td.nom{min-width:200px;max-width:320px}
+.table-contacts td.tel,.table-contacts td.anniv,.table-contacts td.echange{white-space:nowrap;font-variant-numeric:tabular-nums;font-size:var(--t3)}
+.table-contacts td.mail{font-size:var(--t3);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.table-contacts .lien-tel{color:var(--texte);text-decoration:none;border-bottom:1px solid var(--trait)}
+.table-contacts .lien-tel:hover{border-bottom-color:var(--i-bleu);color:var(--i-bleu)}
+.table-contacts .autre{display:block;margin-top:2px;font-size:var(--t2)}
+.table-contacts td svg{vertical-align:-2px;margin-right:5px;color:var(--texte-faible)}
+.table-contacts .rien{color:var(--texte-faible)}
+.table-contacts .j-anniv{font-size:var(--t2);font-weight:600;color:var(--texte-doux);margin-left:4px}
+.table-contacts .j-anniv.proche{color:var(--i-jaune)}
+.table-contacts .a-relancer{color:var(--i-rose)}
+.table-contacts .a-relancer svg{color:inherit}
+.table-contacts td.tags .puce{margin:1px 4px 1px 0}
+.puce.repondre{color:var(--i-violet);border-color:#9085e944;background:#9085e914;flex-shrink:0}
+.pied-contacts{margin:8px 10px 4px}
+.segment button .compte{display:inline-block;padding:0 7px;margin-left:5px;border-radius:99px;font-size:var(--t1);line-height:1.5}   /* « .segment span » vise les étiquettes de formulaire */
+@media (max-width:760px){
+  .carte-contacts{padding:4px 12px}
+  .table-contacts,.table-contacts tbody{display:block}
+  .table-contacts thead{display:block;border-bottom:1px solid var(--trait);padding:6px 2px 8px}
+  .table-contacts thead tr{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
+  .table-contacts thead tr::before{content:'Trier :';font-size:var(--t1);color:var(--texte-faible)}
+  .table-contacts th{display:block;border:0;padding:0}
+  .table-contacts tbody tr.ligne-contact{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:11px 2px;border-bottom:1px solid var(--trait-doux)}
+  .table-contacts tbody tr.ligne-contact:last-child{border-bottom:0}
+  .table-contacts td{display:block;padding:0;border:0}
+  .table-contacts td.nom{flex:1 1 100%;min-width:0;max-width:none}
+  .table-contacts td.vide-m,.table-contacts td.tags:empty{display:none}
+  .table-contacts td.tel,.table-contacts td.mail,.table-contacts td.anniv,.table-contacts td.echange{padding-left:40px;margin-right:-26px}
+  .table-contacts td.mail{max-width:100%}
+  .table-contacts td.tags{flex:1 1 100%;padding-left:40px}
+  .table-contacts .autre{display:inline;margin:0 0 0 8px}
+}
 /* Fiches en grand (contact, note) */
 .modale.fiche{width:min(900px,100%);padding:22px 24px 20px}
 .fiche-tete{align-items:flex-start;gap:12px;margin-bottom:18px}
@@ -3594,26 +3633,58 @@ function corpsDocument(x){
 /* Bouton Archiver / Désarchiver (notes, documents, contacts) */
 const boutonArchive = (type, x, cls = 'btn f compact') => btnAction(type + '-archiver', ico('archive', 13) + (x.archive ? 'Désarchiver' : 'Archiver'), cls, `data-id="${esc(x.id)}"`);
 
-/* --- CONTACTS : titres dépliables ; clic sur le nom = fiche en grand, modifiable --- */
+/* --- CONTACTS (v4.8, repris du prototype) : un tableau triable — nom, téléphone, e-mail, anniversaire, dernier échange, tags.
+   Un clic sur un en-tête trie (nouveau clic : sens inverse ; choix gardé sur cet appareil) ; les cases vides restent en dernier.
+   Filtres rapides : anniversaires sous 60 jours, réponses dues, à relancer (aucun échange depuis 90 jours).
+   Un clic sur la ligne ouvre la fiche en grand ; téléphone et e-mail restent des liens directs. Sur téléphone, une carte par fiche. --- */
+const ANNIV_PROCHES = 60, RELANCE_JOURS = 90, CLE_TRI_CONTACTS = 'lifepanel.triContacts';
+const COLS_CONTACTS = [['nom', 'Nom'], ['telephone', 'Téléphone'], ['email', 'E-mail'], ['anniv', 'Anniversaire'], ['echange', 'Dernier échange'], ['tags', 'Tags']];
+const attendReponse = c => c.aRepondre.some(i => !i.ok);
+const joursSansEchange = c => c.derniereConversation ? ecartJours(c.derniereConversation) : null;   /* > 0 : dans le passé */
+const aRelancer = c => { const e = joursSansEchange(c); return e !== null && e >= RELANCE_JOURS; };
+const annivProche = (c, n = ANNIV_PROCHES) => { const j = joursAvantAnniv(c.anniversaire); return j !== null && j <= n; };
+const FILTRES_CONTACTS = [['tous', 'Tous', () => true], ['anniv', 'Anniversaires sous 60 j', c => annivProche(c)], ['repondre', 'À répondre', attendReponse], ['relancer', 'À relancer', aRelancer]];
+let filtreContacts = 'tous';
+let triContacts = (() => { try { const t = JSON.parse(localStorage.getItem(CLE_TRI_CONTACTS) || 'null'); if(t && COLS_CONTACTS.some(([k]) => k === t.col) && (t.sens === 1 || t.sens === -1)) return t; } catch(e){} return {col:'nom', sens:1}; })();
+const cleTriContact = {nom:c => c.nom, telephone:c => c.telephone || c.autreTelephone, email:c => c.email, anniv:c => joursAvantAnniv(c.anniversaire),
+  echange:c => c.derniereConversation || '', tags:c => c.tags.filter(t => t !== TAG_REPONDRE).join(' ')};
+function comparerContacts(a, b){
+  const {col, sens} = triContacts, cle = cleTriContact[col] || cleTriContact.nom, x = cle(a), y = cle(b), vide = v => v === null || v === '';
+  if(vide(x) !== vide(y)) return vide(x) ? 1 : -1;   /* cases vides en dernier */
+  const r = typeof x === 'number' ? (x - y) : String(x).localeCompare(String(y), 'fr', {sensitivity:'base', numeric:true});
+  return r * sens || a.nom.localeCompare(b.nom, 'fr');
+}
+const ilYaJours = e => e === 0 ? 'aujourd’hui' : e === 1 ? 'hier' : e < 30 ? 'il y a ' + e + ' j' : e < 365 ? 'il y a ' + Math.round(e / 30.4) + ' mois' : 'il y a ' + pluriel(Math.round(e / 365), 'an');
 function pageContacts(){
-  return titre('Contacts', 'Clique sur un nom pour ouvrir sa fiche en grand et la modifier, sur la flèche pour la déplier.',
-      encartArchives('contacts') + boutonDeplier('contacts-deplier', 'contact-', contactsAffiches(), FILTRES.contacts) + btnAction('import-vcard', ico('importer', 14) + 'Importer (vCard)', 'btn') + btnAction('contact-nouveau', ico('plus', 14) + 'Nouvelle fiche', 'btn p')) +
-    (DB.contacts.length ? `<div class="barre-outils">${champFiltre('contacts', 'Rechercher : nom, téléphone, e-mail, adresse, nouvelles, #tag')}${puceFiltreProjet('contacts')}</div>` : '') +
+  const actifs = contactsActifs(), anniv30 = actifs.filter(c => annivProche(c, 30)).length, rep = actifs.filter(attendReponse).length, rel = actifs.filter(aRelancer).length;
+  const resume = actifs.length ? `<b>${pluriel(actifs.length, 'contact')}</b> · <b>${anniv30}</b> anniversaire${anniv30 > 1 ? 's' : ''} sous 30 j · <b>${rep}</b> réponse${rep > 1 ? 's' : ''} due${rep > 1 ? 's' : ''} · <b>${rel}</b> à relancer`
+    : 'Ce module sert de mémoire : anniversaires, nouvelles, messages en attente.';
+  return titre('Contacts', resume, encartArchives('contacts') + btnAction('import-vcard', ico('importer', 14) + 'Importer (vCard)', 'btn') + btnAction('contact-nouveau', ico('plus', 14) + 'Nouvelle fiche', 'btn p')) +
+    (DB.contacts.length ? `<div class="barre-outils">${champFiltre('contacts', 'Rechercher : nom, téléphone, e-mail, adresse, nouvelles, #tag')}${puceFiltreProjet('contacts')}
+      <div class="segment" role="group" aria-label="Afficher">${FILTRES_CONTACTS.map(([k, nom, f]) => { const n = k === 'tous' ? 0 : actifs.filter(f).length;
+        return `<button type="button" data-action="contacts-filtre" data-k="${k}" aria-pressed="${filtreContacts === k}"${filtreContacts === k ? ' class="on"' : ''}>${nom}${n ? ` <span class="compte">${n}</span>` : ''}</button>`; }).join('')}</div></div>` : '') +
     `<div id="liste-contacts">${listeContacts()}</div>`;
 }
 function listeContacts(){
   if(!DB.contacts.length) return vide('Aucune fiche. Ce module sert de mémoire : anniversaires, nouvelles, messages en attente.', btnAction('contact-nouveau', 'Créer une fiche', 'btn p'));
-  const q = FILTRES.contacts, cherche = !!q.trim(), actifs = contactsAffiches();
-  if(!actifs.length) return vide(cherche ? `Aucune fiche active ne correspond à « ${esc(q)} ».` : 'Toutes les fiches sont archivées (menu → Archives).');
-  const proche = c => { const j = joursAvantAnniv(c.anniversaire); return j !== null && j <= 30; };
-  const groupes = [], lettres = new Map();
-  if(actifs.some(proche)) groupes.push(['Anniversaires dans les 30 jours', actifs.filter(proche)]);
-  actifs.filter(c => !proche(c)).sort((a, b) => a.nom.localeCompare(b.nom, 'fr')).forEach(c => {
-    const l = /^[a-z]/.test(norm(c.nom)) ? norm(c.nom).charAt(0).toUpperCase() : '#';
-    if(!lettres.has(l)) lettres.set(l, []); lettres.get(l).push(c); });
-  [...lettres].sort(([a], [b]) => (a === '#') - (b === '#')).forEach(([lettre, l]) => groupes.push([lettre, l]));   /* « # » (nom sans lettre au début) en dernier */
-  return `<div class="annuaire">${groupes.map(([t, l]) => `<section class="groupe-contacts"><h2 class="lettre">${esc(t)}<span class="compte">${l.length}</span></h2>
-    <div class="carte grille-contacts">${l.map(c => carteContact(c, cherche)).join('')}</div></section>`).join('')}</div>`;
+  const q = FILTRES.contacts, f = (FILTRES_CONTACTS.find(x => x[0] === filtreContacts) || FILTRES_CONTACTS[0])[2];
+  const actifs = contactsAffiches(), l = actifs.filter(f).sort(comparerContacts);
+  if(!actifs.length) return vide(q.trim() ? `Aucune fiche active ne correspond à « ${esc(q)} ».` : 'Toutes les fiches sont archivées (menu → Archives).');
+  if(!l.length) return vide('Aucune fiche dans ce filtre.', btnAction('contacts-filtre', 'Tout afficher', 'btn', 'data-k="tous"'));
+  const th = (col, lib) => { const actif = triContacts.col === col;
+    return `<th class="triable${actif ? ' actif' : ''} col-${col}" aria-sort="${actif ? (triContacts.sens > 0 ? 'ascending' : 'descending') : 'none'}"><button type="button" class="tri" data-action="contacts-tri" data-col="${col}" title="Trier par ${lib.toLowerCase()}">${lib}<span class="fleche" aria-hidden="true">${actif ? (triContacts.sens > 0 ? '↑' : '↓') : ''}</span></button></th>`; };
+  const tel = (num, titre) => { const t = num.replace(/[^\d+]/g, ''); return `<a class="lien-tel" href="${t ? 'tel:' + esc(t) : '#'}" title="${titre}">${esc(num)}</a>`; };
+  const rien = '<span class="rien">—</span>';
+  return `<div class="carte carte-contacts"><div class="defile"><table class="table-contacts triable"><thead><tr>${COLS_CONTACTS.map(([k, n]) => th(k, n)).join('')}</tr></thead><tbody>
+    ${l.map(c => { const j = joursAvantAnniv(c.anniversaire), e = joursSansEchange(c), attente = c.aRepondre.filter(i => !i.ok).length, d = `data-id="${esc(c.id)}"`;
+      return `<tr class="ligne-contact" data-action="contact-ouvrir" ${d} tabindex="0" aria-label="Ouvrir la fiche de ${esc(c.nom)}">
+      <td class="nom"><span class="nom-contact">${avatarContact(c)}<button type="button" class="nom-lien" data-action="contact-ouvrir" ${d} title="Ouvrir la fiche en grand">${esc(c.nom)}</button>${attente ? `<span class="puce repondre" title="${pluriel(attente, 'réponse')} en attente">${ico('retour', 11)}répondre</span>` : ''}</span></td>
+      <td class="tel${c.telephone || c.autreTelephone ? '' : ' vide-m'}">${c.telephone ? tel(c.telephone, 'Appeler') : ''}${c.autreTelephone ? `<span class="autre">${tel(c.autreTelephone, 'Appeler (autre numéro)')}</span>` : ''}${c.telephone || c.autreTelephone ? '' : rien}</td>
+      <td class="mail${c.email ? '' : ' vide-m'}">${c.email ? `<a class="lien-tel" href="mailto:${esc(c.email)}" title="Écrire un e-mail">${esc(c.email)}</a>` : rien}</td>
+      <td class="anniv${j === null ? ' vide-m' : ''}">${j === null ? rien : `${ico('cadeau', 12)}${esc(dateCourte(decaleJour(j)))}${j <= ANNIV_PROCHES ? ` <span class="j-anniv${j <= 30 ? ' proche' : ''}">${j === 0 ? 'aujourd’hui' : j === 1 ? 'demain' : 'J−' + j}</span>` : ''}`}</td>
+      <td class="echange${e === null ? ' vide-m' : ''}">${e === null ? rien : `<span class="${e >= RELANCE_JOURS ? 'a-relancer' : ''}" title="${e >= RELANCE_JOURS ? 'Pas d’échange depuis plus de ' + RELANCE_JOURS + ' jours' : 'Dernier échange noté'}">${ico('bulle', 12)}${ilYaJours(e)}</span>`}</td>
+      <td class="tags">${tagProjet(c.projet)}${pucesTags(c.tags.filter(t => t !== TAG_REPONDRE))}</td></tr>`; }).join('')}</tbody></table></div>
+    ${l.length < actifs.length ? `<p class="aide pied-contacts">${pluriel(l.length, 'fiche')} sur ${actifs.length} · <button type="button" class="lien-texte" data-action="contacts-filtre" data-k="tous">tout afficher</button></p>` : ''}</div>`;
 }
 /* Fiches actives affichées (filtre et projet de la page Contacts) */
 function contactsAffiches(){
@@ -3939,7 +4010,7 @@ function pageDonnees(){
         <ul class="liste">${anciennes.map(a => `<li><span class="corps"><span class="t">${esc(a.nom)}</span><span class="s">${esc(resume(a.data))}${derniereModif(a.data) ? ' · modifiées ' + esc(ilya(derniereModif(a.data))) : ''}${(a.data.reglages || {}).demoSeeded ? ' · la démo y a été chargée' : ''}</span></span>${btnAction('ancienne-reprendre', 'Reprendre', 'btn compact', `data-cle="${esc(a.cle)}"`)}</li>`).join('')}</ul></section>` : ''}
       <section class="carte c12">${enteteCarte('commande', 'bleu', 'Raccourcis clavier')}
         <div class="puces"><span class="puce"><kbd>/</kbd> rechercher partout</span><span class="puce"><kbd>c</kbd> capture rapide</span><span class="puce"><kbd>t</kbd> tags</span><span class="puce"><kbd>Ctrl</kbd>+<kbd>K</kbd> commandes</span><span class="puce"><kbd>Échap</kbd> fermer</span></div>
-        <p class="aide" style="margin:12px 0 0">Life Panel v4.7.1 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
+        <p class="aide" style="margin:12px 0 0">Life Panel v4.8 · un seul fichier, aucune bibliothèque externe${ghActif() ? ' · seule connexion : ton dépôt GitHub privé' : ' · aucune connexion externe'}.</p></section>
     </div>`;
 }
 
@@ -5281,6 +5352,11 @@ const ACTIONS = {
   /* Contacts */
   'contact-nouveau': () => formContact({projet:projetFiltre('contacts') || ''}),
   'contact-ouvrir': el => ficheContact(el.dataset.id),
+  /* v4.8 : tableau des contacts (en-tête cliquable : trier ; puces : filtrer) */
+  'contacts-tri': el => { const col = el.dataset.col; if(!cleTriContact[col]) return; triContacts = triContacts.col === col ? {col, sens:-triContacts.sens} : {col, sens:1};
+    try { localStorage.setItem(CLE_TRI_CONTACTS, JSON.stringify(triContacts)); } catch(e){ /* réglage de cette visite seulement */ }
+    rafraichirListe('contacts'); const b = $(`#liste-contacts button.tri[data-col="${col}"]`); if(b) b.focus(); },
+  'contacts-filtre': el => { const k = el.dataset.k; if(!FILTRES_CONTACTS.some(([x]) => x === k)) return; filtreContacts = k; rendre(); },
   'contact-supprimer': async el => { const c = contact(el.dataset.id); if(!c) return;
     if(!await confirmerSuppression(c, {titre:'Supprimer cette fiche ?', texte:`La fiche de ${esc(c.nom)} sera mise à la corbeille.`, rouvrir:ficheContact})) return;
     retirerVersCorbeille('contacts', c); sauver(); rendre(); toast('Fiche mise à la corbeille'); },
@@ -5550,6 +5626,8 @@ document.addEventListener('input', e => {
   const carte = e.target.closest('.pliable');   /* taper dans le filtre d'une carte repliée la déplie */
   if(carte && e.target.value && !carte.classList.contains('ouvert')) basculerDepliable(carte, true);
 });
+/* v4.8 : Entrée sur une ligne du tableau des contacts ouvre la fiche */
+document.addEventListener('keydown', e => { if(e.key === 'Enter' && e.target.matches && e.target.matches('tr.ligne-contact')){ e.preventDefault(); ficheContact(e.target.dataset.id); } });
 /* Petits formulaires intégrés aux pages */
 document.addEventListener('submit', e => {
   const f = e.target.closest('form[data-form]'); if(!f) return;
