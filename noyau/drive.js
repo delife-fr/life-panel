@@ -31,7 +31,8 @@ export function connecterDrive(){
   const o = new Uint8Array(16); crypto.getRandomValues(o);
   const etat = [...o].map(x => x.toString(16).padStart(2, '0')).join('');
   try { sessionStorage.setItem(CLE_ETAT, JSON.stringify({etat, retour:location.hash || '#/carnet/documents'})); } catch(e){}
-  const p = new URLSearchParams({client_id:CLIENT_ID, redirect_uri:new URL('./', location.href).href, response_type:'token',
+  /* l'adresse de retour doit être exactement celle enregistrée dans Google Cloud : https://panel.alexishocini.fr, sans « / » final */
+  const p = new URLSearchParams({client_id:CLIENT_ID, redirect_uri:location.origin, response_type:'token',
     scope:PORTEE, include_granted_scopes:'true', state:etat});
   location.assign('https://accounts.google.com/o/oauth2/v2/auth?' + p);
 }
