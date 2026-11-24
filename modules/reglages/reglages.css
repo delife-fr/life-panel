@@ -6,3 +6,4 @@
 .etat-synchro{margin:0 0 6px;font-weight:600}
 .etat-synchro[data-etat="erreur"]{color:var(--c-rouge)}
 .etat-synchro[data-etat="hors"]{color:var(--c-jaune)}
+#reglages-notif .formulaire{margin:12px 0}

@@ -23,7 +23,8 @@ python3 -m http.server 8765
 puis http://127.0.0.1:8765/
 
 **La bêta en ligne** (décision du 23/11) : https://panel.alexishocini.fr/beta/ — une copie des fichiers de `beta` dans le
-dossier `beta/` de la branche `main` (index.html, app.js, noyau/, modules/, icons/ ; rien d'autre de `main` n'est touché).
+dossier `beta/` de la branche `main` (index.html, app.js, sw.js, manifest.webmanifest, noyau/, modules/, icons/ ; rien
+d'autre de `main` n'est touché).
 On la republie après chaque push sur `beta` (commit « Bêta v5 dans /beta (commit …) »). La v4.9 reste à la racine.
 La synchro GitHub n'y lit et n'écrit que `donnees-v5.json` (copie de `donnees.json` créée à la première connexion) ;
 elle reprend la clé GitHub de la v4.9 (même adresse, lue dans sa base « lifepanel », jamais écrite).
@@ -93,8 +94,16 @@ sur « Chargement… ».
   nuage dans la barre du haut quand elle est active (clic = synchroniser). Jamais sur raw.githack (adresse partagée),
   jamais pendant les exemples (`reglages.demo`), jamais un envoi de données vides. Réglages › Données : se connecter
   (avec la clé de la v4.9 en un clic), changer la clé, arrêter.
-  Pendant la bêta, rappels et notifications viennent toujours de la v4.9 (le robot lit donnees.json) ; ceux de la v5,
-  le service worker (hors ligne, installation) et les raccourcis Android `?action=` se font à la bascule.
+  Pendant la bêta, le robot lit toujours donnees.json (celui de la v4.9).
+- **Rappels et notifications** (24/11, noyau/notifications.js) : le moteur ne change pas (robot du dépôt privé, lancé
+  toutes les 30 min par cron-job.org, push du navigateur : rien à laisser ouvert ; précision ± 30 min, suffisante).
+  Réglages › Données › Notifications : activer sur cet appareil, mode (tout, résumé, rien), essayer, désactiver. Un
+  appareil est reconnu par son **abonnement push**, porté par le service worker de la racine du site (la v4.9 pendant la
+  bêta, la v5 ensuite) : même inscription avant et après la bascule, jamais de doublon. La clé (cle-publique.txt) existe
+  déjà : pas de « Préparer les notifications » en v5.
+- **Service worker v5** (sw.js) : le réseau d'abord (revalidé), la copie sans réseau ; cache « lp5-site » (la v4.9
+  efface les « lifepanel-… ») ; push et clic sur une notification comme la v4.9. **Manifeste** : raccourcis « Nouvelle
+  idée » (`?action=inbox` → Noter, Idée) et « Nouvelle dépense » (`?action=depense`), « Partager → LIFE PANEL » (Noter).
 - **Corbeille** gardée (Réglages › Corbeille, 30 jours, « Vider la corbeille » juste à droite de la recherche, option
   `outilsCote` du tableau) ; seules les archives sont parties.
 - **Aujourd'hui** : une tuile Finance (dépensé ce mois-ci, comptes pointés, anneau par catégorie), comme la v4.9.
@@ -195,7 +204,7 @@ modules/
   <section>/          module.js (+ <section>.css si styles:true) ; recherche/ (Ctrl K, résultats), tags/ (la fenêtre Tags) et
                       aide/ (« ? ») ne sont pas des sections ; reglages/exemples.js = les données fictives,
                       finance/releve.js = l'import d'un relevé, contacts/vcard.js = l'import vCard
-sw.js, manifest.webmanifest   ceux de la v4.9, pas encore branchés : refaits au lot 1
+sw.js, manifest.webmanifest   hors ligne, installation, notifications, raccourcis Android (lot 1)
 ```
 
 Les modules ne s'importent **jamais** entre eux : ils passent par le noyau. Une page est une fonction qui renvoie du HTML
@@ -226,6 +235,6 @@ Les modules ne s'importent **jamais** entre eux : ils passent par le noyau. Une 
 
 - Adresses de la v4.9 et du prototype : `noyau/adresses.js` (ALIAS). Le robot des rappels ouvre `#/aujourdhui`, `#/taches`,
   `#/donnees`, `#/evenement/ID` ; elles doivent continuer de mener à la bonne page.
-- Raccourcis Android du manifeste : `?action=inbox` et `?action=depense` (à traiter au lot 1 ou 2).
+- Raccourcis Android du manifeste : `?action=inbox` et `?action=depense` (app.js, ouvertureDepuisAndroid).
 - Le robot (`life-panel-donnees/notifications/rappels.js`) lit `donnees.json` : toute nouvelle forme d'événement ou de tâche
   qui doit déclencher un rappel doit y être ajoutée aussi.

@@ -151,8 +151,8 @@ function apercu(t){
   const c = lireCapture(t, typeChoisi), [nom] = TYPES_CAPTURE[c.type];
   return `${ico(ICONES[c.type], 16)}<span><b>${esc(nom)}</b> · ${esc(c.titre)}${c.puces.length ? ' · ' + esc(c.puces.join(' · ')) : ''}${c.complet ? '' : ' <span class="faible">(à compléter)</span>'}</span>`;
 }
-export function ouvrirCapture(texte = ''){
-  typeChoisi = 'idee';
+export function ouvrirCapture(texte = '', type = 'idee'){
+  typeChoisi = type;
   const types = [['idee', 'Idée'], ['auto', 'Auto'], ...Object.entries(TYPES_CAPTURE).filter(([k]) => k !== 'idee').map(([k, [n]]) => [k, n])];
   ouvrirFiche({titre:'Noter', html:`<form class="capture" data-capture autocomplete="off">
       <textarea id="capture-texte" rows="2" placeholder="Une phrase, puis Entrée" aria-label="Ce que tu veux noter" autofocus>${esc(texte)}</textarea>

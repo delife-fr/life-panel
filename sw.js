@@ -1,57 +1,42 @@
-/* LIFE PANEL — service worker (v4.9)
+/* LIFE PANEL v5 — service worker (repris de celui de la v4.9)
    Permet d'installer LIFE PANEL comme une appli, de l'ouvrir sans réseau et d'afficher ses notifications.
-   · La page (index.html) : le réseau d'abord, pour avoir toujours la dernière version ; sans réseau, ou si le
-     réseau ne répond pas en 3 secondes (4G faible), la copie gardée — la copie est tout de même remise à jour
-     quand la réponse finit par arriver.
-   · Manifeste (raccourcis, partage, icônes de l'appli) : le réseau d'abord lui aussi, pour que Chrome voie tout
-     de suite une nouvelle version de l'appli installée ; la copie gardée sans réseau.
-   · Icônes : la copie gardée d'abord.
-   · À l'installation d'une nouvelle version, tout est rechargé depuis le réseau (jamais depuis le cache HTTP
-     du navigateur, qui pourrait rendre l'ancienne version pendant quelques minutes).
-   · Notifications : un rappel envoyé par GitHub Actions (dépôt privé) arrive chiffré ; il est affiché comme la
-     notification d'une appli, même LIFE PANEL fermée. Un appui ouvre LIFE PANEL à la bonne page.
-   · Notes vocales retirées (v4) : le modèle Whisper et son code, gardés par la v3.38 dans « transformers-cache » et
-     « whisper-code » (≈ 270 Mo), sont effacés de l'appareil à l'activation.
-   · Rien d'autre n'est touché : ni GitHub (tes données), ni aucun autre site. */
-const CACHE = 'lifepanel-v4.9';
-const FICHIERS = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/badge-96.png', './icons/raccourci-inbox.png', './icons/raccourci-depense.png', './icons/favicon.svg', './icons/favicon-32.png'];
+   · Tous les fichiers du site (la page, app.js, noyau/, modules/, styles, polices, icônes) : le réseau d'abord, en
+     revalidant toujours (jamais un mélange d'anciens et de nouveaux modules) ; la copie gardée sans réseau, ou si le
+     réseau ne répond pas en 3 secondes (4G faible). Chaque réponse reçue met la copie à jour : après une première
+     visite, tout le site s'ouvre hors ligne (toutes les sections sont chargées au démarrage).
+   · Notifications : un rappel envoyé par le robot du dépôt privé arrive chiffré ; il est affiché comme la notification
+     d'une appli, même LIFE PANEL fermée. Un appui ouvre LIFE PANEL à la bonne page.
+   · Jamais GitHub, Google ni aucun autre site : seulement les fichiers de LIFE PANEL.
+   BÊTA : ce fichier est dans /beta/ (portée /beta/) ; à la bascule, il remplace celui de la v4.9 à la racine. Le cache
+   s'appelle « lp5-… » : la v4.9 efface les caches « lifepanel-… » qui ne sont pas les siens. */
+const CACHE = 'lp5-site';
 const DELAI_RESEAU = 3000;
 
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FICHIERS.map(f => new Request(f, {cache:'reload'})))).then(() => self.skipWaiting()));
-});
-self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys()
-    .then(l => Promise.all(l.filter(k => (k.startsWith('lifepanel-') && k !== CACHE) || k === 'transformers-cache' || k === 'whisper-code').map(k => caches.delete(k))))
-    .then(() => self.clients.claim()));
-});
-const copieGardee = r => caches.match(r, {ignoreSearch:true}).then(x => x || caches.match('./index.html'));
+self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.add(new Request('./', {cache:'reload'})).catch(() => {})).then(() => self.skipWaiting())); });
+self.addEventListener('activate', e => { e.waitUntil(self.clients.claim()); });
+
 self.addEventListener('fetch', e => {
   const r = e.request;
   if(r.method !== 'GET') return;
   const u = new URL(r.url);
-  if(u.origin !== self.location.origin) return;   /* GitHub, Google… : jamais interceptés */
-  const page = r.mode === 'navigate' || u.pathname.endsWith('/') || u.pathname.endsWith('.html') || u.pathname.endsWith('.webmanifest');
-  if(page){
-    const reseau = fetch(r).then(rep => {
-      if(rep.ok){ const copie = rep.clone(); caches.open(CACHE).then(c => c.put(r, copie)); }
-      return rep;
-    });
-    e.waitUntil(reseau.catch(() => {}));   /* la copie se met à jour même si la page a déjà été servie depuis le cache */
-    e.respondWith(new Promise(ok => {
-      let fini = false;
-      const servir = x => { if(!fini && x){ fini = true; ok(x); } };
-      const secours = () => copieGardee(r).then(x => { if(x) servir(x); else reseau.then(servir, () => servir(Response.error())); });
-      const t = setTimeout(secours, DELAI_RESEAU);
-      reseau.then(rep => { clearTimeout(t); servir(rep); }, () => { clearTimeout(t); copieGardee(r).then(x => servir(x || Response.error())); });
-    }));
-    return;
-  }
-  e.respondWith(caches.match(r).then(x => x || fetch(r)));
+  if(u.origin !== self.location.origin || !u.pathname.startsWith(new URL(self.registration.scope).pathname)) return;   /* rien hors de LIFE PANEL */
+  const cle = r.mode === 'navigate' ? new Request(new URL('./', self.registration.scope).href) : r;   /* une seule page : #/… et ?action=… sont la même */
+  const reseau = fetch(r, {cache:'no-cache'}).then(rep => {
+    if(rep.ok && rep.type === 'basic'){ const copie = rep.clone(); caches.open(CACHE).then(c => c.put(cle, copie)); }
+    return rep;
+  });
+  e.waitUntil(reseau.catch(() => {}));   /* la copie se met à jour même si la réponse gardée a déjà servi */
+  e.respondWith(new Promise(ok => {
+    let fini = false;
+    const servir = x => { if(!fini && x){ fini = true; ok(x); } };
+    const garde = () => caches.match(cle, {ignoreSearch:true});
+    const t = setTimeout(() => garde().then(x => { if(x) servir(x); }), DELAI_RESEAU);
+    reseau.then(rep => { clearTimeout(t); servir(rep); }, () => { clearTimeout(t); garde().then(x => servir(x || Response.error())); });
+  }));
 });
 
-/* --- Notifications --- */
-const pageSure = u => typeof u === 'string' && /^#\/[\w/?=&%.-]*$/.test(u) ? u : '#/accueil';
+/* --- Notifications (comme la v4.9) --- */
+const pageSure = u => typeof u === 'string' && /^#\/[\w/?=&%.-]*$/.test(u) ? u : '#/aujourdhui';
 self.addEventListener('push', e => {
   let m = {};
   try { m = e.data ? e.data.json() : {}; } catch(x){ m = {titre:'LIFE PANEL', corps:e.data ? e.data.text() : ''}; }

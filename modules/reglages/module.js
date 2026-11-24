@@ -14,6 +14,7 @@ import {tableau} from '../../noyau/tableau.js';
 import {ouvrirElement, titreElement, nomDe} from '../../noyau/fiches.js';
 import {lien} from '../../noyau/adresses.js';
 import {etat, faireSecours, lireSecours} from '../../noyau/stockage.js';
+import {notif, notifDispo, MODES, lireEtat, activer, changerMode, desactiver, essayer, dernierEnvoi} from '../../noyau/notifications.js';
 import {gh, FICHIER, adressePartagee, etatSynchro, TEXTES, cleV49, connecter, changerCle, deconnecter, appareilParDefaut} from '../../noyau/synchro.js';
 import {ico} from '../../noyau/icones.js';
 import {entete, bientot, toast, confirmer, VERSION_APPLI, champAjout, ouvrirFiche, fermerFiche, rendre} from '../../noyau/interface.js';
@@ -43,7 +44,7 @@ function page(){
   </section>`;
   return entete('Réglages et données') + `<div class="grille-reglages">${donnees}
     ${sectionSynchro()}
-    ${bientot(1, ['Les notifications', 'L’installation comme une appli'])}
+    ${gh.cfg && gh.cfg.jeton && !adressePartagee() ? '<section class="panneau" id="reglages-notif"><h2>Notifications</h2><p class="doux">Lecture…</p></section>' : ''}
     ${apropos}</div>`;
 }
 
@@ -112,6 +113,35 @@ function sectionSynchro(){
     <p class="attention" id="synchro-erreur" hidden></p>
     <div class="rangee"><button type="button" class="btn plein" data-action="synchro-connecter">${ico('nuage', 16, 1.8)}<span>Se connecter</span></button></div></section>`;
 }
+/* --- Notifications (noyau/notifications.js) : lues après l'affichage (il faut demander à GitHub) --- */
+const RAPPELS = 'Résumé du matin vers 8 h, rappel d’une tâche ou d’un rendez-vous un peu avant son heure, rien entre 0 h et 6 h, à l’heure de l’appareil.';
+function blocNotif(){
+  const tete = '<h2>Notifications</h2>';
+  if(!notifDispo()) return tete + '<p class="doux">Ce navigateur ne sait pas recevoir de notifications.</p>';
+  if(!notif.charge) return tete + `<p class="attention">${esc(notif.erreur ? 'Lecture impossible : ' + notif.erreur : 'Lecture…')}</p>${notif.erreur ? '<div class="rangee"><button type="button" class="btn" data-action="notif-relire">Réessayer</button></div>' : ''}`;
+  const e = notif.entree;
+  if(!e || notif.perdu) return tete + `<p class="doux">${notif.perdu ? '<b>L’autorisation a été retirée sur cet appareil.</b> ' : `Cet appareil (${esc(gh.cfg.appareil || '?')}) ne reçoit pas les rappels. `}${RAPPELS}</p>
+    <div class="rangee"><button type="button" class="btn plein" data-action="notif-activer">${notif.perdu ? 'Réactiver' : 'Activer sur cet appareil'}</button></div>`;
+  const d = dernierEnvoi();
+  return tete + `<p class="doux">Activées sur <b>${esc(e.nom)}</b> (${esc(e.fuseau)}). ${RAPPELS}${d ? ' Dernier envoi : ' + esc(dateCourte(jourDe(d))) + '.' : ''}</p>
+    <div class="formulaire"><div class="champ demi"><label for="notif-mode">Sur cet appareil</label><select id="notif-mode">${MODES.map(([v, t]) => `<option value="${v}"${v === e.mode ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></div></div>
+    <div class="rangee"><button type="button" class="btn" data-action="notif-essayer">Essayer ici</button><button type="button" class="btn discret" data-action="notif-desactiver">Désactiver</button></div>`;
+}
+async function montrerNotif(vue, relire = true){
+  const z = vue.querySelector('#reglages-notif'); if(!z) return;
+  if(relire) await lireEtat();
+  if(!document.contains(z)) return;
+  z.innerHTML = blocNotif();
+  const s = z.querySelector('#notif-mode');
+  if(s) s.addEventListener('change', () => agirNotif(async () => { await changerMode(s.value); toast((MODES.find(([v]) => v === s.value) || ['', ''])[1] + '.'); }));
+}
+/* Une action à la fois ; l'erreur dite clairement ; le bloc redessiné ensuite */
+async function agirNotif(f){
+  if(notif.enCours) return; notif.enCours = true;
+  try { await f(); } catch(e){ toast(e && e.name === 'HorsLigne' ? 'Pas de réseau : réessaie quand tu seras connecté.' : 'Notifications : ' + ((e && e.message) || e)); }
+  finally { notif.enCours = false; const v = document.getElementById('vue'); if(v) montrerNotif(v, false); }
+}
+
 /* La clé de la v4.9, déjà dans ce navigateur (même adresse) : un clic suffit */
 async function montrerCleV49(vue){
   const z = vue.querySelector('#synchro-v49'); if(!z) return;
@@ -161,7 +191,7 @@ export default {
   },
   apres:{
     reglages:(ctx, vue) => { const f = vue.querySelector('#fichier-donnees'); if(f) f.addEventListener('change', () => { if(f.files[0]) importer(f.files[0]); f.value = ''; });
-      if(ctx.arg !== 'corbeille'){ montrerSecours(vue); montrerCleV49(vue); } }
+      if(ctx.arg !== 'corbeille'){ montrerSecours(vue); montrerCleV49(vue); montrerNotif(vue); } }
   },
   actions:{
     'exemples-charger':async () => {
@@ -184,6 +214,11 @@ export default {
       seConnecter({owner:v('owner'), repo:v('repo'), appareil:v('appareil'), jeton:v('jeton')}, el); },
     'synchro-v49':el => { if(cleTrouvee) seConnecter({...cleTrouvee, appareil:(document.getElementById('sy-appareil') || {}).value || cleTrouvee.appareil}, el); },
     'synchro-arreter':() => deconnecter(),
+    'notif-relire':() => { const v = document.getElementById('vue'); if(v) montrerNotif(v); },
+    'notif-activer':() => agirNotif(async () => { await activer(); toast('Notifications activées sur cet appareil.'); }),
+    'notif-essayer':() => agirNotif(essayer),
+    'notif-desactiver':async () => { if(!await confirmer({titre:'Désactiver les notifications ?', oui:'Désactiver', texte:'Cet appareil ne recevra plus de rappels. Tes autres appareils continuent d’en recevoir.'})) return;
+      agirNotif(async () => { await desactiver(); toast('Notifications désactivées sur cet appareil.'); }); },
     'synchro-cle':() => ouvrirFiche({titre:'Nouvelle clé GitHub', html:`<div class="formulaire"><div class="champ"><label for="sy-nouvelle">Clé de cet appareil</label>
         <input type="password" id="sy-nouvelle" spellcheck="false" autocomplete="off" placeholder="github_pat_…"></div></div><p class="attention" id="sy-cle-erreur" hidden></p>`,
       pied:`<div class="droite"><button type="button" class="btn" data-action="fermer-fiche">Annuler</button><button type="button" class="btn plein" data-action="synchro-cle-ok">Enregistrer</button></div>`}),
