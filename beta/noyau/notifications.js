@@ -48,6 +48,11 @@ export async function lireEtat(){
     notif.entree = sub ? liste.find(a => a && a.abonnement && a.abonnement.endpoint === sub.endpoint) || null : null;
     notif.perdu = !!notif.entree && Notification.permission !== 'granted';
     notif.charge = true; notif.erreur = '';
+    /* d'anciennes inscriptions de cet appareil (réactivé plusieurs fois) : retirées, sinon chaque rappel arriverait en double */
+    if(notif.entree && liste.some(a => a && a.id !== notif.entree.id && a.nom === notif.entree.nom)){
+      const garde = notif.entree.id;
+      await majAppareils(x => { x.appareils = x.appareils.filter(a => a && (a.id === garde || a.nom !== notif.entree.nom)); });
+    }
     if(notif.entree && !notif.perdu){
       const fuseau = fuseauIci(), nom = gh.cfg.appareil || notif.entree.nom;
       if(notif.entree.fuseau !== fuseau || notif.entree.nom !== nom){
@@ -67,11 +72,13 @@ export async function activer(){
   const p = await Notification.requestPermission();
   if(p !== 'granted') throw new Error(p === 'denied' ? 'notifications bloquées : autorise-les pour ce site dans les réglages du navigateur, puis réessaie.' : 'notifications non autorisées.');
   const reg = await inscription(); let sub = await reg.pushManager.getSubscription();
-  if(sub){ const k = sub.options && sub.options.applicationServerKey; if(!k || octetsVersB64url(k) !== notif.cle){ await sub.unsubscribe(); sub = null; } }   /* inscrit avec une ancienne clé */
+  /* inscrit avec une ancienne clé : on se réabonne ; si le navigateur ne dit pas sa clé (Android), on garde l'abonnement */
+  if(sub){ const k = sub.options && sub.options.applicationServerKey; if(k && octetsVersB64url(k) !== notif.cle){ await sub.unsubscribe(); sub = null; } }
   if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64urlVersOctets(notif.cle)});
   const ab = abonnementDe(sub), ancien = notif.entree;
   const entree = {id:(ancien && ancien.id) || uid(), nom:gh.cfg.appareil || appareilParDefaut(), fuseau:fuseauIci(), mode:(ancien && ancien.mode) || 'tout', cle:notif.cle, abonnement:ab, maj:maintenant()};
-  await majAppareils(l => { l.appareils = l.appareils.filter(a => a && a.id !== entree.id && !(a.abonnement && a.abonnement.endpoint === ab.endpoint)).concat([entree]); });
+  /* une seule inscription par appareil : on remplace la sienne (même identifiant, même abonnement ou même nom d'appareil) */
+  await majAppareils(l => { l.appareils = l.appareils.filter(a => a && a.id !== entree.id && a.nom !== entree.nom && !(a.abonnement && a.abonnement.endpoint === ab.endpoint)).concat([entree]); });
   notif.entree = entree; notif.perdu = false;
 }
 export async function changerMode(mode){

@@ -40,7 +40,7 @@ p{margin:0}
 .rangee{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
 /* --- Champs --- */
-input[type=text],input[type=search],input[type=date],input[type=time],input[type=number],input[type=email],input[type=tel],input[type=url],select,textarea{
+input[type=text],input[type=search],input[type=date],input[type=time],input[type=number],input[type=email],input[type=tel],input[type=url],input[type=password],select,textarea{
   width:100%;min-height:38px;padding:8px 11px;background:var(--champ);border:1px solid var(--bord);border-radius:var(--r-petit);color:var(--texte);outline:none;transition:border-color .15s,box-shadow .15s}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-doux)}
 textarea{min-height:96px;resize:vertical;line-height:1.5}
