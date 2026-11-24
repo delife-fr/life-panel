@@ -117,8 +117,9 @@ sur « Chargement… ».
 - **Exemples** : Réglages › Données › « Charger des exemples » (modules/reglages/exemples.js) remplace les données de la
   bêta par des données fictives ; à enrichir quand une fonction arrive.
 - **Tags sur tout élément** sauf les idées ; la fenêtre Tags de la v4.7 pour les gérer (en haut à droite).
-- **Capture rapide dans chaque section** : une ligne, Entrée, c'est créé, les détails après. Le bouton + garde la phrase
-  devinée de la v4.9 (« essence 45 » → une dépense).
+- **Capture rapide dans chaque section** : une ligne, Entrée, c'est créé, les détails après. Le bouton + (« Noter ») :
+  **« Idée » choisi par défaut** (24/11), Entrée et c'est dans Idées ; « Auto » (l'ancien « Deviner ») garde la phrase
+  devinée de la v4.9 (« essence 45 » → une dépense), les autres puces forcent le type.
 - **Journal** (Carnet) : une ou deux phrases datées ; « @ » ouvre la liste des contacts pendant la frappe, « # » les tags,
   partout où l'on écrit une entrée (Carnet, page d'un dossier, fiche : noyau/mentions.js, `champAjout(…, {mentions:true})`).
   Pas de champ « Personnes » dans la fiche (24/11) : les personnes d'une entrée sont celles citées avec « @ » dans le texte.
