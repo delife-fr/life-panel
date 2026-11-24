@@ -1,0 +1,286 @@
+/* LIFE PANEL v5 · noyau/styles/composants.css
+   Les pièces communes à toutes les sections : blocs, puces (tags, dossiers), case à cocher, ligne « ajouter vite »,
+   tableau (cartes sur téléphone), formulaire des fiches, fenêtre « Noter », glisser-déposer. */
+
+/* --- Blocs d'une page --- */
+.bloc{background:var(--panneau);border:1px solid var(--bord);border-radius:var(--r);padding:16px 18px;min-width:0}
+.bloc-tete{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 10px}
+.bloc-tete h2{font:700 19px/1.1 var(--titre);letter-spacing:.01em}
+.bloc-tete a,.bloc-tete .lien{font-size:13px;color:var(--texte-2)}
+.bloc-tete a:hover{color:var(--texte)}
+.lien-texte{color:var(--accent-texte);font-weight:500}
+.lien-texte:hover{text-decoration:underline}
+
+/* --- Puces : tags, dossiers, types --- */
+.puces{display:flex;flex-wrap:wrap;gap:4px}
+.puce{display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:1px 8px;border-radius:999px;background:var(--panneau-2);border:1px solid var(--bord);
+  color:var(--texte-2);font-size:12px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.puce.dossier{background:color-mix(in srgb, var(--c, var(--c-gris)) 22%, var(--panneau));border-color:color-mix(in srgb, var(--c, var(--c-gris)) 60%, var(--bord));color:var(--texte)}
+.puce.dossier::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c, var(--c-gris));flex-shrink:0}
+.puce.type{border-color:transparent;background:color-mix(in srgb, var(--c, var(--accent)) 16%, transparent);color:var(--texte)}
+.retard{color:var(--critique)}
+.attention{color:var(--attention)}
+
+/* --- Case à cocher ronde (tâche faite) --- */
+input.coche{appearance:none;-webkit-appearance:none;width:20px;height:20px;margin:0;border-radius:5px;border:1.6px solid var(--bord-fort);background:var(--champ);cursor:pointer;
+  display:inline-grid;place-items:center;flex-shrink:0;transition:background .12s,border-color .12s}
+input.coche:hover{border-color:var(--texte-3)}
+input.coche:checked{background:var(--ok);border-color:var(--ok)}
+input.coche:checked::after{content:"";width:9px;height:5px;border:2px solid var(--fond);border-top:0;border-right:0;transform:translateY(-1px) rotate(-45deg)}
+
+/* --- Ligne « ajouter vite » --- */
+.ajout{display:flex;align-items:center;gap:10px;padding:0 12px;min-height:44px;border:1px dashed var(--bord-fort);border-radius:var(--r-petit);background:var(--champ);color:var(--texte-3)}
+.ajout:focus-within{border-style:solid;border-color:color-mix(in srgb, var(--section) 70%, var(--bord));color:var(--texte-2)}
+.ajout input{flex:1;min-width:0;border:0;background:none;outline:none;padding:10px 0;box-shadow:none!important;min-height:0}
+
+/* --- Tableau --- */
+.tableau{display:flex;flex-direction:column;gap:10px;min-width:0}
+.tableau-barre{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tableau-recherche{display:flex;align-items:center;gap:8px;flex:1 1 240px;max-width:420px;margin:0;padding:0 10px;height:38px;border:1px solid var(--bord);border-radius:var(--r-petit);background:var(--champ);color:var(--texte-3)}
+.tableau-recherche:focus-within{border-color:var(--accent)}
+.tableau-recherche input{border:0;background:none;outline:none;padding:0;min-height:0;height:100%;box-shadow:none!important}
+.tableau-compte{font-size:12.5px;color:var(--texte-3)}
+.tableau-outils{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tableau-outils.cote{margin-left:0}
+.tableau-colonnes{position:relative}
+.tableau-colonnes summary{list-style:none}
+.tableau-colonnes summary::-webkit-details-marker{display:none}
+.menu-colonnes{position:absolute;right:0;top:calc(100% + 6px);z-index:15;min-width:200px;display:flex;flex-direction:column;gap:2px;padding:8px;
+  background:var(--panneau);border:1px solid var(--bord-fort);border-radius:var(--r-petit);box-shadow:var(--ombre-haute)}
+.menu-colonnes label{display:flex;align-items:center;gap:8px;margin:0;padding:6px 8px;border-radius:5px;color:var(--texte);font-size:13.5px;cursor:pointer}
+.menu-colonnes label:hover{background:var(--panneau-2)}
+.defile-tableau{overflow-x:auto;border:1px solid var(--bord);border-radius:var(--r);background:var(--panneau)}
+.tableau table{width:100%;border-collapse:collapse;font-size:13.5px}
+.tableau th{position:sticky;top:0;text-align:left;font-size:12px;font-weight:600;color:var(--texte-3);padding:9px 12px;border-bottom:1px solid var(--bord);background:var(--panneau);white-space:nowrap}
+.tableau th button{display:inline-flex;align-items:center;gap:4px;font:inherit;color:inherit}
+.tableau th button:hover,.tableau th[aria-sort="ascending"] button,.tableau th[aria-sort="descending"] button{color:var(--texte)}
+.tableau td{padding:9px 12px;border-bottom:1px solid var(--bord);vertical-align:middle}
+.tableau tbody tr:last-child td{border-bottom:0}
+.tableau tbody tr[tabindex]{cursor:pointer}
+.tableau tbody tr:hover{background:color-mix(in srgb, var(--panneau-2) 70%, transparent)}
+.tableau tbody tr:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:0}
+.tableau .num{text-align:right;white-space:nowrap}
+.tableau .t-coche{width:44px;padding-right:0}
+.tableau .t-saut{display:none}
+.tableau .col-titre,.tableau .t-titre{font-weight:500;color:var(--texte)}
+.tableau .t-sous,.tableau .t-droite{color:var(--texte-2)}
+.tableau tr.fait .t-titre{color:var(--texte-3);text-decoration:line-through}
+.tableau .extrait{display:block;color:var(--texte-3);font-size:12.5px;font-weight:400;max-width:40vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tableau-vide{padding:28px 16px;text-align:center;color:var(--texte-3);border:1px dashed var(--bord);border-radius:var(--r)}
+.tableau-plus{display:flex;justify-content:center}
+.actions-ligne{display:flex;gap:4px;justify-content:flex-end;align-items:center;flex-wrap:nowrap}
+.btn.petit,.btn.compact{min-height:30px;padding:0 10px;font-size:12.5px}
+.icone-btn.petit{width:30px;height:30px}
+
+/* Téléphone : une carte par ligne (titre en haut, à droite le montant ou la date, le reste en petit dessous) */
+@media (max-width:700px){
+  .tableau-recherche{max-width:none}
+  .defile-tableau{border:0;background:none;overflow:visible}
+  .tableau table,.tableau tbody{display:block}
+  .tableau thead{display:none}
+  .tableau tbody tr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:12px 14px;margin:0 0 8px;background:var(--panneau);border:1px solid var(--bord);border-radius:var(--r)}
+  .tableau td{display:block;padding:0;border:0}
+  .tableau .t-coche{order:0;width:auto}
+  .tableau .t-titre{order:1;flex:1 1 0;min-width:0}
+  .tableau .t-droite{order:2;margin-left:auto}
+  .tableau .t-saut{display:block;order:3;flex-basis:100%;height:0}
+  .tableau .t-sous{order:4;font-size:12.5px;color:var(--texte-3)}
+  .tableau .t-sous.t-vide,.tableau .t-cache{display:none}
+  .tableau .t-actions{order:5;flex-basis:100%}
+  .tableau .actions-ligne{justify-content:flex-start;flex-wrap:wrap}
+  .tableau .extrait{white-space:normal}
+}
+
+/* --- Formulaire des fiches --- */
+.formulaire{display:flex;flex-wrap:wrap;gap:14px 12px}
+.formulaire .champ{flex:1 1 100%;min-width:0}
+.formulaire .champ.demi{flex:1 1 calc(50% - 6px)}
+.formulaire .champ.quart{flex:1 1 calc(25% - 9px)}
+.champ-case{display:flex;align-items:center;gap:8px;flex:1 1 100%;margin:0;color:var(--texte);font-size:14px}
+.avec-vider{display:flex;gap:6px;align-items:center}
+.etapes{display:flex;flex-direction:column;gap:6px}
+.etapes:empty{display:none}
+.etape{display:flex;align-items:center;gap:8px}
+.etape .e-t{flex:1;min-width:0}
+.etape:has(.e-ok:checked) .e-t{color:var(--texte-3);text-decoration:line-through}
+.attributs{display:flex;flex-direction:column;gap:6px;margin:0 0 6px}
+.attribut{display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1.4fr) auto;gap:6px;align-items:center}
+@media (max-width:520px){ .formulaire .champ.demi,.formulaire .champ.quart{flex-basis:100%} }
+
+/* --- Fenêtre « Noter » --- */
+.capture{display:flex;flex-direction:column;gap:12px}
+.capture textarea{font-size:16px;min-height:64px}
+.capture-apercu{display:flex;align-items:flex-start;gap:8px;min-height:22px;color:var(--texte-2);font-size:13.5px}
+.capture-apercu svg{margin-top:2px;color:var(--section)}
+.puces-choix{display:flex;flex-wrap:wrap;gap:6px}
+.puce-choix{padding:5px 11px;border-radius:999px;border:1px solid var(--bord);background:var(--panneau-2);color:var(--texte-2);font-size:13px;font-weight:500}
+.puce-choix:hover{color:var(--texte);border-color:var(--bord-fort)}
+.puce-choix.actif{background:color-mix(in srgb, var(--section) 22%, transparent);border-color:color-mix(in srgb, var(--section) 55%, var(--bord));color:var(--texte)}
+
+/* --- Glisser-déposer --- */
+.en-glisse,.en-glisse *{user-select:none;-webkit-user-select:none;cursor:grabbing!important}
+.fantome{position:fixed;left:0;top:0;z-index:100;pointer-events:none;max-width:280px;padding:7px 12px;border-radius:8px;background:var(--panneau-3);border:1px solid var(--bord-fort);
+  box-shadow:var(--ombre-haute);font-size:13px;font-weight:500;color:var(--texte);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.glisse-source{opacity:.45}
+.depot-possible{outline:1.5px dashed color-mix(in srgb, var(--texte-3) 70%, transparent);outline-offset:-3px;border-radius:8px}
+.cible-active{outline:2px solid var(--accent)!important;outline-offset:-3px;background:var(--accent-doux)!important}
+.bloc-tete a{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.tableau .col-ajoutee,.tableau .col-date,.tableau .col-archivee{white-space:nowrap}
+
+/* --- Petits textes d'aide, masqués sur téléphone au besoin --- */
+.aide{margin:0;font-size:12.5px;color:var(--texte-3)}
+@media (max-width:1099px){ .masque-tel{display:none!important} }
+
+/* --- Filtres en puces (au-dessus d'un tableau) --- */
+.filtres{display:flex;flex-wrap:wrap;gap:6px}
+.filtres a.puce-choix{text-decoration:none}
+
+/* --- Lignes choisies dans un tableau (Ctrl + clic) et leur barre --- */
+.tableau tbody tr.choisie,.tableau tbody tr.choisie:hover{background:color-mix(in srgb, var(--accent) 16%, transparent)}
+.tableau tbody tr.choisie td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.tableau-choix{position:fixed;z-index:40;left:50%;bottom:24px;transform:translateX(-50%);display:flex;align-items:center;flex-wrap:wrap;justify-content:center;gap:6px;
+  max-width:calc(100vw - 32px);padding:8px 10px 8px 16px;border-radius:12px;background:var(--panneau-3);border:1px solid var(--bord-fort);box-shadow:var(--ombre-haute)}
+.tableau-choix .choix-nombre{font-weight:600;font-size:13px;margin-right:6px;white-space:nowrap}
+@media (max-width:1099px){ .tableau-choix{bottom:calc(var(--onglets) + 16px + env(safe-area-inset-bottom))} }
+
+/* --- Petites fenêtres de choix (un jour, une liste, un dossier) --- */
+.choix-grille{display:grid;grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));gap:8px}
+.choix-colonne{display:flex;flex-direction:column;gap:6px}
+.btn.choix{justify-content:flex-start;min-height:44px;text-align:left}
+.choix-grille .btn.choix{flex-direction:column;align-items:flex-start;gap:2px;padding:8px 12px;min-height:56px}
+.btn.choix small{color:var(--texte-3);font-size:12px;font-weight:400}
+.btn.choix b{font-weight:600}
+.pastille-dossier{width:10px;height:10px;border-radius:3px;background:var(--c);flex-shrink:0}
+.autre-jour{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--bord)}
+.autre-jour label{color:var(--texte-2);font-size:13px;margin-right:4px}
+.autre-jour input{width:auto}
+.autre-jour.seul{margin:0;padding:0;border:0}
+.fiche .ajout{margin-top:14px}
+/* Un message en bas de l'écran passe au-dessus de la barre de sélection au lieu de la cacher */
+body:has(.tableau-choix) .toast{bottom:92px}
+@media (max-width:1099px){ body:has(.tableau-choix) .toast{bottom:calc(var(--onglets) + 84px + env(safe-area-inset-bottom))} }
+@media (max-width:700px){ .tableau .t-droite.t-vide{display:none} }
+/* Liens vers l'extérieur dans un tableau (document, téléphone, e-mail) : cliquables sans ouvrir la ligne */
+.lien-externe{display:inline-flex;align-items:center;gap:5px;color:var(--accent-texte);text-decoration:none;max-width:100%;overflow:hidden}
+.lien-externe span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lien-externe:hover{text-decoration:underline}
+a.puce.dossier{text-decoration:none;color:var(--texte)}
+a.puce.dossier:hover{background:color-mix(in srgb, var(--c, var(--c-gris)) 36%, var(--panneau))}
+.journal-fiche{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto}
+.journal-fiche li{padding:7px 10px;border-radius:var(--r-petit);background:var(--panneau-2);font-size:13.5px;color:var(--texte)}
+.journal-fiche b{color:var(--texte-2);font-weight:600;margin-right:6px}
+.formulaire .etiquette{display:block;font-size:12.5px;font-weight:600;color:var(--texte-2);margin-bottom:6px}
+/* Choisir un dossier (puces en couleur, par chemin) et une couleur (pastilles) */
+.choix-dossiers{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.groupe-dossiers{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.groupe-dossiers .chemin{font-size:12px;color:var(--texte-3);margin-right:2px}
+.choix-dossiers .puce{cursor:pointer;padding:4px 11px;font-size:13px}
+.choix-dossiers .puce.choisie{outline:2px solid var(--accent);outline-offset:1px}
+.nuancier{display:flex;flex-wrap:wrap;gap:8px}
+.pastille-choix{width:28px;height:28px;border-radius:7px;border:2px solid transparent;background:var(--c);cursor:pointer;padding:0}
+.pastille-choix.raye{background:repeating-linear-gradient(45deg, var(--c) 0 4px, color-mix(in srgb, var(--c) 45%, var(--panneau)) 4px 7px)}
+.pastille-choix.choisie{border-color:var(--texte);box-shadow:0 0 0 2px var(--panneau)}
+.pastille-cat{display:inline-block;width:11px;height:11px;border-radius:3px;background:var(--c);flex-shrink:0;vertical-align:-1px}
+.pastille-cat.raye{background:repeating-linear-gradient(45deg, var(--c) 0 3px, color-mix(in srgb, var(--c) 45%, var(--panneau)) 3px 5px)}
+.tableau-plier{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;padding:4px 6px;border:0;background:none;color:var(--texte);font-weight:600;font-size:15px;cursor:pointer;border-radius:var(--r-petit)}
+.tableau-plier:hover{background:var(--panneau-2)}
+.tableau-plier svg{transition:transform .15s}
+.tableau-plier .n{font-size:12px;color:var(--texte-3);font-weight:600}
+.tableau.plie .tableau-plier svg{transform:rotate(-90deg)}
+.tableau.plie > .tableau-barre,.tableau.plie > .tableau-corps{display:none}
+/* Le dossier d'un élément : un carré de couleur et son nom (comme dans le prototype) */
+.carre{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c, var(--c-gris));flex-shrink:0}
+.lien-dossier{display:inline-flex;align-items:center;gap:7px;color:var(--texte);text-decoration:none;white-space:nowrap}
+.lien-dossier:hover{text-decoration:underline;text-decoration-color:var(--c, var(--texte-3))}
+/* Liste déroulante qui peut montrer une couleur (dossier, chemin) */
+.deroulant{position:relative}
+.deroulant-bouton{display:flex;align-items:center;gap:8px;width:100%;min-height:38px;padding:0 12px;border:1px solid var(--bord);border-radius:var(--r-petit);background:var(--panneau-2);color:var(--texte);font:inherit;text-align:left;cursor:pointer}
+.deroulant-bouton:hover,.deroulant-bouton[aria-expanded="true"]{border-color:var(--bord-fort)}
+.deroulant-bouton > span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.deroulant-bouton > span.faible{color:var(--texte-3)}
+.deroulant-liste{position:absolute;z-index:70;left:0;right:0;top:calc(100% + 4px);max-height:300px;overflow:auto;list-style:none;margin:0;padding:4px;border:1px solid var(--bord-fort);border-radius:var(--r-petit);background:var(--panneau-3);box-shadow:var(--ombre-haute)}
+.deroulant-liste li[role="option"]{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;color:var(--texte);font-size:13.5px;outline:none}
+.deroulant-liste li[role="option"]:hover,.deroulant-liste li[role="option"]:focus{background:color-mix(in srgb, var(--accent) 18%, transparent)}
+.deroulant-liste li[aria-selected="true"]{font-weight:600}
+.deroulant-groupe{padding:8px 10px 3px;font-size:11.5px;font-weight:600;color:var(--texte-3)}
+/* Propositions pendant la frappe (tags, @ du journal) */
+.avec-suggestions{position:relative}
+.suggestions{position:absolute;z-index:30;left:0;right:0;top:calc(100% + 4px);list-style:none;margin:0;padding:4px;border:1px solid var(--bord-fort);border-radius:var(--r-petit);
+  background:var(--panneau-3);box-shadow:var(--ombre-haute)}
+.suggestions li{padding:7px 10px;border-radius:6px;cursor:pointer;font-size:13.5px;color:var(--texte)}
+.suggestions li.active,.suggestions li:hover{background:color-mix(in srgb, var(--section) 22%, transparent)}
+.pliable.plie > .bloc-corps{display:none}
+.pliable.plie .tableau-plier svg{transform:rotate(-90deg)}
+.pliable .bloc-tete .tableau-plier{font-size:16px}
+.sous-menu a .n{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;margin-left:6px;border-radius:999px;box-sizing:border-box;
+  font-size:11px;font-weight:700;line-height:1;color:var(--texte);background:color-mix(in srgb, var(--section) 34%, var(--panneau-2));font-variant-numeric:tabular-nums}
+.sous-menu a.actif .n{background:var(--section);color:var(--fond)}
+/* L'anneau par catégorie et sa légende */
+.par-categorie{display:grid;grid-template-columns:200px minmax(0, 1fr);gap:24px;align-items:start}
+.anneau{width:200px;height:200px}
+.anneau circle{transition:stroke-dasharray .25s, stroke-dashoffset .25s}
+.anneau-total{font-size:19px;font-weight:700;fill:var(--texte)}
+.anneau-sous{font-size:11px;fill:var(--texte-3)}
+.legende{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));gap:2px 18px}
+.legende li{display:grid;grid-template-columns:12px minmax(0, 1fr) auto auto;align-items:center;gap:10px;padding:6px 6px;border-radius:var(--r-petit);cursor:pointer;font-size:13.5px}
+.legende li:hover{background:var(--panneau-2)}
+.legende .nom{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--texte)}
+.legende .part{color:var(--texte-3);font-size:12px;font-variant-numeric:tabular-nums}
+.legende .val{font-variant-numeric:tabular-nums;color:var(--texte-2)}
+.legende li.retiree .nom,.legende li.retiree .val{color:var(--texte-3);text-decoration:line-through}
+.legende li.retiree .pastille-cat{opacity:.35}
+.pastille-cat{display:inline-block;width:11px;height:11px;border-radius:3px;background:var(--c);flex-shrink:0;vertical-align:-1px}
+.pastille-cat.raye{background:repeating-linear-gradient(45deg, var(--c) 0 3px, color-mix(in srgb, var(--c) 45%, var(--panneau)) 3px 5px)}
+.tableau .puce .pastille-cat{margin-right:5px;width:8px;height:8px}
+@media (max-width:700px){ .par-categorie{grid-template-columns:minmax(0, 1fr);justify-items:center} .legende{width:100%} }
+
+.par-categorie.compact{grid-template-columns:150px minmax(0, 1fr);gap:16px}
+.par-categorie.compact .anneau{width:150px;height:150px}
+.par-categorie.compact .legende{grid-template-columns:minmax(0, 1fr)}
+.par-categorie.compact .legende li{cursor:default;padding:4px 6px}
+/* L'aide (« ? ») */
+.aide-titre{margin:16px 0 8px;font-size:12.5px;font-weight:700;color:var(--texte-3);text-transform:uppercase;letter-spacing:.04em}
+.aide-titre:first-child{margin-top:0}
+.aide-liste{display:grid;grid-template-columns:minmax(110px, max-content) minmax(0, 1fr);gap:8px 14px;margin:0;align-items:baseline}
+.aide-liste dd{margin:0;color:var(--texte-2);font-size:13.5px}
+.touche{display:inline-block;padding:2px 8px;border:1px solid var(--bord-fort);border-radius:6px;background:var(--panneau-2);font-size:12.5px;font-weight:600;color:var(--texte);white-space:nowrap}
+/* --- La liseuse Markdown (noyau/markdown.js), reprise de la v4.9 --- */
+.md{font-size:15px;line-height:1.65;color:var(--texte-2);overflow-wrap:anywhere}
+.md > :first-child{margin-top:0}
+.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{line-height:1.3;font-weight:650;color:var(--texte)}
+.md h1{font-size:24px;font-weight:700;margin:24px 0 10px} .md h2{font-size:20px;font-weight:700;margin:22px 0 9px}
+.md h3{font-size:18px;margin:20px 0 8px} .md h4{font-size:16px;margin:16px 0 6px}
+.md h5{font-size:15px;margin:14px 0 6px} .md h6{font-size:14px;margin:14px 0 6px;color:var(--texte-2)}
+.md p{margin:0 0 12px} .md ul,.md ol{margin:0 0 12px;padding-left:22px} .md li{margin:3px 0}
+.md a,.md .lien-wiki{color:var(--c-bleu);text-decoration:underline}
+.md .lien-wiki{border:0;background:none;padding:0;font:inherit;cursor:pointer}
+.md .lien-wiki.a-ecrire{color:var(--c-rose)}
+.md li.tache-md{list-style:none;margin-left:-20px;display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;row-gap:2px}
+.md li.tache-md > span{flex:1;min-width:0}
+.md li.tache-md > :not(input):not(span){flex-basis:calc(100% - 23px);margin-left:23px;min-width:0}
+.md .case-md{flex-shrink:0;width:15px;height:15px;margin:.3em 0 0;accent-color:var(--accent);cursor:pointer}
+.md .case-md:disabled{cursor:default}
+.md li.tache-md.faite > span{color:var(--texte-3)}
+.md del{color:var(--texte-3)}
+.md .table-md{overflow-x:auto;margin:0 0 14px;max-width:100%;padding:1px}
+.md table{width:auto;min-width:50%;border-collapse:collapse;font-size:14px}
+.md th,.md td{border:1px solid var(--bord);padding:6px 11px;vertical-align:top;white-space:normal}
+.md th{background:var(--panneau-2);color:var(--texte);font-weight:650;text-align:left}
+.md blockquote{margin:0 0 14px;padding:9px 14px;border-left:3px solid var(--c-bleu);background:var(--panneau-2);border-radius:0 var(--r-petit) var(--r-petit) 0}
+.md blockquote p{margin:0 0 8px} .md blockquote p:last-child{margin:0}
+.md hr{border:0;border-top:1px solid var(--bord);margin:18px 0}
+.md li > ul,.md li > ol{margin:3px 0 0} .md li > p{margin:6px 0 0} .md li > pre{margin:6px 0 4px}
+.md li.md-ecart{margin-top:10px}
+.md code{padding:1px 5px;border-radius:4px;background:var(--panneau-2);font-family:ui-monospace,Consolas,monospace;font-size:.9em}
+.md pre{margin:0 0 12px;padding:10px 13px;background:var(--panneau-2);border:1px solid var(--bord);border-radius:var(--r-petit);overflow-x:auto;max-width:100%;
+  font-family:ui-monospace,Consolas,monospace;font-size:13px;line-height:1.55;white-space:pre;tab-size:4}
+.md pre code{background:none;padding:0}
+/* Le contenu d'une note dans sa fiche : Lire (mis en forme) ou Écrire (le texte) */
+.md-champ{display:flex;flex-direction:column;gap:8px}
+.md-onglets{display:flex;gap:4px}
+.md-onglets button{padding:4px 12px;border:1px solid var(--bord);border-radius:999px;background:none;color:var(--texte-2);font-size:13px;cursor:pointer}
+.md-onglets button[aria-pressed="true"]{background:color-mix(in srgb, var(--accent) 20%, transparent);border-color:var(--accent);color:var(--texte)}
+.md-champ [data-md-lire]{min-height:120px;max-height:min(60vh, 640px);overflow:auto;padding:14px 16px;border:1px solid var(--bord);border-radius:var(--r-petit);background:var(--champ)}
+.md-champ textarea{min-height:280px;font-family:ui-monospace,Consolas,monospace;font-size:13.5px}
+.md-champ:not(.ecrire) textarea{display:none}
+.md-champ.ecrire [data-md-lire]{display:none}
