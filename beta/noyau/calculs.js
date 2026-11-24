@@ -18,15 +18,24 @@ export const cheminDe = p => (p && Array.isArray(p.chemin) ? p.chemin : []);
 export const cheminDossier = id => { const p = dossier(id); return p ? [...cheminDe(p), p.nom] : []; };
 export const lireChemin = t => String(t || '').split(/\s*(?:›|>|\/)\s*/).map(propreNom).filter(Boolean);
 /* L'arbre des chemins : ceux qu'on a créés (DB.chemins, « Perso/Finances/Assurances »), ceux des dossiers et leurs débuts.
-   Tant que l'utilisateur n'a rien créé, l'arbre de départ est sa hiérarchie (document de la refonte, sans les dossiers du bout). */
-export const CHEMINS_DEPART = ['Aviation/Licences', 'Aviation/Formations', 'Aviation/Employeurs', 'Aviation/Candidatures', 'Aviation/Documentation',
-  'Perso/Administratif', 'Perso/Finances/Assurances', 'Perso/Logement', 'Perso/Quotidien', 'Perso/Transports', 'Perso/Santé', 'Perso/Famille',
-  'Perso/Numérique', 'Perso/Loisirs', 'Perso/Voyages'];
+   Tant que l'utilisateur n'a rien créé, l'arbre de départ est sa hiérarchie (document de la refonte, validée le 24/11). */
+export const CHEMINS_DEPART = [   /* la hiérarchie validée le 24/11 dans le document de la refonte : chaque nom est un chemin */
+  'Aviation/Licences/EASA', 'Aviation/Licences/FAA', 'Aviation/Médical', 'Aviation/Formations', 'Aviation/Carnet de vol',
+  'Aviation/Employeurs', 'Aviation/Candidatures', 'Aviation/Documentation',
+  'Perso/Administratif/Identité', 'Perso/Administratif/État civil', 'Perso/Administratif/Diplômes',
+  'Perso/Finances/Banques', 'Perso/Finances/Épargne et placements', 'Perso/Finances/Crédits', 'Perso/Finances/Impôts',
+  'Perso/Finances/Assurances', 'Perso/Finances/Retraite', 'Perso/Finances/Chômage',
+  'Perso/Logements', 'Perso/Transports', 'Perso/Santé', 'Perso/Famille', 'Perso/Numérique/Abonnements et télécom',
+  'Perso/Loisirs/JDR', 'Perso/Loisirs/Jeux', 'Perso/Loisirs/Livres', 'Perso/Loisirs/Tableaux', 'Perso/Voyages'];
 export function arbreChemins(){
   const vus = new Map(), mettre = l => l.forEach((_, i) => { const c = l.slice(0, i + 1); vus.set(c.map(cleNom).join('/'), c); });
   (Array.isArray(DB.chemins) ? DB.chemins : CHEMINS_DEPART).forEach(t => mettre(lireChemin(t)));
   DB.projets.forEach(p => mettre(cheminDe(p)));
-  return [...vus.values()].sort((a, b) => a.join('/').localeCompare(b.join('/'), 'fr', {sensitivity:'base'}));
+  /* dans l'ordre de la hiérarchie (celui du document, puis les chemins ajoutés), chaque chemin suivi de ses sous-chemins */
+  const liste = [...vus.values()], cle = c => c.map(cleNom).join('/'), res = [];
+  const parcourir = p => liste.filter(c => c.length === p.length + 1 && cle(c.slice(0, -1)) === cle(p)).forEach(c => { res.push(c); parcourir(c); });
+  parcourir([]);
+  return res;
 }
 export const chemins = () => arbreChemins().map(c => c.join(' › '));
 /* Ajouter un chemin à l'arbre (le premier ajout recopie l'arbre de départ dans les données) */

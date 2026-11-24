@@ -4,13 +4,13 @@ import {decaleJour, aujourdhui} from '../../noyau/outils.js';
 
 export function exemples(){
   const d = n => decaleJour(n), t = n => d(n) + 'T10:00:00.000Z', id = (p, i) => 'ex-' + p + i;
-  /* Perso, Logement, Aviation… ne sont que des chemins (ceux de l'arbre de départ) : les dossiers sont au bout */
+  /* Perso, Logements, Aviation… ne sont que des chemins (ceux de l'arbre de départ) : les dossiers sont au bout */
   const projets = [
-    {id:'ex-travaux', nom:'Travaux cuisine', chemin:['Perso', 'Logement'], couleur:'orange', resume:'Devis, artisans, achats.'},
-    {id:'ex-factures', nom:'Factures maison', chemin:['Perso', 'Logement'], couleur:'jaune', resume:'Énergie, eau, assurance.'},
+    {id:'ex-travaux', nom:'Travaux cuisine', chemin:['Perso', 'Logements'], couleur:'orange', resume:'Devis, artisans, achats.'},
+    {id:'ex-factures', nom:'Factures maison', chemin:['Perso', 'Logements'], couleur:'jaune', resume:'Énergie, eau, assurance.'},
     {id:'ex-sante', nom:'Remboursements 2026', chemin:['Perso', 'Santé'], couleur:'rose', resume:'Feuilles de soins et mutuelle.'},
     {id:'ex-atpl', nom:'Formation ATPL', chemin:['Aviation', 'Formations'], couleur:'violet', resume:'Théorie et examens.'},
-    {id:'ex-licence', nom:'Licence et certificat médical', chemin:['Aviation', 'Licences'], couleur:'bleu', resume:'Renouvellements.'},
+    {id:'ex-licence', nom:'Licence et certificat médical', chemin:['Aviation', 'Licences', 'EASA'], couleur:'bleu', resume:'Renouvellements.'},
     {id:'ex-voyage', nom:'Voyage au Portugal', chemin:['Perso', 'Voyages'], couleur:'vert', resume:'Vacances de printemps.'},
     {id:'ex-demenagement', nom:'Déménagement 2025', chemin:['Perso'], couleur:'bleu', archive:true, resume:'Fini : dossier fermé.'}
   ].map(p => ({...p, modif:t(-3)}));
