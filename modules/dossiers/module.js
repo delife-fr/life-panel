@@ -1,5 +1,6 @@
 /* LIFE PANEL v5 · modules/dossiers — les dossiers (les « projets » des données, champ « projet » sur chaque élément).
    Un élément est dans un seul dossier : le dossier est son « super tag ».
+   - L'arbre se range à la main (24/11) : un chemin se glisse sous un autre, la croix le supprime (ses dossiers remontent).
    - Les dossiers sont rangés par un **chemin** (Perso › Logements, Aviation › Formations…) : de simples noms pour s'y
      retrouver, pas des dossiers ; seul le dossier au bout du chemin contient des éléments. L'arbre des chemins est à gauche :
      un clic montre les dossiers de ce chemin (et en dessous), la ligne d'ajout y crée le dossier ; glisser un dossier sur un
@@ -11,9 +12,9 @@
 import {esc, aujourdhui, dateCourte, jourDe, maintenant, propreNom, cleNom} from '../../noyau/outils.js';
 import {ico} from '../../noyau/icones.js';
 import {DB, ajouter, modifie, couleurLibre} from '../../noyau/donnees.js';
-import {dossier, cheminDe, couleurDossier, nomDossier, toucherDossier, arbreChemins, ajouterChemin} from '../../noyau/calculs.js';
+import {dossier, cheminDe, couleurDossier, nomDossier, toucherDossier, arbreChemins, ajouterChemin, supprimerChemin, deplacerChemin, commencePar} from '../../noyau/calculs.js';
 import {puceTags, carreDossier} from '../../noyau/affichage.js';
-import {entete, champAjout, toast, bouton} from '../../noyau/interface.js';
+import {entete, champAjout, toast, bouton, confirmer} from '../../noyau/interface.js';
 import {lien, aller} from '../../noyau/adresses.js';
 import {tableau} from '../../noyau/tableau.js';
 import {colonnes, recherche} from '../../noyau/colonnes.js';
@@ -29,7 +30,6 @@ const TYPES = [['taches', 'Tâches', 'tache', 'Ajouter une tâche'], ['evenement
   ['journal', 'Journal', 'journal', 'Écrire dans le journal (@ une personne)']];
 const annee = d => d && d.slice(0, 4) !== aujourdhui().slice(0, 4) ? ' ' + d.slice(0, 4) : '';
 const nbElements = id => TYPES.reduce((n, [l]) => n + DB[l].filter(x => x.projet === id).length, 0);
-const commencePar = (c, debut) => debut.every((n, i) => cleNom(c[i]) === cleNom(n));
 const lienChemin = (c, fermes) => lien('dossiers', fermes ? 'fermes' : '', c.length ? {chemin:c.join('/')} : null);
 
 /* --- Ouverts / Fermés : l'arbre des chemins à gauche (où créer, où ranger), le tableau des dossiers de ce chemin --- */
@@ -41,9 +41,10 @@ function pageListe(fermes, ctx){
   const dernier = c => { const p = cle(c.slice(0, -1)), i = tousChemins.findIndex(x => cle(x) === cle(c));
     return !tousChemins.some((x, j) => j > i && x.length === c.length && cle(x.slice(0, -1)) === p); };
   const traits = c => c.map((_, i) => i < c.length - 1 ? `<i class="trait${dernier(c.slice(0, i + 1)) ? '' : ' v'}"></i>` : `<i class="trait ${dernier(c) ? 'l' : 't'}"></i>`).join('');
+  /* Un chemin : un clic l'ouvre ; il se glisse sur un autre chemin (ou sur « Tous les dossiers ») ; la croix le supprime (24/11) */
   const noeud = (c, texte) => { const on = c.map(cleNom).join('/') === k, n = tous.filter(p => commencePar(cheminDe(p), c)).length;
-    return `<a class="noeud${on ? ' actif' : ''}" href="${lienChemin(c, fermes)}" data-depot="dossier" data-chemin="${esc(c.join('/'))}"${on ? ' aria-current="true"' : ''}>
-      <span class="noeud-nom">${c.length ? `<span class="traits" aria-hidden="true">${traits(c)}</span>` : ''}<span>${esc(texte)}</span></span>${n ? `<span class="n">${n}</span>` : ''}</a>`; };
+    return `<div class="noeud${on ? ' actif' : ''}" role="link" tabindex="0" data-action="chemin-aller" data-href="${lienChemin(c, fermes)}" data-depot="dossier chemin" data-chemin="${esc(c.join('/'))}"${c.length && !fermes ? ' data-glisser="chemin"' : ''}${on ? ' aria-current="true"' : ''}>
+      <span class="noeud-nom">${c.length ? `<span class="traits" aria-hidden="true">${traits(c)}</span>` : ''}<span>${esc(texte)}</span></span>${n ? `<span class="n">${n}</span>` : ''}${c.length && !fermes ? `<button type="button" class="noeud-suppr" data-action="chemin-supprimer" data-chemin="${esc(c.join('/'))}" aria-label="Supprimer le chemin ${esc(texte)}" title="Supprimer ce chemin">${ico('fermer', 13)}</button>` : ''}</div>`; };
   /* Sur téléphone, l'arbre se replie (une flèche) pour voir tout de suite les dossiers ; replié au départ, retenu sur l'appareil */
   const plie = pref('dossiers.arbrePlie', true);
   const arbre = `<nav class="arbre-chemins${plie ? ' plie' : ''}" aria-label="Chemins"><button type="button" class="arbre-plier" data-action="arbre-plier" aria-expanded="${!plie}">${ico('bas', 16, 2)}<span>${esc(ici.length ? ici.join(' › ') : 'Chemins')}</span></button>${noeud([], 'Tous les dossiers')}${tousChemins.map(c => noeud(c, c[c.length - 1])).join('')}
@@ -83,6 +84,16 @@ function sousMenu(ctx){
   return [['', '‹ Dossiers'], ...TYPES.map(([l, nom], i) => [i ? id + '/' + l : id, nom, DB[l].filter(x => x.projet === id).length])];
 }
 
+/* Glisser un chemin sur un autre : il passe dessous, avec ses sous-chemins et ses dossiers (sur « Tous les dossiers » : à la racine) */
+glisserType('chemin', {
+  etiquette:c => (c.d.chemin || '').split('/').pop(),
+  depot:c => { const z = c.cible.dataset; if(!('chemin' in z)) return false;
+    const de = c.d.chemin.split('/').filter(Boolean), vers = z.chemin.split('/').filter(Boolean);
+    const annuler = deplacerChemin(de, vers); if(!annuler) return false;
+    modifie('deplacer chemin');
+    toast('« ' + de[de.length - 1] + ' » rangé dans ' + (vers.length ? vers.join(' › ') : 'Tous les dossiers') + '.', [['Annuler', () => { annuler(); modifie('annuler'); }]]); }
+});
+
 /* Glisser un dossier sur une puce de chemin : il y est rangé */
 glisserType('dossier', {
   etiquette:c => nomDossier(c.d.id),
@@ -103,6 +114,17 @@ export default {
       const p = ajouter('projets', {nom, chemin:((f && f.dataset.chemin) || '').split('/').filter(Boolean), couleur:couleurLibre(DB.projets), modif:maintenant()}); modifie('ajout');
       toast('Dossier créé : ' + p.nom, [['Ouvrir', () => aller('dossiers', p.id)], ['Annuler', () => { DB.projets = DB.projets.filter(x => x !== p); modifie('annuler'); }]]); },
     'dossier-ouvrir':tr => aller('dossiers', tr.dataset.id),
+    'chemin-aller':el => { location.hash = el.dataset.href; },
+    /* Supprimer un chemin : ses sous-chemins aussi ; ses dossiers remontent dans son parent ; « Annuler » remet tout */
+    'chemin-supprimer':async el => { const c = el.dataset.chemin.split('/').filter(Boolean); if(!c.length) return;
+      const sous = arbreChemins().filter(x => x.length > c.length && commencePar(x, c)).length, n = DB.projets.filter(p => commencePar(cheminDe(p), c)).length;
+      const parent = c.length > 1 ? c.slice(0, -1).join(' › ') : 'Tous les dossiers';
+      if((sous || n) && !await confirmer({titre:'Supprimer le chemin « ' + c[c.length - 1] + ' » ?', oui:'Supprimer',
+        texte:[sous ? (sous > 1 ? 'Ses ' + sous + ' sous-chemins aussi.' : 'Son sous-chemin aussi.') : '', n ? (n > 1 ? 'Ses ' + n + ' dossiers' : 'Son dossier') + ' remonte' + (n > 1 ? 'nt' : '') + ' dans « ' + parent + ' ».' : ''].filter(Boolean).join(' ')})) return;
+      const annuler = supprimerChemin(c); modifie('supprimer chemin');
+      const ici = new URLSearchParams(location.hash.split('?')[1] || '').get('chemin') || '';
+      if(commencePar(ici.split('/').filter(Boolean), c)) location.hash = lienChemin(c.slice(0, -1), false);
+      toast('Chemin « ' + c.join(' › ') + ' » supprimé.', [['Annuler', () => { annuler(); modifie('annuler'); }]]); },
     'arbre-plier':el => { const nav = el.closest('.arbre-chemins'), plie = !nav.classList.contains('plie'); nav.classList.toggle('plie', plie); el.setAttribute('aria-expanded', !plie); changerPref('dossiers.arbrePlie', plie); },
     'chemin-ajouter':(texte, f) => { const nom = propreNom(texte.replace(/[›\/>]/g, ' ')); if(!nom) return false;
       const c = [...((f && f.dataset.chemin) || '').split('/').filter(Boolean), nom]; ajouterChemin(c); modifie('chemin');

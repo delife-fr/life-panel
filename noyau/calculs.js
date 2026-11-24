@@ -44,6 +44,29 @@ export function ajouterChemin(l){
   if(!Array.isArray(DB.chemins)) DB.chemins = CHEMINS_DEPART.slice();
   if(!DB.chemins.some(t => lireChemin(t).map(cleNom).join('/') === l.map(cleNom).join('/'))) DB.chemins.push(l.join('/'));
 }
+/* L'utilisateur range lui-même son arbre (24/11) : supprimer un chemin, le déplacer sous un autre. La première modification
+   recopie l'arbre entier dans les données (DB.chemins, dans l'ordre affiché). Chaque fonction renvoie de quoi annuler. */
+export const commencePar = (c, debut) => c.length >= debut.length && debut.every((n, i) => cleNom(c[i]) === cleNom(n));
+function photoArbre(){
+  const chemins = Array.isArray(DB.chemins) ? DB.chemins.slice() : null, projets = DB.projets.map(p => [p, p.chemin, p.modif]);
+  return () => { DB.chemins = chemins; projets.forEach(([p, c, m]) => { p.chemin = c; p.modif = m; }); };
+}
+/* Supprime le chemin c et ses sous-chemins ; les dossiers qui y étaient remontent dans son parent (rien n'est perdu) */
+export function supprimerChemin(c){
+  const annuler = photoArbre(), parent = c.slice(0, -1);
+  DB.chemins = arbreChemins().filter(x => !commencePar(x, c)).map(x => x.join('/'));
+  DB.projets.forEach(p => { if(commencePar(cheminDe(p), c)){ p.chemin = parent.slice(); p.modif = maintenant(); } });
+  return annuler;
+}
+/* Déplace le chemin c (avec ses sous-chemins et ses dossiers) sous le chemin cible ([] = la racine) ; null si impossible */
+export function deplacerChemin(c, cible){
+  if(!c.length || commencePar(cible, c) || cible.map(cleNom).join('/') === c.slice(0, -1).map(cleNom).join('/')) return null;
+  const annuler = photoArbre(), nouveau = [...cible, c[c.length - 1]], vers = x => [...nouveau, ...x.slice(c.length)];
+  DB.chemins = arbreChemins().map(x => (commencePar(x, c) ? vers(x) : x).join('/'));
+  DB.projets.forEach(p => { if(commencePar(cheminDe(p), c)){ p.chemin = vers(cheminDe(p)); p.modif = maintenant(); } });
+  return annuler;
+}
+
 /* Tous les tags (ceux créés dans la fenêtre Tags et ceux portés par un élément) */
 export function tousLesTags(){
   const s = new Set(DB.tags || []);

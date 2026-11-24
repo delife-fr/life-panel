@@ -112,7 +112,10 @@ sur « Chargement… ».
   « Lire » / « Écrire », cases « - [ ] » cochables, [[Titre]] ouvre la note ou le contact (crée la note qui manque).
 - **Largeur** (24/11) : les pages prennent toute la largeur de l'écran (plus de max-width en px) ; seules les lignes
   « ajouter vite » gardent 640 px.
-- **Arbre des chemins** : les traits ├ └ │ de la hiérarchie (Dossiers).
+- **Arbre des chemins** : les traits ├ └ │ de la hiérarchie (Dossiers). L'utilisateur le range lui-même (24/11) : glisser
+  un chemin sur un autre (il passe dessous, avec ses sous-chemins et ses dossiers ; sur « Tous les dossiers » : racine),
+  croix à droite du nom pour le supprimer (ses dossiers remontent dans le parent), « Annuler » dans le message
+  (supprimerChemin, deplacerChemin dans calculs.js).
 - **Dossiers sur téléphone** : l'arbre des chemins se replie (flèche « Chemins »), replié au départ, retenu sur l'appareil.
 - **Hiérarchie des dossiers** (validée le 24/11, bloc de code de « Vrac » du document) : tous ses noms sont des chemins,
   les dossiers se créent au bout ; « À trier » et « Archives » de sa racine ne sont pas repris (ils servent pour Google

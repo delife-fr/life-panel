@@ -10,7 +10,13 @@
 .contenu-dossiers{display:flex;flex-direction:column;gap:14px;min-width:0}
 .contenu-dossiers > .ajout{max-width:640px}
 .arbre-chemins{display:flex;flex-direction:column;gap:0;padding:8px;border:1px solid var(--bord);border-radius:var(--r);background:var(--panneau)}
-.noeud{display:flex;align-items:stretch;justify-content:space-between;gap:8px;padding:0 10px;min-height:30px;border-radius:6px;color:var(--texte-2);text-decoration:none;font-size:13.5px}
+.noeud{display:flex;align-items:stretch;gap:8px;padding:0 6px 0 10px;min-height:30px;border-radius:6px;color:var(--texte-2);font-size:13.5px;cursor:pointer;user-select:none}
+.noeud-nom{flex:1}
+/* la croix : à droite du nom, visible au survol (toujours sur un écran tactile) */
+.noeud-suppr{align-self:center;display:grid;place-items:center;width:22px;height:22px;padding:0;border:0;border-radius:5px;background:none;color:var(--texte-3);cursor:pointer;opacity:0}
+.noeud:hover .noeud-suppr,.noeud:focus-within .noeud-suppr{opacity:1}
+.noeud-suppr:hover{background:color-mix(in srgb, var(--critique) 18%, transparent);color:var(--critique)}
+@media (hover:none){ .noeud-suppr{opacity:.7} }
 .noeud-nom{display:flex;align-items:center;min-width:0}
 .noeud .n{align-self:center}
 /* Les traits de l'arbre : une case de 16 px par niveau, │ ├ └ dessinés par des bordures */
