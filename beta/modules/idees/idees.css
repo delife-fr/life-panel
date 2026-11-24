@@ -1,5 +1,5 @@
 /* LIFE PANEL v5 · modules/idees/idees.css */
-.page-idees{display:flex;flex-direction:column;gap:14px;max-width:1180px}
+.page-idees{display:flex;flex-direction:column;gap:14px}
 .page-idees > .ajout{max-width:640px}
 .bloc-section{display:flex;flex-direction:column;gap:10px;margin-top:18px}
 .bloc-section .bloc-tete{margin:0}

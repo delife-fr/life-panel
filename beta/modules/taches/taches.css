@@ -1,5 +1,5 @@
 /* LIFE PANEL v5 · modules/taches/taches.css */
-.page-taches{display:flex;flex-direction:column;gap:14px;max-width:1180px}
+.page-taches{display:flex;flex-direction:column;gap:14px}
 .page-taches > .ajout{max-width:640px}
 .tableau .col-nom{min-width:220px}
 .tableau .col-date,.tableau .col-faite,.tableau .col-modif{white-space:nowrap}
