@@ -16,4 +16,13 @@
 .noeud .n{font-size:11.5px;color:var(--texte-3);font-weight:600}
 .arbre-chemins .ajout{margin-top:8px;min-height:34px}
 .arbre-chemins .ajout input{font-size:13px}
-@media (max-width:900px){ .avec-arbre{grid-template-columns:minmax(0, 1fr)} .arbre-chemins{max-height:260px;overflow:auto} }
+.arbre-plier{display:none}
+@media (max-width:900px){
+  .avec-arbre{grid-template-columns:minmax(0, 1fr)}
+  .arbre-chemins{max-height:320px;overflow:auto}
+  .arbre-plier{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border:0;background:none;color:var(--texte);font-weight:600;font-size:14px;cursor:pointer;text-align:left}
+  .arbre-plier svg{transition:transform .15s;flex-shrink:0}
+  .arbre-chemins.plie{max-height:none;overflow:visible}
+  .arbre-chemins.plie > :not(.arbre-plier){display:none}
+  .arbre-chemins.plie .arbre-plier svg{transform:rotate(-90deg)}
+}

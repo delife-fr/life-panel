@@ -33,17 +33,13 @@
   .cal-grille.mois .cal-jour{min-height:64px;padding:4px}
   .cal-grille.mois .cal-el{font-size:10.5px;padding:2px 4px;border-left-width:2px}
 }
-/* « Afficher » : une colonne à droite sur PC, une rangée au-dessus sur téléphone */
-.cal-cadre{display:grid;grid-template-columns:minmax(0, 1fr) 170px;gap:18px;align-items:start}
-.cal-principal{display:flex;flex-direction:column;gap:14px;min-width:0}
-.cal-afficher{position:sticky;top:120px;display:flex;flex-direction:column;gap:4px;padding:12px;border:1px solid var(--bord);border-radius:var(--r-petit);background:var(--panneau)}
-.cal-afficher-titre{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--texte-3);margin-bottom:4px}
-.cal-afficher label{display:flex;align-items:center;gap:9px;padding:5px 2px;font-size:13.5px;color:var(--texte);cursor:pointer}
-.cal-afficher input.coche{width:18px;height:18px;border-color:var(--c)}
+/* « Afficher » : une ligne de cases, à droite de ‹ période › (ou de la recherche dans Agenda) ; elle passe dessous si la place manque */
+.cal-nav{flex-wrap:wrap;row-gap:8px}
+.cal-periode{display:flex;align-items:center;gap:8px}
+.cal-afficher{display:flex;align-items:center;flex-wrap:wrap;gap:4px 14px;margin-left:16px}
+.tableau-outils .cal-afficher{margin-left:6px}
+.cal-afficher label{display:flex;align-items:center;gap:7px;margin:0;font-size:13.5px;color:var(--texte-2);cursor:pointer;white-space:nowrap}
+.cal-afficher input.coche{width:17px;height:17px;border-color:var(--c)}
 .cal-afficher input.coche:checked{background:var(--c);border-color:var(--c)}
 .cal-el.dep{--c:var(--c-herbe);font-variant-numeric:tabular-nums}
-@media (max-width:1099px){
-  .cal-cadre{grid-template-columns:minmax(0, 1fr)}
-  .cal-afficher{order:-1;position:static;flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px 16px;padding:8px 12px}
-  .cal-afficher-titre{margin:0}
-}
+@media (max-width:700px){ .cal-afficher{margin-left:0;width:100%} }

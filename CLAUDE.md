@@ -78,8 +78,8 @@ sur « Chargement… ».
   dossier sont dans une petite pastille ronde.
 - **Cases à cocher carrées** (comme le prototype). **Aide « ? »** en haut à droite (modules/aide) : raccourcis et gestes,
   à tenir à jour quand un geste arrive. **Tags d'une fiche** : après une virgule, les tags existants sont proposés.
-- **Calendrier** : « Afficher » (une colonne à droite sur PC, une rangée au-dessus sur téléphone) : Rendez-vous, Tâches,
-  Dépenses, retenu sur cet appareil ; les dépenses (comptes pointés) sont cachées au départ, une ligne par jour avec le
+- **Calendrier** : « Afficher » (24/11 : des cases sur une ligne, juste à droite de ‹ période › ; dans Agenda, juste à
+  droite de la recherche ; sur téléphone, la ligne passe dessous) : Rendez-vous, Tâches, Dépenses, retenu sur cet appareil ; les dépenses (comptes pointés) sont cachées au départ, une ligne par jour avec le
   total, un clic montre le jour. Pas d'anniversaires ni d'échéances de documents (décision du tour 1).
 - **Rendez-vous** : « Heure de » (là où je suis, Paris, Athènes : FUSEAUX dans calculs.js) et Personnes, comme la v4.9 ;
   partout l'heure d'ici (heureIci, texteHeures), l'heure du fuseau entre parenthèses.
@@ -94,8 +94,13 @@ sur « Chargement… ».
   (avec la clé de la v4.9 en un clic), changer la clé, arrêter.
   Pendant la bêta, rappels et notifications viennent toujours de la v4.9 (le robot lit donnees.json) ; ceux de la v5,
   le service worker (hors ligne, installation) et les raccourcis Android `?action=` se font à la bascule.
-- **Corbeille** gardée (Réglages › Corbeille, 30 jours, « Vider la corbeille » en haut) ; seules les archives sont parties.
+- **Corbeille** gardée (Réglages › Corbeille, 30 jours, « Vider la corbeille » juste à droite de la recherche, option
+  `outilsCote` du tableau) ; seules les archives sont parties.
 - **Aujourd'hui** : une tuile Finance (dépensé ce mois-ci, comptes pointés, anneau par catégorie), comme la v4.9.
+  PC (24/11) : trois colonnes, Aujourd'hui | Finance | À ranger et À venir ; téléphone : les uns sous les autres.
+- **Dossiers sur téléphone** : l'arbre des chemins se replie (flèche « Chemins »), replié au départ, retenu sur l'appareil.
+- **Hiérarchie des dossiers** : l'utilisateur la remodèle dans le document de la refonte (bloc de code de « Vrac ») ; à
+  relire une fois validée. « À trier » et « Archives » de sa racine ne sont pas repris (ils servent pour Google Drive).
 - **Couleurs** des catégories et des dossiers : 14 teintes (les 9 de la v4.9 + cyan, brun, olive, indigo, gris) et 13
   rayées (TEINTES, COULEURS_CAT dans donnees.js).
 - **Finance** : le tableau des mouvements, « Par catégorie » et « Mois par mois » se plient (flèche) ; Comptes : colonne

@@ -1,6 +1,13 @@
 /* LIFE PANEL v5 · modules/aujourdhui/aujourdhui.css */
-.grille-jour{display:grid;grid-template-columns:minmax(0, 1.6fr) minmax(280px, 1fr);gap:16px;align-items:start;max-width:1180px}
-.col-principale,.col-cote{display:flex;flex-direction:column;gap:16px;min-width:0}
+/* Trois colonnes sur PC (Aujourd'hui, Finance, À ranger et À venir), deux sur un écran moyen (la troisième passe dessous),
+   une sur téléphone dans le même ordre */
+.grille-jour{display:grid;grid-template-columns:minmax(0, 1.25fr) minmax(0, 1fr) minmax(250px, .8fr);gap:16px;align-items:start;max-width:1560px}
+.grille-jour > *{min-width:0}
+.col-cote{display:flex;flex-direction:column;gap:16px}
+.col-cote:empty{display:none}
+.finance-jour .par-categorie{grid-template-columns:minmax(0, 1fr);justify-items:center;gap:14px}
+.finance-jour .legende{width:100%;grid-template-columns:minmax(0, 1fr)}
+@media (max-width:1299px){ .grille-jour{grid-template-columns:minmax(0, 1.2fr) minmax(0, 1fr)} .col-cote{grid-column:1 / -1} }
 @media (max-width:900px){ .grille-jour{grid-template-columns:minmax(0, 1fr)} }
 
 .liste-jour{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column}

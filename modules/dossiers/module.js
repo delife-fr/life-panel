@@ -18,6 +18,7 @@ import {lien, aller} from '../../noyau/adresses.js';
 import {tableau} from '../../noyau/tableau.js';
 import {colonnes, recherche} from '../../noyau/colonnes.js';
 import {glisserType} from '../../noyau/glisser.js';
+import {pref, changerPref} from '../../noyau/preferences.js';
 import {ouvrirElement} from '../../noyau/fiches.js';
 import {enregistrerCapture, noterJournal} from '../../noyau/capture.js';
 
@@ -38,7 +39,9 @@ function pageListe(fermes, ctx){
   const noeud = (c, texte) => { const on = c.map(cleNom).join('/') === k, n = tous.filter(p => commencePar(cheminDe(p), c)).length;
     return `<a class="noeud${on ? ' actif' : ''}" href="${lienChemin(c, fermes)}" data-depot="dossier" data-chemin="${esc(c.join('/'))}" style="--retrait:${c.length}"${on ? ' aria-current="true"' : ''}>
       <span>${esc(texte)}</span>${n ? `<span class="n">${n}</span>` : ''}</a>`; };
-  const arbre = `<nav class="arbre-chemins" aria-label="Chemins">${noeud([], 'Tous les dossiers')}${arbreChemins().map(c => noeud(c, c[c.length - 1])).join('')}
+  /* Sur téléphone, l'arbre se replie (une flèche) pour voir tout de suite les dossiers ; replié au départ, retenu sur l'appareil */
+  const plie = pref('dossiers.arbrePlie', true);
+  const arbre = `<nav class="arbre-chemins${plie ? ' plie' : ''}" aria-label="Chemins"><button type="button" class="arbre-plier" data-action="arbre-plier" aria-expanded="${!plie}">${ico('bas', 16, 2)}<span>${esc(ici.length ? ici.join(' › ') : 'Chemins')}</span></button>${noeud([], 'Tous les dossiers')}${arbreChemins().map(c => noeud(c, c[c.length - 1])).join('')}
     ${fermes ? '' : champAjout('chemin-ajouter', ici.length ? 'Nouveau chemin dans ' + ici[ici.length - 1] + '…' : 'Nouveau chemin…', {donnees:{chemin:ici.join('/')}})}</nav>`;
   return entete(fermes ? 'Dossiers fermés' : 'Dossiers', ici.length ? {sur:esc(ici.join(' › '))} : {}) + `<div class="page-dossiers avec-arbre">${arbre}<div class="contenu-dossiers">
     ${fermes ? '' : champAjout('dossier-ajouter', 'Nouveau dossier' + (ici.length ? ' dans ' + ici.join(' › ') : '') + ' : son nom, puis Entrée…', {donnees:{chemin:ici.join('/')}})}
@@ -95,6 +98,7 @@ export default {
       const p = ajouter('projets', {nom, chemin:((f && f.dataset.chemin) || '').split('/').filter(Boolean), couleur:couleurLibre(DB.projets), modif:maintenant()}); modifie('ajout');
       toast('Dossier créé : ' + p.nom, [['Ouvrir', () => aller('dossiers', p.id)], ['Annuler', () => { DB.projets = DB.projets.filter(x => x !== p); modifie('annuler'); }]]); },
     'dossier-ouvrir':tr => aller('dossiers', tr.dataset.id),
+    'arbre-plier':el => { const nav = el.closest('.arbre-chemins'), plie = !nav.classList.contains('plie'); nav.classList.toggle('plie', plie); el.setAttribute('aria-expanded', !plie); changerPref('dossiers.arbrePlie', plie); },
     'chemin-ajouter':(texte, f) => { const nom = propreNom(texte.replace(/[›\/>]/g, ' ')); if(!nom) return false;
       const c = [...((f && f.dataset.chemin) || '').split('/').filter(Boolean), nom]; ajouterChemin(c); modifie('chemin');
       toast('Chemin créé : ' + c.join(' › '), [['Y aller', () => aller('dossiers', '', {chemin:c.join('/')})]]); },

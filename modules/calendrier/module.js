@@ -1,6 +1,7 @@
 /* LIFE PANEL v5 · modules/calendrier — les rendez-vous, les tâches datées et les dépenses (pas d'anniversaires :
    ils sont sur Aujourd'hui).
-   - « Afficher » (à droite sur PC, au-dessus sur téléphone) : Rendez-vous, Tâches, Dépenses, comme les cases de la v4.9 ;
+   - « Afficher » (sur une ligne, à droite de ‹ période › ; dans Agenda, à droite de la recherche) : Rendez-vous, Tâches,
+     Dépenses, comme les cases de la v4.9 ;
      retenu sur cet appareil. Les dépenses (comptes pointés) font une ligne par jour, leur total ; un clic montre le jour.
    - 2 semaines : cette semaine et la suivante, une case par jour ; Mois : le mois en grille ; Agenda : le tableau de ce qui
      arrive (un an), un rendez-vous qui se répète a une ligne par date.
@@ -31,8 +32,8 @@ const moisCourt = new Intl.DateTimeFormat('fr-FR', {month:'short'});
 /* Ce qu'on montre (cet appareil) : [clé, nom, couleur] ; les dépenses sont cachées au départ, comme en v4.9 */
 const FILTRES = [['rdv', 'Rendez-vous', 'violet'], ['taches', 'Tâches', 'vert'], ['depenses', 'Dépenses', 'herbe']];
 const montre = k => { const a = pref('calendrier.afficher', {}) || {}; return k in a ? !!a[k] : k !== 'depenses'; };
-const afficher = () => `<aside class="cal-afficher" aria-label="Afficher"><span class="cal-afficher-titre">Afficher</span>${FILTRES.map(([k, nom, c]) =>
-  `<label style="--c:var(--c-${c})"><input type="checkbox" class="coche" data-action="cal-filtre" data-k="${k}"${montre(k) ? ' checked' : ''}><span>${nom}</span></label>`).join('')}</aside>`;
+const afficher = () => `<div class="cal-afficher" role="group" aria-label="Afficher">${FILTRES.map(([k, nom, c]) =>
+  `<label style="--c:var(--c-${c})"><input type="checkbox" class="coche" data-action="cal-filtre" data-k="${k}"${montre(k) ? ' checked' : ''}><span>${nom}</span></label>`).join('')}</div>`;
 
 /* Ce qu'il y a chaque jour entre deux dates : les rendez-vous (dans l'ordre des heures), les tâches datées, puis le total
    des dépenses du jour */
@@ -64,8 +65,8 @@ function caseJour(j, l, {max, etiquette, hors = false}){
 }
 
 /* --- Navigation : ‹ période › et « Aujourd'hui » --- */
-const navigation = (titre, prec, suiv, ici) => `<div class="cal-nav"><a class="icone-btn" href="${prec}" aria-label="Avant">${ico('gauche', 18)}</a>
-  <h2>${esc(titre)}</h2><a class="icone-btn" href="${suiv}" aria-label="Après">${ico('fleche', 18)}</a>${ici ? `<a class="btn petit" href="${ici}">Aujourd’hui</a>` : ''}</div>`;
+const navigation = (titre, prec, suiv, ici) => `<div class="cal-nav"><div class="cal-periode"><a class="icone-btn" href="${prec}" aria-label="Avant">${ico('gauche', 18)}</a>
+  <h2>${esc(titre)}</h2><a class="icone-btn" href="${suiv}" aria-label="Après">${ico('fleche', 18)}</a>${ici ? `<a class="btn petit" href="${ici}">Aujourd’hui</a>` : ''}</div>${afficher()}</div>`;
 const ajout = () => champAjout('calendrier-ajouter', 'Ajouter un rendez-vous (ex. dentiste jeudi 14h30)…');
 
 function pageDeuxSemaines(ctx){
@@ -75,8 +76,8 @@ function pageDeuxSemaines(ctx){
   for(let i = 0; i < 14; i++){ const j = decaleJour(i, versDate(debut)), d = versDate(j);
     cases += caseJour(j, c.get(j) || [], {max:8, etiquette:JOURS[i % 7] + ' ' + d.getDate() + (d.getDate() === 1 || i === 0 ? ' ' + moisCourt.format(d) : '')}); }
   return entete('Calendrier') + `<div class="page-cal">${ajout()}
-    <div class="cal-cadre"><div class="cal-principal">${navigation(titre, lien('calendrier', '', {du:decaleJour(-14, versDate(debut))}), lien('calendrier', '', {du:decaleJour(14, versDate(debut))}), ici ? lien('calendrier') : '')}
-    <div class="cal-grille deux-sem">${cases}</div></div>${afficher()}</div></div>`;
+    ${navigation(titre, lien('calendrier', '', {du:decaleJour(-14, versDate(debut))}), lien('calendrier', '', {du:decaleJour(14, versDate(debut))}), ici ? lien('calendrier') : '')}
+    <div class="cal-grille deux-sem">${cases}</div></div>`;
 }
 
 function pageMois(ctx){
@@ -86,8 +87,8 @@ function pageMois(ctx){
   for(let i = 0; i < decal; i++) cases += '<div class="cal-jour vide" aria-hidden="true"></div>';
   for(let d = 1; d <= n; d++){ const j = ym + '-' + pad(d); cases += caseJour(j, c.get(j) || [], {max:4, etiquette:String(d)}); }
   return entete('Calendrier', {sur:'Mois'}) + `<div class="page-cal">${ajout()}
-    <div class="cal-cadre"><div class="cal-principal">${navigation(nomMois(ym), lien('calendrier', 'mois', {m:decaleMois(ym, -1)}), lien('calendrier', 'mois', {m:decaleMois(ym, 1)}), ym !== moisCourant() ? lien('calendrier', 'mois') : '')}
-    <div class="cal-semaine">${JOURS.map(x => `<span>${x}</span>`).join('')}</div><div class="cal-grille mois">${cases}</div></div>${afficher()}</div></div>`;
+    ${navigation(nomMois(ym), lien('calendrier', 'mois', {m:decaleMois(ym, -1)}), lien('calendrier', 'mois', {m:decaleMois(ym, 1)}), ym !== moisCourant() ? lien('calendrier', 'mois') : '')}
+    <div class="cal-semaine">${JOURS.map(x => `<span>${x}</span>`).join('')}</div><div class="cal-grille mois">${cases}</div></div>`;
 }
 
 /* --- Agenda : un tableau de ce qui arrive dans l'année (rendez-vous à chaque date, tâches à faire datées) --- */
@@ -96,7 +97,7 @@ function pageAgenda(){
   contenuJours(debut, fin).forEach(l => l.forEach(it => { if(it.type === 'tache' && it.x.fait) return;
     if(it.type === 'depenses') it.liste.forEach(x => lignes.push({type:'mouvement', x, j:it.j, heure:''})); else lignes.push(it); }));
   const quand = it => majuscule(jourCourt(it.j));
-  return entete('Calendrier', {sur:'Agenda'}) + `<div class="page-cal">${ajout()}<div class="cal-cadre"><div class="cal-principal">${tableau({id:'agenda', lignes, cle:it => it.type[0] + '|' + it.x.id + '|' + it.j,
+  return entete('Calendrier', {sur:'Agenda'}) + `<div class="page-cal">${ajout()}${tableau({id:'agenda', lignes, cle:it => it.type[0] + '|' + it.x.id + '|' + it.j, outils:afficher(), outilsCote:true,
     ouvrir:'agenda-ouvrir', tri:{col:'date', sens:1}, recherche:it => [it.x.titre || it.x.nom, it.x.lieu || '', it.x.note || '', cheminDossier(it.x.projet).join(' ')], tags:it => it.x.tags,
     texteRecherche:'Chercher dans l’agenda', vide:'Rien de prévu. Ajoute un rendez-vous juste au-dessus.',
     colonnes:[
@@ -108,7 +109,7 @@ function pageAgenda(){
       {id:'lieu', titre:'Lieu', valeur:it => it.x.lieu || '', html:it => esc(it.x.lieu || '') || '—'},
       {id:'dossier', titre:'Dossier', valeur:it => nomDossier(it.x.projet), html:it => puceDossier(it.x.projet) || '—'},
       {id:'tags', titre:'Tags', html:it => puceTags(it.x.tags) || '—'}
-    ]})}</div>${afficher()}</div></div>`;
+    ]})}</div>`;
 }
 
 /* --- Ouvrir un élément ; un rendez-vous qui se répète propose aussi de retirer seulement ce jour-là --- */
