@@ -1,5 +1,5 @@
 /* LIFE PANEL v5 · modules/reglages — Réglages et données (icône en haut à droite, pas une section).
-   - Données : les données de la bêta (importer un donnees.json, exporter, les finances en CSV, tout effacer, revenir à la
+   - Données : les données de ce navigateur (importer un donnees.json, exporter, les finances en CSV, tout effacer, revenir à la
      copie de secours gardée avant le dernier remplacement). Tout est lu et gardé dans ce
      navigateur : rien n'est envoyé nulle part. Le thème se change par l'icône jour/nuit de la barre du haut, pas ici.
    - Corbeille : ce qui a été supprimé depuis moins de 30 jours, à remettre ou à supprimer pour de bon.
@@ -24,9 +24,9 @@ const SOUS = [['', 'Données'], ['corbeille', 'Corbeille']];
 function page(){
   const vide = compter(DB) === 0;
   const donnees = `<section class="panneau">
-    <h2>Tes données dans la bêta</h2>
+    <h2>Tes données</h2>
     <p class="doux">${vide ? 'Aucune donnée pour l’instant. Importe ton donnees.json pour voir la v5 avec tes vraies données.'
-      : 'Ton donnees.json est importé.'} Les données restent dans ce navigateur, à part de la v4.9, et ne partent nulle part.</p>
+      : 'Ton donnees.json est importé.'} Elles sont gardées dans ce navigateur${gh.cfg && gh.cfg.jeton ? ' et dans ton dépôt GitHub privé' : ''}.</p>
     <div class="rangee">
       <button type="button" class="btn plein" data-action="importer-donnees">${ico('importer', 16, 1.8)}<span>${vide ? 'Importer un donnees.json' : 'Importer un autre donnees.json'}</span></button>
       ${vide ? '' : `<button type="button" class="btn" data-action="exporter-donnees">${ico('exporter', 16, 1.8)}<span>Exporter</span></button>
@@ -40,7 +40,7 @@ function page(){
   </section>`;
   const apropos = `<section class="panneau">
     <h2>À propos</h2>
-    <p class="doux">LIFE PANEL ${esc(VERSION_APPLI)}. La v4.9 reste l’appli en service jusqu’à la bascule.</p>
+    <p class="doux">LIFE PANEL ${esc(VERSION_APPLI)}. L’ancienne version (v4.9) reste consultable à l’adresse …/v49/, sans synchro.</p>
   </section>`;
   return entete('Réglages et données') + `<div class="grille-reglages">${donnees}
     ${sectionSynchro()}
@@ -83,7 +83,7 @@ async function importer(fichier){
   let brut;
   try { brut = JSON.parse(await fichier.text()); } catch(e){ return toast('Ce fichier n’est pas un donnees.json lisible.'); }
   if(!brut || typeof brut !== 'object' || Array.isArray(brut)) return toast('Ce fichier n’est pas un donnees.json lisible.');
-  if(compter(DB) > 0 && !await confirmer({titre:'Remplacer les données de la bêta ?', texte:'Les données actuelles de la bêta sont remplacées par celles du fichier. « Annuler » dans le message les remet.', oui:'Remplacer'})) return;
+  if(compter(DB) > 0 && !await confirmer({titre:'Remplacer tes données ?', texte:'Les données de ce navigateur sont remplacées par celles du fichier, puis envoyées sur GitHub si la synchro est active. « Annuler » dans le message les remet.', oui:'Remplacer'})) return;
   const avant = JSON.parse(JSON.stringify(DB));
   await faireSecours('import');
   remplacer(brut, {raison:'import'});
@@ -92,7 +92,7 @@ async function importer(fichier){
 /* --- Synchronisation GitHub (noyau/synchro.js) : les mêmes données sur le PC et le téléphone --- */
 function sectionSynchro(){
   const tete = '<h2>Synchronisation GitHub</h2>';
-  if(adressePartagee()) return `<section class="panneau">${tete}<p class="doux">Elle se règle à l’adresse de la bêta sur ton site (…/beta/) : sur cette adresse-ci, ta clé ne serait pas à l’abri.</p></section>`;
+  if(adressePartagee()) return `<section class="panneau">${tete}<p class="doux">Elle se règle à l’adresse de LIFE PANEL sur ton site : sur cette adresse-ci, ta clé ne serait pas à l’abri.</p></section>`;
   const c = gh.cfg;
   if(c && c.jeton){ const e = etatSynchro();
     return `<section class="panneau">${tete}<p class="etat-synchro" id="synchro-etat" data-etat="${e}">${esc(e === 'aucun' ? 'En pause pendant les exemples.' : TEXTES[e]())}</p>
@@ -102,7 +102,7 @@ function sectionSynchro(){
         <a class="btn" href="https://github.com/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/commits" target="_blank" rel="noopener noreferrer">${ico('externe', 15)}<span>Historique</span></a>
         <button type="button" class="btn discret" data-action="synchro-arreter">Arrêter sur cet appareil</button></div></section>`; }
   const d = c || {};
-  return `<section class="panneau">${tete}<p class="doux">La bêta utilise ${esc(FICHIER)}, une copie de donnees.json créée à la première connexion : la v4.9 n’est pas touchée.</p>
+  return `<section class="panneau">${tete}<p class="doux">Les mêmes données sur le PC et le téléphone, dans ton dépôt GitHub privé (${esc(FICHIER)}).</p>
     <div id="synchro-v49"></div>
     <div class="formulaire" id="synchro-form">
       <div class="champ demi"><label for="sy-owner">Pseudo GitHub</label><input type="text" id="sy-owner" value="${esc(d.owner || '')}" spellcheck="false" autocomplete="off"></div>
@@ -147,7 +147,7 @@ async function montrerCleV49(vue){
   const z = vue.querySelector('#synchro-v49'); if(!z) return;
   const v = await cleV49(); if(!v || !document.contains(z)) return;
   cleTrouvee = v;
-  z.innerHTML = `<div class="secours"><p class="doux">Ta clé GitHub de la v4.9 est déjà sur cet appareil (dépôt ${esc(v.owner)}/${esc(v.repo)}).</p>
+  z.innerHTML = `<div class="secours"><p class="doux">Ta clé GitHub est déjà sur cet appareil (dépôt ${esc(v.owner)}/${esc(v.repo)}).</p>
     <button type="button" class="btn plein" data-action="synchro-v49">${ico('nuage', 16, 1.8)}<span>Se connecter avec elle</span></button></div>`;
   ['owner', 'repo'].forEach(k => { const i = vue.querySelector('#sy-' + k); if(i && !i.value) i.value = v[k]; });
   const a = vue.querySelector('#sy-appareil'); if(a && v.appareil) a.value = v.appareil;
@@ -195,7 +195,7 @@ export default {
   },
   actions:{
     'exemples-charger':async () => {
-      if(compter(DB) > 0 && !await confirmer({titre:'Remplacer par des exemples ?', texte:'Les données de la bêta sont remplacées par des données fictives. « Annuler » dans le message remet les tiennes.', oui:'Charger les exemples'})) return;
+      if(compter(DB) > 0 && !await confirmer({titre:'Remplacer par des exemples ?', texte:'Les données de ce navigateur sont remplacées par des données fictives ; rien n’est envoyé sur GitHub tant qu’elles sont là. « Annuler » dans le message remet les tiennes.', oui:'Charger les exemples'})) return;
       const avant = JSON.parse(JSON.stringify(DB)); await faireSecours('exemples');
       remplacer(exemples(), {raison:'exemples'});
       toast('Exemples chargés : visite les sections.', [['Annuler', () => remplacer(avant, {raison:'annuler exemples'})]]);
@@ -233,11 +233,11 @@ export default {
       remplacer(s.data, {raison:'restauration'});
       toast('Copie de secours remise.', [['Annuler', () => remplacer(avant, {raison:'annuler restauration'})]]); },
     'effacer-donnees':async () => {
-      if(!await confirmer({titre:'Effacer les données de la bêta ?', texte:'Seules les données de la bêta, dans ce navigateur, sont effacées. Celles de la v4.9 ne sont pas touchées.', oui:'Effacer', danger:true})) return;
+      if(!await confirmer({titre:'Effacer les données de ce navigateur ?', texte:'Seules les données de ce navigateur sont effacées. Celles de GitHub ne sont pas touchées (rien de vide n’est envoyé).', oui:'Effacer', danger:true})) return;
       const avant = JSON.parse(JSON.stringify(DB));
       await faireSecours('effacement');
       remplacer({}, {raison:'effacement'});
-      toast('Données de la bêta effacées.', [['Annuler', () => remplacer(avant, {raison:'annuler effacement'})]]);
+      toast('Données de ce navigateur effacées.', [['Annuler', () => remplacer(avant, {raison:'annuler effacement'})]]);
     }
   }
 };

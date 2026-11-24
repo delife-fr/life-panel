@@ -5,12 +5,13 @@
    Délais maximum (leçon de la v4.4.1, Brave) : une question au navigateur sans réponse échoue au lieu d'attendre sans fin,
    et tant que les données ne sont pas lues (« pretes »), rien n'est écrit : jamais une base vide par-dessus tes données.
 
-   BÊTA : noms à part (NOMS ci-dessous), pour ne jamais toucher aux données de la v4.9 dans le même navigateur.
-   À la bascule (lot 8), NOMS reprend ceux de la v4.9 (base « lifepanel », magasin « poignees », copie « lifepanel »). */
+   Les noms sont ceux de la v4.9 (bascule du 24/11) : la v5 reprend sur chaque appareil ses données, sa clé GitHub et la
+   base de la synchro, au même format (clés « donnees », « secours », « github », « github-base »). L'ancienne version,
+   gardée dans …/v49/, a ses propres noms (« lifepanel-v49 ») : elle ne touche jamais à ceux-ci. */
 import {DB, ecouterChangements, aDesDonnees} from './donnees.js';
 import {maintenant} from './outils.js';
 
-export const NOMS = {base:'lifepanel-v5-beta', magasin:'donnees', miroir:'lifepanel-v5-beta.donnees', canal:'lifepanel-v5-beta'};
+export const NOMS = {base:'lifepanel', magasin:'poignees', miroir:'lifepanel', canal:'lifepanel'};
 const MIROIR_MAX = 2e6;          /* au-delà de 2 millions de caractères, pas de copie dans localStorage */
 const DELAI_DONNEES = 8000;      /* IndexedDB répond d'habitude en bien moins d'une seconde */
 

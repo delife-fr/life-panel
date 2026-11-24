@@ -5,8 +5,11 @@ d'assemblage. Servie par GitHub Pages. Les données vivent dans le dépôt priv�
 
 ## Branches
 
-- `main` : la **v4.9**, en service. Un seul `index.html`. On n'y touche pas pendant la refonte (sauf correctif demandé).
-- `beta` : la **v5**, la refonte. Un dossier par section. Bascule sur `main` au lot 8.
+- `main` : la **v5**, en service depuis la bascule du 24/11 (https://panel.alexishocini.fr/). L'ancienne **v4.9** est gardée
+  dans le dossier `v49/` (…/v49/), sans synchro : ses données sont à part (base « lifepanel-v49 ») et elle refuse d'écrire
+  un donnees.json de VERSION 24.
+- `beta` : la branche de travail de la v5 ; on la fusionne dans `main` pour publier. Le dossier `beta/` de `main` (la bêta
+  en ligne pendant la refonte) est supprimé.
 - Référence v4.9 pour reprendre du code : `git show origin/main:index.html` (sections A à Q : données, utilitaires, calculs,
   pages, routeur, fenêtres, actions, focus, palette, recherche, fichiers, Drive, synchro GitHub, notifications).
 - Le suivi de la refonte (décisions, lots, retours) est dans le document Claude Docs « Refonte LIFE PANEL » :
@@ -22,12 +25,9 @@ python3 -m http.server 8765
 
 puis http://127.0.0.1:8765/
 
-**La bêta en ligne** (décision du 23/11) : https://panel.alexishocini.fr/beta/ — une copie des fichiers de `beta` dans le
-dossier `beta/` de la branche `main` (index.html, app.js, sw.js, manifest.webmanifest, noyau/, modules/, icons/ ; rien
-d'autre de `main` n'est touché).
-On la republie après chaque push sur `beta` (commit « Bêta v5 dans /beta (commit …) »). La v4.9 reste à la racine.
-La synchro GitHub n'y lit et n'écrit que `donnees-v5.json` (copie de `donnees.json` créée à la première connexion) ;
-elle reprend la clé GitHub de la v4.9 (même adresse, lue dans sa base « lifepanel », jamais écrite).
+**En ligne** : https://panel.alexishocini.fr/ (la v5, branche `main`). La synchro lit et écrit `donnees.json`. Pendant la
+bêta (23-24/11), la v5 vivait dans …/beta/ avec `donnees-v5.json`, gardé dans le dépôt de données comme archive ; à la
+bascule, `donnees.json` a repris son contenu (rien n'avait changé côté v4.9).
 
 Aperçu sans synchro : **toujours l'adresse figée sur un commit**,
 `https://raw.githack.com/delife-fr/life-panel/<commit complet>/index.html`, à donner après chaque push. L'adresse de branche
@@ -94,7 +94,7 @@ sur « Chargement… ».
   nuage dans la barre du haut quand elle est active (clic = synchroniser). Jamais sur raw.githack (adresse partagée),
   jamais pendant les exemples (`reglages.demo`), jamais un envoi de données vides. Réglages › Données : se connecter
   (avec la clé de la v4.9 en un clic), changer la clé, arrêter.
-  Pendant la bêta, le robot lit toujours donnees.json (celui de la v4.9).
+  Une clé gardée par l'ancienne bêta (base « lifepanel-v5-beta ») est proposée en un clic (cleV49, nom historique).
 - **Rappels et notifications** (24/11, noyau/notifications.js) : le moteur ne change pas (robot du dépôt privé, lancé
   toutes les 30 min par cron-job.org, push du navigateur : rien à laisser ouvert ; précision ± 30 min, suffisante).
   Réglages › Données › Notifications : activer sur cet appareil, mode (tout, résumé, rien), essayer, désactiver. Un
@@ -221,9 +221,9 @@ Les modules ne s'importent **jamais** entre eux : ils passent par le noyau. Une 
 - **Données : rien n'est perdu.** `FORMES` garde les champs inconnus (`{...x, champs vérifiés}`), `normaliser` garde les
   clés inconnues et reste idempotent. Toute nouvelle donnée passe par `FORMES` (lecture comme création).
   Vérifié : la v5 lit le vrai `donnees.json` exactement comme la v4.9.
-- **VERSION** des données : 23 pendant la bêta, 24 à la bascule (la v4.9 refuse alors de synchroniser un fichier plus récent).
-- **Bêta isolée** : `noyau/stockage.js` (`NOMS`) range les données sous d'autres noms que la v4.9 ; rien n'est envoyé à
-  GitHub sans la synchro (Réglages), et pendant la bêta seulement dans `donnees-v5.json`. À la bascule, `NOMS` reprend les noms de la v4.9 (base `lifepanel`, magasin `poignees`, copie `lifepanel`).
+- **VERSION** des données : 24 depuis la bascule (la v4.9 refuse de synchroniser un fichier plus récent qu'elle).
+- **Stockage** : `noyau/stockage.js` (`NOMS`) utilise les noms de la v4.9 (base `lifepanel`, magasin `poignees`, copie
+  `lifepanel`, mêmes clés et formats) : à la bascule, chaque appareil a gardé ses données, sa clé GitHub et sa base de synchro.
 - **Jamais d'écriture avant la lecture** : tant que `etat.donnees !== 'pretes'`, `ecrire()` ne fait rien.
 - **Sécurité** : aucun script en ligne ni `onclick=` (la CSP n'autorise que les fichiers du site) ; toute donnée affichée
   passe par `esc()` ; un lien venu des données passe par `normaliserLien()`.

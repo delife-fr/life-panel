@@ -5,8 +5,8 @@
    Ici : inscrire cet appareil (autorisation + abonnement push signé par la clé publique du dépôt), son mode (tout,
    résumé du matin seul, rien), un essai, le désinscrire ; le fuseau et l'adresse d'abonnement sont tenus à jour.
    Cet appareil est reconnu dans la liste par son abonnement push (son adresse), pas par un identifiant gardé à part :
-   l'abonnement est porté par le service worker de la racine du site (celui de la v4.9 pendant la bêta, celui de la v5
-   après la bascule), donc le même avant et après : jamais deux inscriptions, jamais deux fois le même rappel. */
+   l'abonnement est porté par le service worker de la racine du site (celui de la v5 a remplacé celui de la v4.9 à la
+   bascule, en gardant ses abonnements) : jamais deux inscriptions, jamais deux fois le même rappel. */
 import {uid, maintenant} from './outils.js';
 import {gh, synchroActive, adressePartagee, appareilParDefaut, lireTexte, ecrireTexte, ErreurGitHub} from './synchro.js';
 import {fuseauIci} from './calculs.js';

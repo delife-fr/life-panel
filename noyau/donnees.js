@@ -5,9 +5,9 @@
    Les champs connus sont vérifiés comme en v4.9. normaliser() reste idempotent : deux passages donnent le même résultat. */
 import {txt, num, uid, unique, maintenant, aujourdhui, dateISO, heureValide, jourDe, propreNom, cleNom, norm, pluriel, estObjet} from './outils.js';
 
-/* VERSION des données : 23 comme la v4.9 pendant la bêta (les données de la bêta restent dans ce navigateur).
-   Elle passera à 24 à la bascule (lot 8) : la v4.9 refuse alors de synchroniser un fichier plus récent qu'elle. */
-export const VERSION = 23;
+/* VERSION des données : 24 depuis la bascule (24/11) ; la v4.9 (23) refuse de synchroniser un fichier plus récent
+   qu'elle : l'ancienne version (…/v49/) ne peut plus écrire par-dessus les données de la v5. */
+export const VERSION = 24;
 export const LISTES_DONNEES = ['projets', 'taches', 'notes', 'documents', 'mouvements', 'contacts', 'inbox', 'evenements', 'listes', 'journal'];   /* journal : nouveau en v5 */
 export const LIENS_PROJET = ['taches', 'notes', 'documents', 'mouvements', 'contacts', 'evenements'];   /* ce qu'un projet peut rassembler */
 export const JOURS_CORBEILLE = 30;

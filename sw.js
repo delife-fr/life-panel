@@ -7,8 +7,9 @@
    · Notifications : un rappel envoyé par le robot du dépôt privé arrive chiffré ; il est affiché comme la notification
      d'une appli, même LIFE PANEL fermée. Un appui ouvre LIFE PANEL à la bonne page.
    · Jamais GitHub, Google ni aucun autre site : seulement les fichiers de LIFE PANEL.
-   BÊTA : ce fichier est dans /beta/ (portée /beta/) ; à la bascule, il remplace celui de la v4.9 à la racine. Le cache
-   s'appelle « lp5-… » : la v4.9 efface les caches « lifepanel-… » qui ne sont pas les siens. */
+   Depuis la bascule (24/11), il remplace celui de la v4.9 à la racine (même adresse : les abonnements aux notifications
+   sont gardés). L'ancienne version vit dans v49/ avec son propre service worker : on n'y touche pas. Le cache s'appelle
+   « lp5-… » : la v4.9 efface les caches « lifepanel-… » qui ne sont pas les siens. */
 const CACHE = 'lp5-site';
 const DELAI_RESEAU = 3000;
 
@@ -19,8 +20,10 @@ self.addEventListener('fetch', e => {
   const r = e.request;
   if(r.method !== 'GET') return;
   const u = new URL(r.url);
-  if(u.origin !== self.location.origin || !u.pathname.startsWith(new URL(self.registration.scope).pathname)) return;   /* rien hors de LIFE PANEL */
-  const cle = r.mode === 'navigate' ? new Request(new URL('./', self.registration.scope).href) : r;   /* une seule page : #/… et ?action=… sont la même */
+  const portee = new URL(self.registration.scope).pathname;
+  if(u.origin !== self.location.origin || !u.pathname.startsWith(portee)) return;   /* rien hors de LIFE PANEL */
+  if(/^(v49|beta)\//.test(u.pathname.slice(portee.length))) return;   /* l'ancienne version a son propre service worker */
+  const cle = r.mode === 'navigate' ? new Request(u.origin + u.pathname) : r;   /* une page : ?action=… et #/… ne comptent pas */
   const reseau = fetch(r, {cache:'no-cache'}).then(rep => {
     if(rep.ok && rep.type === 'basic'){ const copie = rep.clone(); caches.open(CACHE).then(c => c.put(cle, copie)); }
     return rep;

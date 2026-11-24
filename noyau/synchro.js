@@ -4,8 +4,7 @@
    page est affichée (sans changement, GitHub répond « 304 » : rien n'est téléchargé) ; écriture 2,5 s après la dernière
    modification. GitHub refuse d'écrire si le fichier a changé depuis la dernière lecture (sha) : on relit, on fusionne
    avec la « base » (dernière version synchronisée), on réessaie.
-   BÊTA (décision du 23/11) : le fichier est donnees-v5.json, créé à la première connexion en copiant donnees.json ; la v4.9
-   garde donnees.json pour elle seule. À la bascule (lot 8), FICHIER redevient donnees.json.
+   Le fichier est donnees.json (pendant la bêta : donnees-v5.json, gardé dans le dépôt comme archive).
    Jamais sur raw.githack.com : cette adresse sert les pages de n'importe qui, la clé y serait lisible par d'autres. */
 import {DB, VERSION, LISTES_DONNEES, normaliser, remplacer, aDesDonnees, resume, ecouterChangements} from './donnees.js';
 import {maintenant, txt, uid, cleNom, pluriel, heureTexte} from './outils.js';
@@ -13,7 +12,7 @@ import {etat as stockage, garder, relire, oublier, faireSecours} from './stockag
 import {toast, ficheOuverte, confirmer, rendre} from './interface.js';
 import {actionNoyau} from './modules.js';
 
-export const FICHIER = 'donnees-v5.json', SOURCE = 'donnees.json';
+export const FICHIER = 'donnees.json';
 const API = 'https://api.github.com';
 export const adressePartagee = () => /(^|\.)githack\.com$/i.test(location.hostname);
 export const gh = {cfg:null, sha:null, base:null, lu:null, etat:'aucun', erreur:'', faiteA:null, enCours:null, aRefaire:false, t:null, controle:0,
@@ -308,16 +307,18 @@ function majIndicateur(){
   if(location.hash.startsWith('#/reglages')){ const p = document.getElementById('synchro-etat'); if(p){ p.textContent = TEXTES[e](); p.dataset.etat = e; } }
 }
 
-/* --- La clé de la v4.9 : sur la même adresse (panel…/beta/), elle est déjà dans ce navigateur. Lue seulement, jamais écrite. --- */
+/* --- La clé gardée par la bêta (…/beta/, base « lifepanel-v5-beta ») sur un appareil qui n'a connu qu'elle (le téléphone,
+   dans Chrome) : même adresse, donc un clic pour se reconnecter. Lue seulement, jamais écrite. --- */
 export async function cleV49(){
   if(adressePartagee() || !('indexedDB' in window)) return null;
   try {
-    if(indexedDB.databases){ const l = await indexedDB.databases(); if(!l.some(x => x.name === 'lifepanel')) return null; }
-    const db = await new Promise((ok, ko) => { const r = indexedDB.open('lifepanel'); r.onsuccess = () => ok(r.result); r.onerror = () => ko(r.error);
+    const NOM = 'lifepanel-v5-beta', MAGASIN = 'donnees';
+    if(indexedDB.databases){ const l = await indexedDB.databases(); if(!l.some(x => x.name === NOM)) return null; }
+    const db = await new Promise((ok, ko) => { const r = indexedDB.open(NOM); r.onsuccess = () => ok(r.result); r.onerror = () => ko(r.error);
       r.onupgradeneeded = () => { r.transaction.abort(); ko(new Error('pas de base v4.9')); }; });   /* n'existe pas : surtout ne pas la créer */
     try {
-      if(!db.objectStoreNames.contains('poignees')) return null;
-      const cfg = await new Promise((ok, ko) => { const q = db.transaction('poignees').objectStore('poignees').get('github'); q.onsuccess = () => ok(q.result || null); q.onerror = () => ko(q.error); });
+      if(!db.objectStoreNames.contains(MAGASIN)) return null;
+      const cfg = await new Promise((ok, ko) => { const q = db.transaction(MAGASIN).objectStore(MAGASIN).get('github'); q.onsuccess = () => ok(q.result || null); q.onerror = () => ko(q.error); });
       return cfg && cfg.jeton && cfg.owner && cfg.repo ? {owner:cfg.owner, repo:cfg.repo, jeton:cfg.jeton, appareil:cfg.appareil || ''} : null;
     } finally { db.close(); }
   } catch(e){ return null; }
@@ -325,7 +326,7 @@ export async function cleV49(){
 
 /* --- Première connexion d'un appareil (Réglages). Renvoie un message d'erreur, ou '' --- */
 export async function connecter(v){
-  if(adressePartagee()) return 'Pas de synchro sur cette adresse : ouvre la bêta à son adresse à elle.';
+  if(adressePartagee()) return 'Pas de synchro sur cette adresse : ouvre LIFE PANEL à son adresse à elle.';
   const cfg = {owner:txt(v.owner).trim(), repo:txt(v.repo).trim(), chemin:FICHIER, appareil:txt(v.appareil).trim() || appareilParDefaut(), jeton:txt(v.jeton).trim(), branche:'main'};
   if(!/^[A-Za-z0-9-]{1,39}$/.test(cfg.owner)) return 'Pseudo GitHub invalide.';
   if(!/^[A-Za-z0-9._-]{1,100}$/.test(cfg.repo)) return 'Nom de dépôt invalide.';
@@ -341,21 +342,17 @@ export async function connecter(v){
   let dist, base = null, sha = null;
   try {
     dist = await lireDistant(cfg);
-    if(dist.absent){
-      /* Bêta : donnees-v5.json n'existe pas encore → copie de donnees.json (celui de la v4.9, qui n'est pas modifié) */
-      const src = await lireDistant({...cfg, chemin:SOURCE});
-      if(src.absent) return `Ni ${FICHIER} ni ${SOURCE} dans ce dépôt.`;
-      if(!await confirmer({titre:'Copier tes données pour la bêta ?', oui:'Copier et utiliser',
-        texte:`${SOURCE} (${resume(src.d)}) est copié dans ${FICHIER}, que seule la bêta utilise : la v4.9 n'est pas touchée.` +
-          (aDesDonnees(DB) && !DB.reglages.demo ? ` Les données actuelles de la bêta (${resume(DB)}) passent en copie de secours.` : '')})) return '';
-      const w = await ecrireDistant(src.d, null, cfg); if(w.conflit) return 'Le fichier vient d’être créé depuis un autre appareil : recommence.';
-      await faireSecours('synchro'); appliquer(src.d); base = JSON.stringify(src.d); sha = w.sha;
+    if(dist.absent){   /* le dépôt n'a pas encore de données : on y envoie celles de ce navigateur (comme la v4.9) */
+      if(!aDesDonnees(DB) || DB.reglages.demo) return 'Ni ce navigateur ni le dépôt ne contiennent de données : importe d’abord tes données, puis connecte-toi.';
+      if(!await confirmer({titre:'Envoyer tes données sur GitHub ?', oui:'Envoyer', texte:`Le dépôt privé ${cfg.owner}/${cfg.repo} ne contient pas encore ${FICHIER}. Y envoyer les données de ce navigateur (${resume(DB)}) ?`})) return '';
+      const L = JSON.stringify(normaliser(DB)), w = await ecrireDistant(JSON.parse(L), null, cfg); if(w.conflit) return 'Le fichier vient d’être créé depuis un autre appareil : recommence.';
+      base = L; sha = w.sha;
     } else {
       const L = JSON.stringify(normaliser(DB));
       if(dist.R === L){ base = L; sha = dist.sha; }
       else {
         if(aDesDonnees(DB) && !DB.reglages.demo && !await confirmer({titre:'Prendre les données de GitHub ?', oui:'Prendre celles de GitHub',
-          texte:`${FICHIER} contient ${resume(dist.d)}. Les données actuelles de la bêta (${resume(DB)}) passent en copie de secours.`})) return '';
+          texte:`${FICHIER} contient ${resume(dist.d)}. Les données de ce navigateur (${resume(DB)}) passent en copie de secours.`})) return '';
         await faireSecours('synchro'); appliquer(dist.d); base = dist.R; sha = dist.sha;
       }
     }
