@@ -26,8 +26,8 @@ python3 -m http.server 8765
 puis http://127.0.0.1:8765/
 
 **En ligne** : https://panel.alexishocini.fr/ (la v5, branche `main`). La synchro lit et écrit `donnees.json`. Pendant la
-bêta (23-24/11), la v5 vivait dans …/beta/ avec `donnees-v5.json`, gardé dans le dépôt de données comme archive ; à la
-bascule, `donnees.json` a repris son contenu (rien n'avait changé côté v4.9).
+bêta (23-24/11), la v5 vivait dans …/beta/ avec `donnees-v5.json` ; à la bascule, `donnees.json` a repris son contenu (rien
+n'avait changé côté v4.9), puis `donnees-v5.json` a été supprimé : **un seul fichier de données**, `donnees.json`.
 
 Aperçu sans synchro : **toujours l'adresse figée sur un commit**,
 `https://raw.githack.com/delife-fr/life-panel/<commit complet>/index.html`, à donner après chaque push. L'adresse de branche
@@ -52,6 +52,8 @@ sur « Chargement… ».
   la couleur de la section. À droite : Chercher (Ctrl K), Noter, Tags (T), Aide « ? », l'icône jour/nuit, Réglages
   (sous 1 600 px, Chercher et Noter en icônes).
 - **Téléphone et tablette** : le titre de la section en haut, le sous-menu qui défile, 4 onglets en bas + « Plus », le bouton +.
+  Les icônes du haut sont serrées (36 px) et le nuage de la synchro n'y paraît qu'en cas d'erreur ou hors ligne : le titre
+  doit tenir en entier jusqu'à 360 px de large.
 - **Thème** : nuit par défaut ou jour, seulement par l'icône en haut à droite (pas de thème automatique, rien dans Réglages).
 
 ## Autres décisions du tour 1 (à appliquer dans les lots)
@@ -190,7 +192,7 @@ noyau/
   affichage.js        dossier (carré de couleur + nom), tags, lien de document (Drive compris), téléphone, e-mail
   finance.js          comptes pointés, dépenses d'une période, l'anneau par catégorie (Finance et Aujourd'hui)
   fichiers.js         choisir un fichier sur l'appareil (texte décodé), en télécharger un, cellule CSV
-  synchro.js          la synchro GitHub de la v4.9 (donnees-v5.json pendant la bêta), l'icône nuage
+  synchro.js          la synchro GitHub de la v4.9 (donnees.json), l'icône nuage
   colonnes.js         les colonnes de chaque type d'élément et le texte où chercher, communs à tous les tableaux
   glisser.js          le glisser-déposer (souris et doigt) : glisserType(type, {depot}), [data-glisser], [data-depot]
   fiches.js           la fiche de chaque type d'élément (TYPES_ELEMENT), avec dossier, tags et attributs libres

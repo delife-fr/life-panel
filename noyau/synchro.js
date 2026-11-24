@@ -4,7 +4,8 @@
    page est affichée (sans changement, GitHub répond « 304 » : rien n'est téléchargé) ; écriture 2,5 s après la dernière
    modification. GitHub refuse d'écrire si le fichier a changé depuis la dernière lecture (sha) : on relit, on fusionne
    avec la « base » (dernière version synchronisée), on réessaie.
-   Le fichier est donnees.json (pendant la bêta : donnees-v5.json, gardé dans le dépôt comme archive).
+   Le fichier est donnees.json, le seul fichier de données du dépôt (la copie de la bêta, donnees-v5.json, a été supprimée
+   après la bascule ; l'historique du dépôt la garde).
    Jamais sur raw.githack.com : cette adresse sert les pages de n'importe qui, la clé y serait lisible par d'autres. */
 import {DB, VERSION, LISTES_DONNEES, normaliser, remplacer, aDesDonnees, resume, ecouterChangements} from './donnees.js';
 import {maintenant, txt, uid, cleNom, pluriel, heureTexte} from './outils.js';
