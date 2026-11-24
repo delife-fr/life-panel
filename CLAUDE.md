@@ -64,7 +64,8 @@ sur « Chargement… ».
   v3.13, et `parent` n'est plus utilisé). Les vrais dossiers sont au bout du chemin, l'utilisateur choisit leur chemin
   (fiche « Chemin » : une liste déroulante de l'arbre ; ou glisser le dossier sur un chemin de l'arbre). Page Dossiers :
   l'arbre des chemins à gauche (où créer, où ranger ; « Nouveau chemin… »), le tableau des dossiers de ce chemin. L'arbre de
-  départ est la hiérarchie du document de la refonte, sans les dossiers du bout (CHEMINS_DEPART, calculs.js) ; dès qu'on
+  départ est la hiérarchie validée le 24/11 dans le document de la refonte, où **chaque nom est un chemin** (CHEMINS_DEPART,
+  calculs.js) ; dès qu'on
   ajoute un chemin il est recopié dans les données (`DB.chemins`). Dans un dossier, le sous-menu compte chaque type. Un dossier ouvert : le sous-menu passe aux types, chacun le même tableau que dans
   sa section. Un dossier dont on n'a plus besoin est **fermé** (drapeau `archive`) et reste visible dans « Fermés ».
 - **Idées** = l'Inbox : ni tags, ni dossier, ni archives ; une idée ne va nulle part, elle devient une tâche, une note,
@@ -104,8 +105,9 @@ sur « Chargement… ».
   « ajouter vite » gardent 640 px.
 - **Arbre des chemins** : les traits ├ └ │ de la hiérarchie (Dossiers).
 - **Dossiers sur téléphone** : l'arbre des chemins se replie (flèche « Chemins »), replié au départ, retenu sur l'appareil.
-- **Hiérarchie des dossiers** : l'utilisateur la remodèle dans le document de la refonte (bloc de code de « Vrac ») ; à
-  relire une fois validée. « À trier » et « Archives » de sa racine ne sont pas repris (ils servent pour Google Drive).
+- **Hiérarchie des dossiers** (validée le 24/11, bloc de code de « Vrac » du document) : tous ses noms sont des chemins,
+  les dossiers se créent au bout ; « À trier » et « Archives » de sa racine ne sont pas repris (ils servent pour Google
+  Drive). « Abonnements et télécom » est rangé sous Numérique.
 - **Couleurs** des catégories et des dossiers : 14 teintes (les 9 de la v4.9 + cyan, brun, olive, indigo, gris) et 13
   rayées (TEINTES, COULEURS_CAT dans donnees.js).
 - **Finance** : le tableau des mouvements, « Par catégorie » et « Mois par mois » se plient (flèche) ; Comptes : colonne

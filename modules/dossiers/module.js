@@ -1,6 +1,6 @@
 /* LIFE PANEL v5 · modules/dossiers — les dossiers (les « projets » des données, champ « projet » sur chaque élément).
    Un élément est dans un seul dossier : le dossier est son « super tag ».
-   - Les dossiers sont rangés par un **chemin** (Perso › Logement, Aviation › Formations…) : de simples noms pour s'y
+   - Les dossiers sont rangés par un **chemin** (Perso › Logements, Aviation › Formations…) : de simples noms pour s'y
      retrouver, pas des dossiers ; seul le dossier au bout du chemin contient des éléments. L'arbre des chemins est à gauche :
      un clic montre les dossiers de ce chemin (et en dessous), la ligne d'ajout y crée le dossier ; glisser un dossier sur un
      chemin l'y range (ou sa fiche : « Chemin », une liste déroulante de l'arbre). « Nouveau chemin… » ajoute une branche.
@@ -38,7 +38,8 @@ function pageListe(fermes, ctx){
   const tous = DB.projets.filter(p => !!p.archive === fermes), l = tous.filter(p => commencePar(cheminDe(p), ici));
   /* Les traits de l'arbre (24/11) : ├ └ pour le chemin, │ pour chaque parent qui a encore des frères en dessous */
   const tousChemins = arbreChemins(), cle = c => c.map(cleNom).join('/');
-  const dernier = c => { const p = cle(c.slice(0, -1)); return !tousChemins.some(x => x.length === c.length && cle(x.slice(0, -1)) === p && x.join('/').localeCompare(c.join('/'), 'fr', {sensitivity:'base'}) > 0); };
+  const dernier = c => { const p = cle(c.slice(0, -1)), i = tousChemins.findIndex(x => cle(x) === cle(c));
+    return !tousChemins.some((x, j) => j > i && x.length === c.length && cle(x.slice(0, -1)) === p); };
   const traits = c => c.map((_, i) => i < c.length - 1 ? `<i class="trait${dernier(c.slice(0, i + 1)) ? '' : ' v'}"></i>` : `<i class="trait ${dernier(c) ? 'l' : 't'}"></i>`).join('');
   const noeud = (c, texte) => { const on = c.map(cleNom).join('/') === k, n = tous.filter(p => commencePar(cheminDe(p), c)).length;
     return `<a class="noeud${on ? ' actif' : ''}" href="${lienChemin(c, fermes)}" data-depot="dossier" data-chemin="${esc(c.join('/'))}"${on ? ' aria-current="true"' : ''}>
