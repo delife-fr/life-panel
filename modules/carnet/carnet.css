@@ -7,3 +7,8 @@
 .source-drive{display:inline-flex;align-items:center;gap:5px;color:var(--texte-2);font-size:12.5px}
 .source-drive svg{color:var(--c-vert)}
 .page-carnet .filtres{display:flex;gap:6px;flex-wrap:wrap}
+/* Case « Drive », sur le même modèle que « Afficher » du calendrier */
+.docs-afficher{display:flex;align-items:center;flex-wrap:wrap;gap:4px 14px}
+.docs-afficher label{display:flex;align-items:center;gap:7px;margin:0;font-size:13.5px;color:var(--texte-2);cursor:pointer;white-space:nowrap}
+.docs-afficher input.coche{width:17px;height:17px;border-color:var(--c)}
+.docs-afficher input.coche:checked{background:var(--c);border-color:var(--c)}

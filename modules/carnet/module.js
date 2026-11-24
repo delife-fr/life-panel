@@ -2,10 +2,11 @@
    - Notes : titre, extrait, tags, dossier ; la fiche au centre pour écrire (Markdown).
    - Journal : une ou deux phrases datées. En tapant, « @ » propose les contacts et « # » les tags ; les personnes citées
      sont reliées à l'entrée, les « #mots » deviennent ses tags.
-   - Documents : titre, lien (cliquable, Drive compris), échéance, dossier, tags. Avec Google Drive connecté (24/11), le même
-     tableau montre aussi tous les fichiers du Drive (source « Drive ») ; « Pas encore rangés » = ceux sans dossier. Ranger un
-     fichier (lui donner un dossier, dans sa fiche ou en choisissant plusieurs lignes) en fait un document LIFE PANEL lié
-     (driveId) ; son nom changé dans la fiche change aussi dans Drive (noyau/drive.js). */
+   - Documents : titre, type (PDF, JPG… ou un tiret si la fiche est créée ici), lien (cliquable, Drive compris), échéance, dossier, tags.
+     Avec Google Drive connecté (24/11), le même tableau montre aussi tous les fichiers du Drive (source « Drive ») ;
+     « Pas encore rangés » = ceux sans dossier. La case « Drive » (retenue sur cet appareil, comme « Afficher » du calendrier)
+     les montre ou les cache. Ranger un fichier (lui donner un dossier, dans sa fiche ou en choisissant plusieurs lignes)
+     en fait un document LIFE PANEL lié (driveId) ; son nom changé dans la fiche change aussi dans Drive (noyau/drive.js). */
 import {esc, aujourdhui, maintenant, jourCourt, majuscule, dateCourte, norm, cleNom, extrait, pluriel} from '../../noyau/outils.js';
 import {DB, ajouter, modifie} from '../../noyau/donnees.js';
 import {nomDossier, cheminDossier, etatDocument, texteEcheance} from '../../noyau/calculs.js';
@@ -20,6 +21,7 @@ import {tableau, choixTableau, viderChoix} from '../../noyau/tableau.js';
 import {colonnes, recherche} from '../../noyau/colonnes.js';
 import {ouvrirElement} from '../../noyau/fiches.js';
 import {lireCapture, lireTags, noterJournal} from '../../noyau/capture.js';
+import {pref, changerPref} from '../../noyau/preferences.js';
 
 const SOUS = [['', 'Notes'], ['journal', 'Journal'], ['documents', 'Documents']];
 const annee = d => d && d.slice(0, 4) !== aujourdhui().slice(0, 4) ? ' ' + d.slice(0, 4) : '';
@@ -45,21 +47,26 @@ function pageJournal(){
 }
 
 /* --- Documents --- */
+/* Case « Drive », comme les cases du calendrier : retenue sur cet appareil. Cochée au départ (tout reste visible). */
+const montreDrive = () => { const a = pref('documents.afficher', {}) || {}; return 'drive' in a ? !!a.drive : true; };
+const afficherDrive = () => `<div class="docs-afficher" role="group" aria-label="Afficher"><label style="--c:var(--c-vert)"><input type="checkbox" class="coche" data-action="documents-filtre" data-k="drive"${montreDrive() ? ' checked' : ''}><span>Drive</span></label></div>`;
 function pageDocuments(ctx){
   const toutes = driveConnecte() || drive.fichiers ? [...DB.documents, ...fichiersSansDocument()] : DB.documents;
-  const aRanger = x => !!x.driveId && !x.projet, filtre = ctx.params.get('filtre') === 'ranger', n = toutes.filter(aRanger).length;
-  const puces = toutes.some(x => x.driveId) ? `<nav class="filtres" aria-label="Filtres">
+  const avecDrive = montreDrive(), base = avecDrive ? toutes : toutes.filter(x => !x.driveId);
+  const aRanger = x => !!x.driveId && !x.projet, filtre = avecDrive && ctx.params.get('filtre') === 'ranger', n = toutes.filter(aRanger).length;
+  const puces = avecDrive && toutes.some(x => x.driveId) ? `<nav class="filtres" aria-label="Filtres">
     <a class="puce-choix${filtre ? '' : ' actif'}" href="${lien('carnet', 'documents')}">Tous</a>
     <a class="puce-choix${filtre ? ' actif' : ''}" href="${lien('carnet', 'documents', {filtre:'ranger'})}">Pas encore rangés${n ? ` <span class="n">${n}</span>` : ''}</a></nav>` : '';
   /* Google Drive : se connecter, se reconnecter (après une heure), ou relire la liste */
   const google = driveConnecte() ? `<button type="button" class="btn petit" data-action="drive-actualiser" title="Relire la liste du Drive">${ico('drive', 15)}<span>Actualiser</span></button>`
     : `<button type="button" class="btn petit" data-action="drive-connecter">${ico('drive', 15)}<span>${driveExpire() ? 'Reconnecter Google Drive' : 'Se connecter à Google Drive'}</span></button>`;
+  const caseDrive = driveConnecte() || toutes.some(x => x.driveId) ? afficherDrive() : '';
   return entete('Documents', {sur:'Carnet'}) + `<div class="page-carnet">${champAjout('document-ajouter', 'Ajouter un document : son titre ou son lien…')}
     ${drive.erreur && driveConnecte() ? `<p class="attention">Google Drive : ${esc(drive.erreur)}</p>` : ''}${tableau({id:'documents',
-    lignes:filtre ? toutes.filter(aRanger) : toutes, toutes, cle:x => x.id, ouvrir:'document-ouvrir', tri:{col:'titre', sens:1}, outils:puces + google,
+    lignes:filtre ? base.filter(aRanger) : base, toutes:base, cle:x => x.id, ouvrir:'document-ouvrir', tri:{col:'titre', sens:1}, outils:caseDrive + puces + google,
     selection:{un:'document choisi', plusieurs:'documents choisis', actions:`<button type="button" class="btn petit" data-action="documents-choix-dossier" data-tableau="documents">${ico('dossier', 14)}<span>Dossier…</span></button>`},
     recherche:recherche('documents'), tags:x => x.tags, texteRecherche:'Chercher dans les documents',
-    vide:filtre ? 'Tout est rangé.' : 'Aucun document. Ajoute-en un juste au-dessus.', colonnes:colonnes('documents', toutes)})}</div>`;
+    vide:filtre ? 'Tout est rangé.' : 'Aucun document. Ajoute-en un juste au-dessus.', colonnes:colonnes('documents', base)})}</div>`;
 }
 /* Un fichier Drive pas encore rangé : le document LIFE PANEL qu'il deviendra */
 const fichierDrive = id => fichiersSansDocument().find(x => x.id === id);
@@ -110,6 +117,7 @@ export default {
       ouvrirElement('documents', tr.dataset.id); },
     'drive-connecter':() => connecterDrive(),
     'drive-actualiser':() => listerDrive(true).then(() => { rendre(); toast(drive.erreur ? 'Google Drive : ' + drive.erreur : pluriel((drive.fichiers || []).length, 'fichier') + ' dans ton Drive.'); }),
+    'documents-filtre':el => { const a = {...(pref('documents.afficher', {}) || {})}; a[el.dataset.k] = el.checked; changerPref('documents.afficher', a); rendre(); },
     'documents-choix-dossier':el => { const ids = choixTableau(el.dataset.tableau || 'documents'); if(ids.length) choisirDossierDocs(ids); },
     'documents-mettre-dossier':el => mettreDossierDocs(visees, el.dataset.dossier || null)
   }

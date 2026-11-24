@@ -99,9 +99,45 @@ export async function renommerDrive(id, nom){
   const f = drive.fichiers && drive.fichiers.find(x => x.id === id); if(f) f.name = nom;
 }
 export const lienFichier = f => f.webViewLink || 'https://drive.google.com/file/d/' + encodeURIComponent(f.id) + '/view';
+/* Libellés courts d'un fichier Drive (colonne Type). Rien n'est écrit dans les données : le type se calcule à l'affichage. */
+const LIBELLES_MIME = {
+  'application/pdf':'PDF', 'image/jpeg':'JPG', 'image/png':'PNG', 'image/gif':'GIF', 'image/webp':'WEBP', 'image/heic':'HEIC', 'image/heif':'HEIF',
+  'image/svg+xml':'SVG', 'image/tiff':'TIFF', 'image/bmp':'BMP', 'text/plain':'TXT', 'text/html':'HTML', 'text/csv':'CSV', 'text/markdown':'MD',
+  'application/json':'JSON', 'application/zip':'ZIP', 'application/x-zip-compressed':'ZIP', 'application/gzip':'GZ', 'application/x-7z-compressed':'7Z',
+  'application/msword':'DOC', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':'DOCX',
+  'application/vnd.ms-excel':'XLS', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'XLSX',
+  'application/vnd.ms-powerpoint':'PPT', 'application/vnd.openxmlformats-officedocument.presentationml.presentation':'PPTX',
+  'application/vnd.oasis.opendocument.text':'ODT', 'application/vnd.oasis.opendocument.spreadsheet':'ODS', 'application/vnd.oasis.opendocument.presentation':'ODP',
+  'application/vnd.google-apps.document':'Docs', 'application/vnd.google-apps.spreadsheet':'Sheets', 'application/vnd.google-apps.presentation':'Slides',
+  'application/vnd.google-apps.drawing':'Dessin', 'application/vnd.google-apps.form':'Formulaire', 'application/vnd.google-apps.script':'Script',
+  'application/vnd.google-apps.shortcut':'Raccourci', 'video/mp4':'MP4', 'video/quicktime':'MOV', 'video/webm':'WEBM', 'audio/mpeg':'MP3', 'audio/mp4':'M4A', 'audio/wav':'WAV'
+};
+let indexFichiers = null;
+const parId = () => {
+  if(!drive.fichiers) return null;
+  if(!indexFichiers || indexFichiers.lu !== drive.lu) indexFichiers = {lu:drive.lu, map:new Map(drive.fichiers.map(f => [f.id, f]))};
+  return indexFichiers.map;
+};
+export function mimeFichier(x){
+  if(!x) return '';
+  if(x.mimeType) return x.mimeType;
+  const f = x.driveId && parId() && parId().get(x.driveId);
+  return (f && f.mimeType) || '';
+}
+export function libelleType(mime, nom){
+  if(mime && LIBELLES_MIME[mime]) return LIBELLES_MIME[mime];
+  const ext = String(nom || '').match(/\.([A-Za-z0-9]{1,5})$/);
+  if(ext) return ext[1].toUpperCase();
+  if(!mime) return '';
+  const brut = /^(image|video|audio)\//.test(mime) ? mime.split('/')[1] : mime.split('/').pop().split('.').pop();
+  const court = String(brut || '').replace(/^x-/, '').split('+')[0];
+  return court && court.length <= 8 ? court.toUpperCase() : 'Fichier';
+}
+/* Une fiche créée dans LIFE PANEL (sans driveId) n'a pas de type : la colonne affiche un tiret. */
+export const typeDocument = x => !x || !x.driveId ? '' : (libelleType(mimeFichier(x), x.titre) || 'Fichier');
 /* Les fichiers du Drive qui ne sont pas encore des documents LIFE PANEL : des lignes « virtuelles » du tableau Documents */
 export function fichiersSansDocument(){
   const lies = new Set(DB.documents.map(d => d.driveId).filter(Boolean));
-  return (drive.fichiers || []).filter(f => !lies.has(f.id)).map(f => ({id:'drive:' + f.id, titre:f.name, url:lienFichier(f), driveId:f.id, virtuel:true,
+  return (drive.fichiers || []).filter(f => !lies.has(f.id)).map(f => ({id:'drive:' + f.id, titre:f.name, url:lienFichier(f), driveId:f.id, mimeType:f.mimeType || '', virtuel:true,
     tags:[], projet:null, attributs:[], modif:f.modifiedTime || ''}));
 }

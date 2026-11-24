@@ -133,6 +133,9 @@ sur « Chargement… ».
   corbeille, seulement les siens) ; « Pas encore rangés » = fichiers Drive sans dossier. Ranger un fichier (dossier dans sa
   fiche, ou Ctrl + clic puis « Dossier… ») crée un document lié (`driveId`) ; un nom changé dans la fiche change dans
   Drive, un nom changé dans Drive revient ici. L'utilisateur range ses fichiers lui-même (ou avec Claude, autre session).
+  **Afficher** (24/11) : une case « Drive », comme celles du calendrier, retenue sur cet appareil (`documents.afficher`) :
+  décochée, les fichiers Drive disparaissent du tableau (les fiches créées ici restent). Colonne **Type** (triable) : PDF,
+  JPG, Docs… d'après le type Drive ; un tiret pour une fiche créée dans LIFE PANEL. Le type n'est pas enregistré.
 - **Plus d'archives** (23/11) : pas de page Archives. Une tâche faite reste visible, barrée, en bas du tableau ; notes,
   documents et contacts archivés en v4.9 sont affichés comme les autres (le drapeau reste dans les données).
 - **Contacts** (23/11) : plus d'« À lui dire », « À répondre », « Idées de cadeaux », « Nouvelles », « Dernier échange »,

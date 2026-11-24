@@ -8,6 +8,7 @@ import {DB} from './donnees.js';
 import {nomListe, nomDossier, estEnRetard, couleurCategorie, joursAvantAnniv, etatDocument, texteEcheance, cheminDossier, texteHeures} from './calculs.js';
 import {puceDossier, puceTags, lienDocument, lienTel, lienMail} from './affichage.js';
 import {colonnesAttributs} from './tableau.js';
+import {typeDocument} from './drive.js';
 
 const annee = d => d && d.slice(0, 4) !== aujourdhui().slice(0, 4) ? ' ' + d.slice(0, 4) : '';
 export const quand = d => d ? esc(dateCourte(d) + annee(d)) : '—';
@@ -39,6 +40,8 @@ const COLONNES = {
     tags, dossier, {id:'modif', titre:'Modifiée', tel:'droite', valeur:n => n.modif, html:n => quand(n.modif)}],
   documents:() => [
     {id:'titre', titre:'Document', tel:'titre', valeur:x => x.titre, html:x => esc(x.titre)},
+    /* Type : PDF, JPG, Docs… pour un fichier Drive ; un tiret pour une fiche créée ici. Triable. */
+    {id:'type', titre:'Type', garder:true, valeur:x => typeDocument(x), html:x => esc(typeDocument(x)) || '—'},
     /* un fichier de Google Drive (24/11) : la source le dit, le lien l'ouvre dans Drive */
     {id:'source', titre:'Source', valeur:x => x.driveId ? 'Drive' : '', html:x => x.driveId ? `<span class="source-drive">${ico('drive', 14)}Drive</span>` : ''},
     {id:'lien', titre:'Lien', html:x => x.driveId && x.url ? `<a class="lien-externe" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${ico('externe', 13)}<span>Ouvrir dans Drive</span></a>` : lienDocument(x.url) || '—'},
@@ -71,7 +74,7 @@ export const colonnes = (liste, lignes, {sansDossier = false, ...opts} = {}) =>
 /* Le texte où la recherche d'un tableau regarde, type par type */
 export const textes = {
   taches:t => [t.nom, texteDateTache(t), nomListe(t.liste), ...t.etapes.map(e => e.t)], evenements:e => [e.titre, e.lieu, e.note],
-  notes:n => [n.titre, n.contenu], documents:x => [x.titre, x.url, x.note],
+  notes:n => [n.titre, n.contenu], documents:x => [x.titre, x.url, x.note, typeDocument(x)],
   mouvements:m => [m.libelle, m.categorie, m.compte, m.note, String(m.montant).replace('.', ','), dateCourte(m.date)],
   contacts:c => [c.nom, c.telephone, c.autreTelephone, c.email, c.adresse, ...DB.journal.filter(j => j.contacts.includes(c.id)).map(j => j.texte)],
   journal:j => [j.texte, ...nomsContacts(j.contacts)]
