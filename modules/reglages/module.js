@@ -14,6 +14,7 @@ import {tableau} from '../../noyau/tableau.js';
 import {ouvrirElement, titreElement, nomDe} from '../../noyau/fiches.js';
 import {lien} from '../../noyau/adresses.js';
 import {etat, faireSecours, lireSecours} from '../../noyau/stockage.js';
+import {driveConnecte, driveExpire, finAcces, connecterDrive, deconnecterDrive} from '../../noyau/drive.js';
 import {notif, notifDispo, MODES, lireEtat, activer, changerMode, desactiver, essayer, dernierEnvoi} from '../../noyau/notifications.js';
 import {gh, FICHIER, adressePartagee, etatSynchro, TEXTES, cleV49, connecter, changerCle, deconnecter, appareilParDefaut} from '../../noyau/synchro.js';
 import {ico} from '../../noyau/icones.js';
@@ -44,6 +45,7 @@ function page(){
   </section>`;
   return entete('Réglages et données') + `<div class="grille-reglages">${donnees}
     ${sectionSynchro()}
+    ${sectionDrive()}
     ${gh.cfg && gh.cfg.jeton && !adressePartagee() ? '<section class="panneau" id="reglages-notif"><h2>Notifications</h2><p class="doux">Lecture…</p></section>' : ''}
     ${apropos}</div>`;
 }
@@ -113,6 +115,17 @@ function sectionSynchro(){
     <p class="attention" id="synchro-erreur" hidden></p>
     <div class="rangee"><button type="button" class="btn plein" data-action="synchro-connecter">${ico('nuage', 16, 1.8)}<span>Se connecter</span></button></div></section>`;
 }
+/* --- Google Drive (noyau/drive.js) : la connexion de cet appareil ; les fichiers sont dans Carnet › Documents --- */
+function sectionDrive(){
+  if(adressePartagee()) return '';
+  const h = d => String(d.getHours()) + ' h ' + String(d.getMinutes()).padStart(2, '0');
+  const etat = driveConnecte() ? 'Connecté jusqu’à ' + h(new Date(finAcces())) + ' ; ensuite, un clic pour reconnecter.' : driveExpire() ? 'L’accès a expiré : reconnecte-toi.' : 'Pas connecté sur cet appareil.';
+  return `<section class="panneau"><h2>Google Drive</h2><p class="doux">${esc(etat)} Tes fichiers apparaissent dans Carnet › Documents.</p>
+    <div class="rangee">${driveConnecte() ? `<a class="btn" href="${lien('carnet', 'documents')}">${ico('drive', 16)}<span>Voir les documents</span></a>
+      <button type="button" class="btn discret" data-action="drive-deconnecter">Se déconnecter</button>`
+      : `<button type="button" class="btn plein" data-action="drive-connecter-reglages">${ico('drive', 16)}<span>${driveExpire() ? 'Reconnecter' : 'Se connecter à Google Drive'}</span></button>`}</div></section>`;
+}
+
 /* --- Notifications (noyau/notifications.js) : lues après l'affichage (il faut demander à GitHub) --- */
 const RAPPELS = 'Résumé du matin vers 8 h, rappel d’une tâche ou d’un rendez-vous un peu avant son heure, rien entre 0 h et 6 h, à l’heure de l’appareil.';
 function blocNotif(){
@@ -214,6 +227,8 @@ export default {
       seConnecter({owner:v('owner'), repo:v('repo'), appareil:v('appareil'), jeton:v('jeton')}, el); },
     'synchro-v49':el => { if(cleTrouvee) seConnecter({...cleTrouvee, appareil:(document.getElementById('sy-appareil') || {}).value || cleTrouvee.appareil}, el); },
     'synchro-arreter':() => deconnecter(),
+    'drive-connecter-reglages':() => connecterDrive(),
+    'drive-deconnecter':() => { deconnecterDrive(); rendre(); toast('Google Drive déconnecté sur cet appareil.'); },
     'notif-relire':() => { const v = document.getElementById('vue'); if(v) montrerNotif(v); },
     'notif-activer':() => agirNotif(async () => { await activer(); toast('Notifications activées sur cet appareil.'); }),
     'notif-essayer':() => agirNotif(essayer),

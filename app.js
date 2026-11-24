@@ -18,6 +18,7 @@ import './noyau/tableau.js';
 import './noyau/mentions.js';   /* « @ » et « # » dans le journal */
 import {demarrerSynchro} from './noyau/synchro.js';
 import {lireEtat} from './noyau/notifications.js';
+import {lireRetourGoogle} from './noyau/drive.js';
 import RUBRIQUES from './modules/liste.js';
 
 const echec = (etape, e) => { console.error(etape, e); const v = $('#vue'); if(v) v.innerHTML = `<div class="vide"><b>LIFE PANEL n’a pas pu démarrer (${etape}).</b><br><small>${String(e && e.message || e).replace(/[<>&]/g, '')}</small></div>`; };
@@ -38,6 +39,7 @@ function redessiner(){
 }
 
 async function demarrer(){
+  const google = lireRetourGoogle();   /* retour de la page de Google (connexion à Drive) : avant tout affichage */
   try { brancherActions(); brancherClavier(); } catch(e){ return echec('actions', e); }
   try { await charger(RUBRIQUES); } catch(e){ return echec('rubriques', e); }
   try { construireCoquille(); } catch(e){ return echec('coquille', e); }
@@ -48,8 +50,10 @@ async function demarrer(){
   } catch(e){ etat.donnees = 'bloquees'; etat.raison = 'la lecture a échoué (' + e.message + ').'; echec('données', e); }
   brancher(async () => { const brut = await lire(); if(etat.donnees === 'pretes'){ remplacer(brut, {enregistrer:false}); redessiner(); } });
   ecouterChangements(() => redessiner());
-  window.addEventListener('hashchange', () => { fermerFiche({depuisHistorique:true}); rendre(); });
+  window.addEventListener('hashchange', () => { const g = lireRetourGoogle(); if(g === 'ok') toast('Google Drive est connecté.');   /* un accès dans l'adresse : lu et effacé */
+    fermerFiche({depuisHistorique:true}); rendre(); });
   rendre();
+  if(google) toast({ok:'Google Drive est connecté.', refuse:'Connexion à Google Drive annulée.', erreur:'La connexion à Google Drive n’a pas abouti : réessaie.'}[google]);
   ouvertureDepuisAndroid();
   demarrerSynchro().then(() => lireEtat()).catch(e => console.error('synchro', e));   /* après la lecture des données, jamais avant ; puis l'état des notifications (fuseau tenu à jour) */
   brancherServiceWorker();

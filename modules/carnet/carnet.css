@@ -4,3 +4,6 @@
 .page-carnet .avec-suggestions{max-width:640px}
 .tableau .col-texte{min-width:280px}
 .tableau .col-lien{max-width:280px}
+.source-drive{display:inline-flex;align-items:center;gap:5px;color:var(--texte-2);font-size:12.5px}
+.source-drive svg{color:var(--c-vert)}
+.page-carnet .filtres{display:flex;gap:6px;flex-wrap:wrap}
