@@ -10,6 +10,7 @@ import {DB, FORMES, ajouter, modifie, retirer, assurerCategorie, assurerCompte, 
 import {dossiersActifs, arbreChemins, lireChemin, couleurDossier, tousLesTags, listesTriees, categoriesFrequentes, compteParDefaut, toucherDossier, cocherTache, etatDocument, FUSEAUX, nomFuseau, contactsCites} from './calculs.js';
 import {ouvrirFiche, fermerFiche, toast} from './interface.js';
 import {actionNoyau} from './modules.js';
+import {md, basculerCaseMd} from './markdown.js';
 
 const COMMUNS = [{c:'projet', t:'Dossier', k:'dossier'}, {c:'tags', t:'Tags', k:'tags'}, {c:'attributs', t:'Attributs', k:'attributs'}];
 export const TYPES_ELEMENT = {
@@ -26,7 +27,8 @@ export const TYPES_ELEMENT = {
     {c:'libelle', t:'Libellé', k:'texte'}, {c:'date', t:'Date', k:'date', demi:true}, {c:'compte', t:'Compte', k:'compte', demi:true}, {c:'categorie', t:'Catégorie', k:'categorie'},
     {c:'note', t:'Note', k:'zone', lignes:2}, ...COMMUNS],
     boutons:() => [['Répéter', 'mouvement-repeter']]},   /* la même, datée d'aujourd'hui (v4.9) */
-  notes:{nom:'Note', une:'une note', champs:[{c:'titre', t:'Titre', k:'texte'}, {c:'contenu', t:'Contenu (Markdown)', k:'zone', lignes:10}, ...COMMUNS]},
+  /* la note se lit mise en forme (la liseuse Markdown de la v4.9), « Écrire » montre le texte ; grande fiche */
+  notes:{nom:'Note', une:'une note', large:true, champs:[{c:'titre', t:'Titre', k:'texte'}, {c:'contenu', t:'Contenu', k:'markdown'}, ...COMMUNS]},
   contacts:{nom:'Contact', une:'un contact', champs:[{c:'nom', t:'Nom', k:'texte'}, {c:'telephone', t:'Téléphone', k:'tel', demi:true}, {c:'autreTelephone', t:'Autre téléphone', k:'tel', demi:true},
     {c:'email', t:'E-mail', k:'email'}, {c:'anniversaire', t:'Anniversaire', k:'date', demi:true}, {c:'adresse', t:'Adresse', k:'zone', lignes:2},
     {c:'journal', t:'Journal', k:'journal'}, ...COMMUNS]},   /* v5 : plus de Nouvelles ni d'À lui dire, À répondre, Idées (gardés dans les données) */
@@ -106,6 +108,9 @@ function champ(f, d, x, liste){
   const id = idChamp(f, d.c), v = d.lit ? d.lit(x) : x[d.c], attrs = `id="${id}"${d.autofocus ? ' autofocus' : ''}`;
   let html;
   switch(d.k){
+    case 'markdown': { const lire = !!(v || '').trim();
+      html = `<div class="md-champ${lire ? '' : ' ecrire'}" data-md-champ><div class="md-onglets" role="group" aria-label="Affichage"><button type="button" data-md-mode="lire" aria-pressed="${lire}">Lire</button><button type="button" data-md-mode="ecrire" aria-pressed="${!lire}">Écrire</button></div>
+        <article class="md" data-md-lire title="Double-clic pour écrire">${lire ? md(v, {cases:true, wiki:true}) : ''}</article><textarea ${attrs} rows="14" placeholder="Markdown : # titre, **gras**, - liste, - [ ] case…">${esc(v || '')}</textarea></div>`; break; }
     case 'zone': html = d.mentions ? `<div class="avec-suggestions"><textarea ${attrs} rows="${d.lignes || 4}" data-mentions>${esc(v || '')}</textarea><ul class="suggestions" role="listbox" hidden></ul></div>`
       : `<textarea ${attrs} rows="${d.lignes || 4}">${esc(v || '')}</textarea>`; break;
     case 'date': html = `<div class="avec-vider"><input type="date" ${attrs} value="${esc(v || '')}"><button type="button" class="icone-btn petit" data-vider="${id}" aria-label="Vider la date" title="Vider">${ico('fermer', 14)}</button></div>`; break;
@@ -190,7 +195,7 @@ export function ouvrirElement(liste, id, {nouveau = null, apresAjout = null, bou
   const pied = nouveau
     ? `<div class="droite"><button type="button" class="btn" data-action="fermer-fiche">Annuler</button><button type="button" class="btn plein" data-fiche-ajouter="${f}">${ico('plus', 15, 2)}<span>Ajouter</span></button></div>`
     : `<button type="button" class="btn discret" data-fiche-supprimer="${f}">${ico('corbeille', 15)}<span>Supprimer</span></button><div class="droite">${extra}<button type="button" class="btn" data-action="fermer-fiche">Fermer</button></div>`;
-  ouvrirFiche({titre, html:`<form class="formulaire" data-fiche="${f}" novalidate>${champs}</form>`, pied, apres:boite => brancher(boite, f, liste, x, {nouveau, apresAjout}),
+  ouvrirFiche({titre, large:!!T.large, html:`<form class="formulaire" data-fiche="${f}" novalidate>${champs}</form>`, pied, apres:boite => brancher(boite, f, liste, x, {nouveau, apresAjout}),
     aLaFermeture:nouveau ? null : () => enregistrer(f, liste, x)});
 }
 
@@ -217,6 +222,16 @@ function brancher(boite, f, liste, x, {nouveau, apresAjout}){
     e.preventDefault();
     if(!e.target.value.trim()) return;
     const l = e.target.closest('.etape'); l.insertAdjacentHTML('afterend', ligneEtape()); l.nextElementSibling.querySelector('.e-t').focus();
+  });
+  /* Markdown : Lire / Écrire ; une case « - [ ] » cochée dans la lecture coche la ligne du texte (puis enregistrement) */
+  boite.querySelectorAll('[data-md-champ]').forEach(z => {
+    const ta = z.querySelector('textarea'), art = z.querySelector('[data-md-lire]');
+    const mode = ecrire => { z.classList.toggle('ecrire', ecrire); z.querySelectorAll('[data-md-mode]').forEach(b => b.setAttribute('aria-pressed', (b.dataset.mdMode === 'ecrire') === ecrire));
+      if(!ecrire) art.innerHTML = ta.value.trim() ? md(ta.value, {cases:true, wiki:true}) : '<p class="faible">Note vide.</p>'; else ta.focus(); };
+    z.addEventListener('click', e => { const b = e.target.closest('[data-md-mode]'); if(b) mode(b.dataset.mdMode === 'ecrire'); });
+    art.addEventListener('dblclick', e => { if(!e.target.closest('a, button, input')) mode(true); });
+    art.addEventListener('change', e => { const c = e.target.closest('[data-md-case]'); if(!c) return;
+      ta.value = basculerCaseMd(ta.value, Number(c.dataset.mdCase), c.checked); art.innerHTML = md(ta.value, {cases:true, wiki:true}); });
   });
   if(!nouveau) form.addEventListener('change', () => enregistrer(f, liste, x));
   boite.addEventListener('click', e => {
@@ -246,7 +261,8 @@ function brancher(boite, f, liste, x, {nouveau, apresAjout}){
   });
 }
 
-/* Ouvrir depuis n'importe quel bouton ou ligne : data-liste + data-id */
+/* Ouvrir depuis n'importe quel bouton ou ligne : data-liste + data-id ; ou un signal (note [[à écrire]] juste créée) */
+window.addEventListener('lifepanel:ouvrir', e => { const d = e.detail || {}; if(d.liste && d.id) ouvrirElement(d.liste, d.id); });
 actionNoyau('ouvrir-element', el => ouvrirElement(el.dataset.liste, el.dataset.id));
 /* Cocher ou décocher une tâche, de partout (Aujourd'hui, Tâches, page d'un dossier…) */
 actionNoyau('tache-cocher', el => { const t = DB.taches.find(x => x.id === el.dataset.id); if(!t) return; cocherTache(t, !t.fait); modifie('cocher'); });

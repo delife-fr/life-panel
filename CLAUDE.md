@@ -98,6 +98,11 @@ sur « Chargement… ».
   `outilsCote` du tableau) ; seules les archives sont parties.
 - **Aujourd'hui** : une tuile Finance (dépensé ce mois-ci, comptes pointés, anneau par catégorie), comme la v4.9.
   PC (24/11) : trois colonnes, Aujourd'hui | Finance | À ranger et À venir ; téléphone : les uns sous les autres.
+- **Notes** : la fiche (grande) montre la note mise en forme par la liseuse Markdown de la v4.9 (noyau/markdown.js) :
+  « Lire » / « Écrire », cases « - [ ] » cochables, [[Titre]] ouvre la note ou le contact (crée la note qui manque).
+- **Largeur** (24/11) : les pages prennent toute la largeur de l'écran (plus de max-width en px) ; seules les lignes
+  « ajouter vite » gardent 640 px.
+- **Arbre des chemins** : les traits ├ └ │ de la hiérarchie (Dossiers).
 - **Dossiers sur téléphone** : l'arbre des chemins se replie (flèche « Chemins »), replié au départ, retenu sur l'appareil.
 - **Hiérarchie des dossiers** : l'utilisateur la remodèle dans le document de la refonte (bloc de code de « Vrac ») ; à
   relire une fois validée. « À trier » et « Archives » de sa racine ne sont pas repris (ils servent pour Google Drive).
@@ -132,7 +137,7 @@ sur « Chargement… ».
   montrer (`garder:true` pour l'afficher quand même, ex. la Date des tâches).
 - **Ne rien ajouter qui n'a pas été demandé** (23/11) : pas de raccourcis « Aujourd'hui, Demain, Samedi », pas de bande
   de dépôt, pas de texte d'aide en plus. La date d'une tâche se donne dans sa fiche ou en la glissant sur le Calendrier.
-- **Tâches au plus simple** : un tableau, une colonne Date (un tiret sans date), aucun regroupement par jour, ni statut,
+- **Tâches au plus simple** (24/11 : les tâches faites dans un second tableau « Faites », qui se replie) : un tableau, une colonne Date (un tiret sans date), aucun regroupement par jour, ni statut,
   ni notation, **sans sous-menu** : toutes les tâches, celles des listes comprises (colonne Liste triable) ; une tâche
   faite reste barrée en bas. Les listes en puces au-dessus : un clic filtre (`#/taches?liste=ID`, l'adresse de la v4.9),
   « Nouvelle liste… » en une ligne ; chaque puce reçoit les tâches glissées. Étapes dans la fiche (« 1/3 » dans le tableau).
@@ -177,6 +182,7 @@ noyau/
   fiches.js           la fiche de chaque type d'élément (TYPES_ELEMENT), avec dossier, tags et attributs libres
   capture.js          « Noter » en une phrase (bouton +, touche C), et le rangement d'une idée
   mentions.js         « @ » (contacts) et « # » (tags) proposés pendant la frappe d'une entrée du journal
+  markdown.js         la liseuse Markdown de la v4.9 (md, basculerCaseMd), [[liens]] entre notes
   preferences.js      réglages de CET appareil (thème…), jamais synchronisés
   icones.js           ico('agenda', 18)
   theme-avant.js      pose le thème avant le premier affichage (script bloquant, seul script classique)

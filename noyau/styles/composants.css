@@ -65,7 +65,7 @@ input.coche:checked::after{content:"";width:9px;height:5px;border:2px solid var(
 .tableau .col-titre,.tableau .t-titre{font-weight:500;color:var(--texte)}
 .tableau .t-sous,.tableau .t-droite{color:var(--texte-2)}
 .tableau tr.fait .t-titre{color:var(--texte-3);text-decoration:line-through}
-.tableau .extrait{display:block;color:var(--texte-3);font-size:12.5px;font-weight:400;max-width:560px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tableau .extrait{display:block;color:var(--texte-3);font-size:12.5px;font-weight:400;max-width:40vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tableau-vide{padding:28px 16px;text-align:center;color:var(--texte-3);border:1px dashed var(--bord);border-radius:var(--r)}
 .tableau-plus{display:flex;justify-content:center}
 .actions-ligne{display:flex;gap:4px;justify-content:flex-end;align-items:center;flex-wrap:nowrap}
@@ -244,3 +244,43 @@ a.puce.dossier:hover{background:color-mix(in srgb, var(--c, var(--c-gris)) 36%, 
 .aide-liste{display:grid;grid-template-columns:minmax(110px, max-content) minmax(0, 1fr);gap:8px 14px;margin:0;align-items:baseline}
 .aide-liste dd{margin:0;color:var(--texte-2);font-size:13.5px}
 .touche{display:inline-block;padding:2px 8px;border:1px solid var(--bord-fort);border-radius:6px;background:var(--panneau-2);font-size:12.5px;font-weight:600;color:var(--texte);white-space:nowrap}
+/* --- La liseuse Markdown (noyau/markdown.js), reprise de la v4.9 --- */
+.md{font-size:15px;line-height:1.65;color:var(--texte-2);overflow-wrap:anywhere}
+.md > :first-child{margin-top:0}
+.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{line-height:1.3;font-weight:650;color:var(--texte)}
+.md h1{font-size:24px;font-weight:700;margin:24px 0 10px} .md h2{font-size:20px;font-weight:700;margin:22px 0 9px}
+.md h3{font-size:18px;margin:20px 0 8px} .md h4{font-size:16px;margin:16px 0 6px}
+.md h5{font-size:15px;margin:14px 0 6px} .md h6{font-size:14px;margin:14px 0 6px;color:var(--texte-2)}
+.md p{margin:0 0 12px} .md ul,.md ol{margin:0 0 12px;padding-left:22px} .md li{margin:3px 0}
+.md a,.md .lien-wiki{color:var(--c-bleu);text-decoration:underline}
+.md .lien-wiki{border:0;background:none;padding:0;font:inherit;cursor:pointer}
+.md .lien-wiki.a-ecrire{color:var(--c-rose)}
+.md li.tache-md{list-style:none;margin-left:-20px;display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;row-gap:2px}
+.md li.tache-md > span{flex:1;min-width:0}
+.md li.tache-md > :not(input):not(span){flex-basis:calc(100% - 23px);margin-left:23px;min-width:0}
+.md .case-md{flex-shrink:0;width:15px;height:15px;margin:.3em 0 0;accent-color:var(--accent);cursor:pointer}
+.md .case-md:disabled{cursor:default}
+.md li.tache-md.faite > span{color:var(--texte-3)}
+.md del{color:var(--texte-3)}
+.md .table-md{overflow-x:auto;margin:0 0 14px;max-width:100%;padding:1px}
+.md table{width:auto;min-width:50%;border-collapse:collapse;font-size:14px}
+.md th,.md td{border:1px solid var(--bord);padding:6px 11px;vertical-align:top;white-space:normal}
+.md th{background:var(--panneau-2);color:var(--texte);font-weight:650;text-align:left}
+.md blockquote{margin:0 0 14px;padding:9px 14px;border-left:3px solid var(--c-bleu);background:var(--panneau-2);border-radius:0 var(--r-petit) var(--r-petit) 0}
+.md blockquote p{margin:0 0 8px} .md blockquote p:last-child{margin:0}
+.md hr{border:0;border-top:1px solid var(--bord);margin:18px 0}
+.md li > ul,.md li > ol{margin:3px 0 0} .md li > p{margin:6px 0 0} .md li > pre{margin:6px 0 4px}
+.md li.md-ecart{margin-top:10px}
+.md code{padding:1px 5px;border-radius:4px;background:var(--panneau-2);font-family:ui-monospace,Consolas,monospace;font-size:.9em}
+.md pre{margin:0 0 12px;padding:10px 13px;background:var(--panneau-2);border:1px solid var(--bord);border-radius:var(--r-petit);overflow-x:auto;max-width:100%;
+  font-family:ui-monospace,Consolas,monospace;font-size:13px;line-height:1.55;white-space:pre;tab-size:4}
+.md pre code{background:none;padding:0}
+/* Le contenu d'une note dans sa fiche : Lire (mis en forme) ou Écrire (le texte) */
+.md-champ{display:flex;flex-direction:column;gap:8px}
+.md-onglets{display:flex;gap:4px}
+.md-onglets button{padding:4px 12px;border:1px solid var(--bord);border-radius:999px;background:none;color:var(--texte-2);font-size:13px;cursor:pointer}
+.md-onglets button[aria-pressed="true"]{background:color-mix(in srgb, var(--accent) 20%, transparent);border-color:var(--accent);color:var(--texte)}
+.md-champ [data-md-lire]{min-height:120px;max-height:min(60vh, 640px);overflow:auto;padding:14px 16px;border:1px solid var(--bord);border-radius:var(--r-petit);background:var(--champ)}
+.md-champ textarea{min-height:280px;font-family:ui-monospace,Consolas,monospace;font-size:13.5px}
+.md-champ:not(.ecrire) textarea{display:none}
+.md-champ.ecrire [data-md-lire]{display:none}

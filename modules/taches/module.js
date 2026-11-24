@@ -21,7 +21,7 @@ import {glisserType} from '../../noyau/glisser.js';
 import {lireCapture} from '../../noyau/capture.js';
 import {ouvrirElement} from '../../noyau/fiches.js';
 
-const TABLEAUX = ['taches'];
+const TABLEAUX = ['taches', 'taches-faites'];
 const tache = id => DB.taches.find(t => t.id === id);
 const uneListe = id => (id && DB.listes.find(l => l.id === id)) || null;
 /* À faire, ou cochée aujourd'hui (pas encore partie aux archives) */
@@ -36,18 +36,20 @@ const actionsChoix = id => [['taches-choix-cocher', 'Cocher', 'check'], ['taches
   ['taches-choix-dossier', 'Dossier…', 'dossier'], ['taches-choix-supprimer', 'Supprimer', 'corbeille']]
   .map(([a, t, i]) => `<button type="button" class="btn petit" data-action="${a}" data-tableau="${esc(id)}">${ico(i, 14)}<span>${t}</span></button>`).join('');
 
-function tableTaches({id, lignes, toutes = null, liste = true, vide, outils = ''}){
-  return tableau({id, lignes, toutes, cle:t => t.id, colonnes:colonnes('taches', toutes || lignes, {liste}), ouvrir:'tache-ouvrir', glisser:'tache',
+function tableTaches({id, lignes, toutes = null, liste = true, vide, outils = '', pliable = '', tri = {col:'date', sens:1}}){
+  return tableau({id, lignes, toutes, cle:t => t.id, pliable, vide, colonnes:colonnes('taches', toutes || lignes, {liste}), ouvrir:'tache-ouvrir', glisser:'tache',
     coche:{action:'tache-cocher', etat:t => t.fait, titre:'Faite'}, enBas:t => t.fait, classe:t => t.fait ? 'fait' : '',
-    recherche:recherche('taches'), tags:t => t.tags, tri:{col:'date', sens:1},
+    recherche:recherche('taches'), tags:t => t.tags, tri,
     selection:{un:'tâche choisie', plusieurs:'tâches choisies', actions:actionsChoix(id)},
-    texteRecherche:'Chercher dans les tâches', vide, outils});
+    texteRecherche:'Chercher dans les tâches', outils});
 }
 
 
 /* --- La page : toutes les tâches, celles des listes comprises ; les listes en puces au-dessus (un clic filtre) --- */
 function page(ctx){
   const l = uneListe(ctx.params.get('liste')), listes = listesTriees();
+  /* les tâches faites dans un second tableau, qui se replie (24/11) */
+  const toutes = l ? DB.taches.filter(t => t.liste === l.id) : DB.taches, faites = toutes.filter(t => t.fait);
   const aFaire = id => DB.taches.filter(t => t.liste === id && !t.fait).length;
   const puces = `<nav class="puces-listes" aria-label="Listes">
     ${listes.map(x => { const n = aFaire(x.id), on = l === x;
@@ -56,8 +58,9 @@ function page(ctx){
     ${champAjout('liste-nouvelle', 'Nouvelle liste…')}</nav>`;
   return entete(l ? l.nom : 'Tâches', l ? {sur:'Tâches'} : {}) + `<div class="page-taches">${puces}
     ${champAjout('tache-ajouter', l ? 'Ajouter à « ' + l.nom + ' »…' : 'Ajouter une tâche (ex. appeler Paul demain 15h)…', l ? {donnees:{liste:l.id}} : {})}
-    ${tableTaches({id:'taches', lignes:l ? DB.taches.filter(t => t.liste === l.id) : DB.taches, liste:!l,
-      vide:l ? 'Cette liste est vide : écris sa première tâche juste au-dessus.' : 'Rien à faire. Écris une tâche juste au-dessus, puis Entrée.'})}</div>`;
+    ${tableTaches({id:'taches', lignes:toutes.filter(t => !t.fait), toutes, liste:!l,
+      vide:l ? 'Rien à faire dans cette liste : écris une tâche juste au-dessus.' : 'Rien à faire. Écris une tâche juste au-dessus, puis Entrée.'})}
+    ${faites.length ? tableTaches({id:'taches-faites', lignes:faites, toutes, liste:!l, pliable:'Faites', tri:{col:'date', sens:-1}, vide:''}) : ''}</div>`;
 }
 
 /* --- Créer, renommer, supprimer une liste --- */

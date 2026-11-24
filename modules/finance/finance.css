@@ -1,5 +1,5 @@
 /* LIFE PANEL v5 · modules/finance/finance.css */
-.page-finance{display:flex;flex-direction:column;gap:14px;max-width:1180px}
+.page-finance{display:flex;flex-direction:column;gap:14px}
 .page-finance > .ajout{max-width:640px}
 .cal-nav{display:flex;align-items:center;gap:8px}
 .cal-nav h2{margin:0 6px;font-size:18px}

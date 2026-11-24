@@ -1,5 +1,5 @@
 /* LIFE PANEL v5 · modules/carnet/carnet.css */
-.page-carnet{display:flex;flex-direction:column;gap:14px;max-width:1180px}
+.page-carnet{display:flex;flex-direction:column;gap:14px}
 .page-carnet .ajout{max-width:640px}
 .page-carnet .avec-suggestions{max-width:640px}
 .tableau .col-texte{min-width:280px}

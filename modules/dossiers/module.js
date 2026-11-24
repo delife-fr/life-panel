@@ -36,12 +36,16 @@ const lienChemin = (c, fermes) => lien('dossiers', fermes ? 'fermes' : '', c.len
 function pageListe(fermes, ctx){
   const ici = (ctx.params.get('chemin') || '').split('/').map(propreNom).filter(Boolean), k = ici.map(cleNom).join('/');
   const tous = DB.projets.filter(p => !!p.archive === fermes), l = tous.filter(p => commencePar(cheminDe(p), ici));
+  /* Les traits de l'arbre (24/11) : ├ └ pour le chemin, │ pour chaque parent qui a encore des frères en dessous */
+  const tousChemins = arbreChemins(), cle = c => c.map(cleNom).join('/');
+  const dernier = c => { const p = cle(c.slice(0, -1)); return !tousChemins.some(x => x.length === c.length && cle(x.slice(0, -1)) === p && x.join('/').localeCompare(c.join('/'), 'fr', {sensitivity:'base'}) > 0); };
+  const traits = c => c.map((_, i) => i < c.length - 1 ? `<i class="trait${dernier(c.slice(0, i + 1)) ? '' : ' v'}"></i>` : `<i class="trait ${dernier(c) ? 'l' : 't'}"></i>`).join('');
   const noeud = (c, texte) => { const on = c.map(cleNom).join('/') === k, n = tous.filter(p => commencePar(cheminDe(p), c)).length;
-    return `<a class="noeud${on ? ' actif' : ''}" href="${lienChemin(c, fermes)}" data-depot="dossier" data-chemin="${esc(c.join('/'))}" style="--retrait:${c.length}"${on ? ' aria-current="true"' : ''}>
-      <span>${esc(texte)}</span>${n ? `<span class="n">${n}</span>` : ''}</a>`; };
+    return `<a class="noeud${on ? ' actif' : ''}" href="${lienChemin(c, fermes)}" data-depot="dossier" data-chemin="${esc(c.join('/'))}"${on ? ' aria-current="true"' : ''}>
+      <span class="noeud-nom">${c.length ? `<span class="traits" aria-hidden="true">${traits(c)}</span>` : ''}<span>${esc(texte)}</span></span>${n ? `<span class="n">${n}</span>` : ''}</a>`; };
   /* Sur téléphone, l'arbre se replie (une flèche) pour voir tout de suite les dossiers ; replié au départ, retenu sur l'appareil */
   const plie = pref('dossiers.arbrePlie', true);
-  const arbre = `<nav class="arbre-chemins${plie ? ' plie' : ''}" aria-label="Chemins"><button type="button" class="arbre-plier" data-action="arbre-plier" aria-expanded="${!plie}">${ico('bas', 16, 2)}<span>${esc(ici.length ? ici.join(' › ') : 'Chemins')}</span></button>${noeud([], 'Tous les dossiers')}${arbreChemins().map(c => noeud(c, c[c.length - 1])).join('')}
+  const arbre = `<nav class="arbre-chemins${plie ? ' plie' : ''}" aria-label="Chemins"><button type="button" class="arbre-plier" data-action="arbre-plier" aria-expanded="${!plie}">${ico('bas', 16, 2)}<span>${esc(ici.length ? ici.join(' › ') : 'Chemins')}</span></button>${noeud([], 'Tous les dossiers')}${tousChemins.map(c => noeud(c, c[c.length - 1])).join('')}
     ${fermes ? '' : champAjout('chemin-ajouter', ici.length ? 'Nouveau chemin dans ' + ici[ici.length - 1] + '…' : 'Nouveau chemin…', {donnees:{chemin:ici.join('/')}})}</nav>`;
   return entete(fermes ? 'Dossiers fermés' : 'Dossiers', ici.length ? {sur:esc(ici.join(' › '))} : {}) + `<div class="page-dossiers avec-arbre">${arbre}<div class="contenu-dossiers">
     ${fermes ? '' : champAjout('dossier-ajouter', 'Nouveau dossier' + (ici.length ? ' dans ' + ici.join(' › ') : '') + ' : son nom, puis Entrée…', {donnees:{chemin:ici.join('/')}})}

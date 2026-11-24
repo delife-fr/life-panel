@@ -1,7 +1,7 @@
 /* LIFE PANEL v5 · modules/aujourdhui/aujourdhui.css */
 /* Trois colonnes sur PC (Aujourd'hui, Finance, À ranger et À venir), deux sur un écran moyen (la troisième passe dessous),
    une sur téléphone dans le même ordre */
-.grille-jour{display:grid;grid-template-columns:minmax(0, 1.25fr) minmax(0, 1fr) minmax(250px, .8fr);gap:16px;align-items:start;max-width:1560px}
+.grille-jour{display:grid;grid-template-columns:minmax(0, 1.25fr) minmax(0, 1fr) minmax(250px, .8fr);gap:16px;align-items:start}
 .grille-jour > *{min-width:0}
 .col-cote{display:flex;flex-direction:column;gap:16px}
 .col-cote:empty{display:none}
