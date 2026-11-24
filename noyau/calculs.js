@@ -195,3 +195,10 @@ export function compteParDefaut(){
   if(dernier && (!dernier.compte || DB.comptes.some(c => c.nom === dernier.compte))) return dernier.compte;
   return DB.comptes[0] ? DB.comptes[0].nom : '';
 }
+
+/* Les contacts cités dans un texte du journal (« @Nom »), le plus long nom d'abord : « @Paul Dupont » avant « @Paul » */
+export function contactsCites(texte){
+  const t = norm(texte), ids = [];
+  DB.contacts.slice().sort((a, b) => b.nom.length - a.nom.length).forEach(c => { const k = '@' + norm(c.nom); if(k.length > 2 && t.includes(k) && !ids.includes(c.id)) ids.push(c.id); });
+  return ids;
+}

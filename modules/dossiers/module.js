@@ -61,7 +61,7 @@ function pageDossier(ctx){
   const [l, nom, capture, texte] = TYPES.find(t => t[0] === type0) || TYPES[0], lignes = DB[l].filter(x => x.projet === id), taches = l === 'taches';
   return entete(p.nom + (p.archive ? ' (fermé)' : ''), {sur:esc(cheminDe(p).join(' › ') || 'Dossier'), actions:bouton('Modifier', 'dossier-modifier', {icone:'modifier', attrs:`data-id="${esc(id)}"`})}) +
     `<div class="page-dossiers" style="--section:var(--c-${couleurDossier(id)})">${p.resume ? `<p class="doux">${esc(p.resume)}</p>` : ''}
-    ${champAjout('dossier-noter', texte + '…', {donnees:{dossier:id, type:capture}})}
+    ${champAjout('dossier-noter', texte + '…', {donnees:{dossier:id, type:capture}, mentions:l === 'journal'})}
     ${tableau({id:'dossier-' + l, lignes, cle:x => x.id, ouvrir:'dossier-element', tri:{col:l === 'notes' ? 'modif' : l === 'contacts' ? 'nom' : 'date', sens:taches || l === 'evenements' || l === 'contacts' ? 1 : -1},
       classe:x => taches && x.fait ? 'fait' : '', enBas:taches ? x => x.fait : null, coche:taches ? {action:'tache-cocher', etat:x => x.fait, titre:'Faite'} : null,
       recherche:recherche(l), tags:x => x.tags || [], texteRecherche:'Chercher dans ' + nom.toLowerCase(), vide:'Rien ici pour l’instant.',

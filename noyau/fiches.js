@@ -7,7 +7,7 @@
 import {esc, dateISO, maintenant, aujourdhui, propreNom, cleNom, dateCourte, versDate, iso} from './outils.js';
 import {ico} from './icones.js';
 import {DB, FORMES, ajouter, modifie, retirer, assurerCategorie, assurerCompte, TEINTES} from './donnees.js';
-import {dossiersActifs, arbreChemins, lireChemin, couleurDossier, tousLesTags, listesTriees, categoriesFrequentes, compteParDefaut, toucherDossier, cocherTache, etatDocument, FUSEAUX, nomFuseau} from './calculs.js';
+import {dossiersActifs, arbreChemins, lireChemin, couleurDossier, tousLesTags, listesTriees, categoriesFrequentes, compteParDefaut, toucherDossier, cocherTache, etatDocument, FUSEAUX, nomFuseau, contactsCites} from './calculs.js';
 import {ouvrirFiche, fermerFiche, toast} from './interface.js';
 import {actionNoyau} from './modules.js';
 
@@ -38,8 +38,9 @@ export const TYPES_ELEMENT = {
     {c:'chemin', t:'Chemin (ex. Perso › Maison)', k:'chemin'}, {c:'couleur', t:'Couleur', k:'couleur'},
     {c:'archive', t:'Fermé (le dossier reste visible dans « Fermés »)', k:'case'}, {c:'tags', t:'Tags', k:'tags'}, {c:'attributs', t:'Attributs', k:'attributs'}]},
   listes:{nom:'Liste', une:'une liste', champs:[{c:'nom', t:'Nom', k:'texte'}]},
-  journal:{nom:'Entrée du journal', une:'une entrée', champs:[{c:'date', t:'Date', k:'date', demi:true}, {c:'texte', t:'Ce qui s’est passé', k:'zone', lignes:4},
-    {c:'contacts', t:'Personnes', k:'personnes'}, ...COMMUNS]}
+  /* les personnes d'une entrée sont celles citées avec « @ » dans le texte (pas de champ à part, décision du 24/11) */
+  journal:{nom:'Entrée du journal', une:'une entrée', champs:[{c:'date', t:'Date', k:'date', demi:true}, {c:'texte', t:'Ce qui s’est passé (@ une personne)', k:'zone', lignes:4, mentions:true},
+    ...COMMUNS]}
 };
 
 const FEMININ = new Set(['inbox', 'taches', 'notes', 'mouvements', 'journal', 'listes']);
@@ -105,7 +106,8 @@ function champ(f, d, x, liste){
   const id = idChamp(f, d.c), v = d.lit ? d.lit(x) : x[d.c], attrs = `id="${id}"${d.autofocus ? ' autofocus' : ''}`;
   let html;
   switch(d.k){
-    case 'zone': html = `<textarea ${attrs} rows="${d.lignes || 4}">${esc(v || '')}</textarea>`; break;
+    case 'zone': html = d.mentions ? `<div class="avec-suggestions"><textarea ${attrs} rows="${d.lignes || 4}" data-mentions>${esc(v || '')}</textarea><ul class="suggestions" role="listbox" hidden></ul></div>`
+      : `<textarea ${attrs} rows="${d.lignes || 4}">${esc(v || '')}</textarea>`; break;
     case 'date': html = `<div class="avec-vider"><input type="date" ${attrs} value="${esc(v || '')}"><button type="button" class="icone-btn petit" data-vider="${id}" aria-label="Vider la date" title="Vider">${ico('fermer', 14)}</button></div>`; break;
     case 'heure': html = `<input type="time" ${attrs} value="${esc(v || '')}">`; break;
     case 'montant': html = `<input type="text" inputmode="decimal" ${attrs} value="${v ? esc(String(v).replace('.', ',')) : ''}" placeholder="0,00">`; break;
@@ -197,6 +199,7 @@ function enregistrer(f, liste, x){
   if(!document.querySelector(`[data-fiche="${f}"]`) || !DB[liste].includes(x)) return;
   const v = lire(f, liste, x), avant = JSON.stringify(x);
   const n = FORMES[liste]({...x, ...v});
+  if(liste === 'journal') n.contacts = contactsCites(n.texte);
   if(liste === 'taches' && n.fait !== x.fait){ n.faitLe = n.fait ? maintenant() : ''; if(!n.fait){ n.archive = false; n.archiveLe = ''; } }
   if(JSON.stringify(n) === avant) return;
   n.modif = maintenant();
@@ -228,7 +231,7 @@ function brancher(boite, f, liste, x, {nouveau, apresAjout}){
     const retA = e.target.closest('[data-attribut-retirer]');
     if(retA){ retA.closest('.attribut').remove(); form.dispatchEvent(new Event('change', {bubbles:true})); return; }
     if(e.target.closest('[data-fiche-ajouter]')){
-      const v = lire(f, liste, null), cree = ajouter(liste, {...x, ...v, ...(liste === 'taches' && v.fait ? {faitLe:maintenant()} : {}), modif:maintenant(), ...(liste === 'notes' ? {cree:maintenant()} : {})});
+      const v = lire(f, liste, null), cree = ajouter(liste, {...x, ...v, ...(liste === 'taches' && v.fait ? {faitLe:maintenant()} : {}), modif:maintenant(), ...(liste === 'notes' ? {cree:maintenant()} : {}), ...(liste === 'journal' ? {contacts:contactsCites(v.texte || '')} : {})});
       toucherDossier(cree.projet);
       if(apresAjout) try { apresAjout(cree); } catch(err){ console.error(err); }
       modifie('ajout'); fermerFiche();

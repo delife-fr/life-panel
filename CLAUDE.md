@@ -94,7 +94,7 @@ sur « Chargement… ».
   (avec la clé de la v4.9 en un clic), changer la clé, arrêter.
   Pendant la bêta, rappels et notifications viennent toujours de la v4.9 (le robot lit donnees.json) ; ceux de la v5,
   le service worker (hors ligne, installation) et les raccourcis Android `?action=` se font à la bascule.
-- **Corbeille** gardée (Réglages › Corbeille, 30 jours) ; seules les archives sont parties.
+- **Corbeille** gardée (Réglages › Corbeille, 30 jours, « Vider la corbeille » en haut) ; seules les archives sont parties.
 - **Aujourd'hui** : une tuile Finance (dépensé ce mois-ci, comptes pointés, anneau par catégorie), comme la v4.9.
 - **Couleurs** des catégories et des dossiers : 14 teintes (les 9 de la v4.9 + cyan, brun, olive, indigo, gris) et 13
   rayées (TEINTES, COULEURS_CAT dans donnees.js).
@@ -114,7 +114,9 @@ sur « Chargement… ».
 - **Tags sur tout élément** sauf les idées ; la fenêtre Tags de la v4.7 pour les gérer (en haut à droite).
 - **Capture rapide dans chaque section** : une ligne, Entrée, c'est créé, les détails après. Le bouton + garde la phrase
   devinée de la v4.9 (« essence 45 » → une dépense).
-- **Journal** (Carnet) : une ou deux phrases datées ; « @ » ouvre la liste des contacts pendant la frappe, « # » les tags.
+- **Journal** (Carnet) : une ou deux phrases datées ; « @ » ouvre la liste des contacts pendant la frappe, « # » les tags,
+  partout où l'on écrit une entrée (Carnet, page d'un dossier, fiche : noyau/mentions.js, `champAjout(…, {mentions:true})`).
+  Pas de champ « Personnes » dans la fiche (24/11) : les personnes d'une entrée sont celles citées avec « @ » dans le texte.
 - **Attributs libres** sur tout élément : un nom et une valeur inventés, dans la fiche ; un attribut utilisé apparaît aussi
   comme colonne du tableau.
 - **Des tableaux partout** (tâches, dépenses, notes, journal, documents, contacts, dossiers, agenda, tags, corbeille,
@@ -168,6 +170,7 @@ noyau/
   glisser.js          le glisser-déposer (souris et doigt) : glisserType(type, {depot}), [data-glisser], [data-depot]
   fiches.js           la fiche de chaque type d'élément (TYPES_ELEMENT), avec dossier, tags et attributs libres
   capture.js          « Noter » en une phrase (bouton +, touche C), et le rangement d'une idée
+  mentions.js         « @ » (contacts) et « # » (tags) proposés pendant la frappe d'une entrée du journal
   preferences.js      réglages de CET appareil (thème…), jamais synchronisés
   icones.js           ico('agenda', 18)
   theme-avant.js      pose le thème avant le premier affichage (script bloquant, seul script classique)

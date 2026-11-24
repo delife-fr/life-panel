@@ -7,7 +7,8 @@
 import {esc, norm, majuscule, aujourdhui, decaleJour, moisCourant, decaleMois, joursDansMois, pad, maintenant, eur, jourCourt, heureTexte} from './outils.js';
 import {ico} from './icones.js';
 import {DB, ajouter, modifie} from './donnees.js';
-import {categorieProposee, compteParDefaut, toucherDossier} from './calculs.js';
+import {categorieProposee, compteParDefaut, toucherDossier, contactsCites} from './calculs.js';
+export {contactsCites};
 import {ouvrirFiche, fermerFiche, toast} from './interface.js';
 import {ouvrirElement} from './fiches.js';
 import {actionNoyau} from './modules.js';
@@ -134,11 +135,6 @@ export function enregistrerCapture(t, type = 'auto', {idee = null, projet = null
 /* --- Le journal (Carnet) : une phrase datée ; « @Nom » relie les contacts cités, les « #mots » deviennent des tags --- */
 const RE_TAG = /(^|\s)#([\p{L}\d_-]+)/gu;
 export const lireTags = t => ({tags:[...t.matchAll(RE_TAG)].map(m => m[2]), reste:t.replace(RE_TAG, ' ').replace(/\s+/g, ' ').trim()});
-export function contactsCites(texte){   /* le plus long nom d'abord : « @Paul Dupont » avant « @Paul » */
-  const t = norm(texte), ids = [];
-  DB.contacts.slice().sort((a, b) => b.nom.length - a.nom.length).forEach(c => { const k = '@' + norm(c.nom); if(k.length > 2 && t.includes(k) && !ids.includes(c.id)) ids.push(c.id); });
-  return ids;
-}
 export function noterJournal(texte, {projet = null} = {}){
   const {tags, reste} = lireTags(texte); if(!reste) return null;
   const j = ajouter('journal', {date:aujourdhui(), texte:reste, contacts:contactsCites(reste), tags, projet, cree:maintenant(), modif:maintenant()});
