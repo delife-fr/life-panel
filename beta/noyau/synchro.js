@@ -21,7 +21,7 @@ export const gh = {cfg:null, sha:null, base:null, lu:null, etat:'aucun', erreur:
 export const synchroActive = () => !!(gh.cfg && gh.cfg.jeton) && !DB.reglages.demo && !adressePartagee();
 const cleDepot = c => c.owner + '/' + c.repo + '/' + c.chemin;
 export const appareilParDefaut = () => /Android|iPhone|iPad/i.test(navigator.userAgent) ? 'Téléphone' : 'PC';
-class ErreurGitHub extends Error { constructor(code, message){ super(message); this.code = code; } }
+export class ErreurGitHub extends Error { constructor(code, message){ super(message); this.code = code; } }
 
 /* Texte ↔ base64, en UTF-8 (accents, émojis) ; fonctions natives quand elles existent (beaucoup plus rapides) */
 function versBase64(t){
@@ -38,7 +38,7 @@ function depuisBase64(b64){
   for(let i = 0; i < b.length; i++) o[i] = b.charCodeAt(i);
   return new TextDecoder().decode(o);
 }
-async function appel(chemin, {method = 'GET', corps = null, brut = false, cfg = gh.cfg, etag = ''} = {}){
+export async function appel(chemin, {method = 'GET', corps = null, brut = false, cfg = gh.cfg, etag = ''} = {}){
   const ctrl = new AbortController(), minuterie = setTimeout(() => ctrl.abort(), 30000);
   try {
     const h = {'Authorization':'Bearer ' + cfg.jeton, 'Accept':brut ? 'application/vnd.github.raw+json' : 'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28'};
@@ -52,14 +52,31 @@ async function appel(chemin, {method = 'GET', corps = null, brut = false, cfg = 
     return {statut:r.status, ok:r.ok, donnees, texte, etag:r.headers.get('ETag') || ''};
   } finally { clearTimeout(minuterie); }
 }
-const depot = (c = gh.cfg) => '/repos/' + encodeURIComponent(c.owner) + '/' + encodeURIComponent(c.repo);
+export const depot = (c = gh.cfg) => '/repos/' + encodeURIComponent(c.owner) + '/' + encodeURIComponent(c.repo);
 const fichier = (c = gh.cfg) => depot(c) + '/contents/' + c.chemin.split('/').map(encodeURIComponent).join('/');
-function erreurStatut(r){
+export function erreurStatut(r){
   if(r.statut === 401) return new ErreurGitHub('cle', 'GitHub refuse la clé (mal copiée ou expirée).');
   if(r.statut === 403 && /rate limit/i.test(r.texte)) return new ErreurGitHub('limite', 'Trop de demandes à GitHub : nouvel essai dans quelques minutes.');
   if(r.statut === 403 || r.statut === 404) return new ErreurGitHub('acces', 'GitHub refuse l’accès : vérifie le dépôt et que la clé a le droit « Contents : Read and write ».');
   return new ErreurGitHub('reponse', 'Réponse inattendue de GitHub (' + r.statut + ').');
 }
+/* Un fichier texte du dépôt privé, à côté des données (notifications/…) : {sha, texte} ou null ; écrire renvoie false
+   si le fichier a changé entre-temps (on relit et on recommence) */
+const contenu = chemin => depot() + '/contents/' + chemin.split('/').map(encodeURIComponent).join('/');
+export async function lireTexte(chemin){
+  const r = await appel(contenu(chemin));
+  if(r.statut === 404) return null;
+  if(!r.ok || !r.donnees) throw erreurStatut(r);
+  return {sha:r.donnees.sha, texte:depuisBase64(r.donnees.content || '')};
+}
+export async function ecrireTexte(chemin, texte, sha, message){
+  const corps = {message, content:versBase64(texte), branch:gh.cfg.branche || 'main'}; if(sha) corps.sha = sha;
+  const r = await appel(contenu(chemin), {method:'PUT', corps});
+  if(r.statut === 409 || (r.statut === 422 && /sha/i.test(r.texte))) return false;
+  if(!r.ok) throw erreurStatut(r);
+  return true;
+}
+
 /* {absent} ou {sha, d (données normalisées), R (d en texte), par ({appareil, le} : qui a écrit)}. Au-delà de 1 Mo, GitHub ne
    joint pas le contenu : on le lit par le sha de cette version précise. « synchro » (qui a écrit) n'entre pas dans les données. */
 async function lireDistant(cfg = gh.cfg){

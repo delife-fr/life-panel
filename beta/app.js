@@ -10,11 +10,14 @@ import {remplacer, ecouterChangements} from './noyau/donnees.js';
 import {etat, lire, brancher} from './noyau/stockage.js';
 import {charger} from './noyau/modules.js';
 import {construireCoquille, rendre, brancherActions, brancherClavier, fermerFiche, toast} from './noyau/interface.js';
+import {ouvrirCapture} from './noyau/capture.js';
+import {ouvrirElement} from './noyau/fiches.js';
 import './noyau/capture.js';   /* « Noter » (bouton +, touche C) */
 import './noyau/glisser.js';
 import './noyau/tableau.js';
 import './noyau/mentions.js';   /* « @ » et « # » dans le journal */
 import {demarrerSynchro} from './noyau/synchro.js';
+import {lireEtat} from './noyau/notifications.js';
 import RUBRIQUES from './modules/liste.js';
 
 const echec = (etape, e) => { console.error(etape, e); const v = $('#vue'); if(v) v.innerHTML = `<div class="vide"><b>LIFE PANEL n’a pas pu démarrer (${etape}).</b><br><small>${String(e && e.message || e).replace(/[<>&]/g, '')}</small></div>`; };
@@ -47,6 +50,31 @@ async function demarrer(){
   ecouterChangements(() => redessiner());
   window.addEventListener('hashchange', () => { fermerFiche({depuisHistorique:true}); rendre(); });
   rendre();
-  demarrerSynchro().catch(e => console.error('synchro', e));   /* après la lecture des données, jamais avant */
+  ouvertureDepuisAndroid();
+  demarrerSynchro().then(() => lireEtat()).catch(e => console.error('synchro', e));   /* après la lecture des données, jamais avant ; puis l'état des notifications (fuseau tenu à jour) */
+  brancherServiceWorker();
+}
+
+/* Appli installée (Android) : raccourcis de l'icône (appui long) et « Partager → LIFE PANEL », comme la v4.9.
+   « ?action=inbox » : Noter (Idée) · « ?action=depense » : une nouvelle dépense · « ?titre=…&texte=…&lien=… » : Noter, prérempli.
+   L'adresse est aussitôt nettoyée pour qu'un rechargement ne refasse pas l'action. */
+function ouvertureDepuisAndroid(){
+  const q = new URLSearchParams(location.search), action = q.get('action');
+  const partage = ['titre', 'texte', 'lien'].map(k => (q.get(k) || '').trim()).filter(Boolean);
+  if(!action && !partage.length) return;
+  history.replaceState(null, '', location.pathname + (location.hash || '#/aujourdhui'));
+  if(action === 'depense') ouvrirElement('mouvements', null, {nouveau:{type:'depense'}});
+  else if(action === 'inbox') ouvrirCapture('', 'idee');
+  else {   /* un texte partagé : titre, texte, lien sans doublon (le lien est souvent déjà dans le texte) */
+    const morceaux = partage.filter((m, i) => !partage.some((n, j) => j !== i && n.includes(m) && (n.length > m.length || j < i)));
+    ouvrirCapture(morceaux.join('\n'), 'idee');
+  }
+}
+/* Hors ligne, installation et notifications : le service worker (sw.js), seulement sur une vraie adresse https
+   (pas sur raw.githack, adresse partagée) ; une notification touchée pendant que LIFE PANEL est ouvert y mène. */
+function brancherServiceWorker(){
+  if(!('serviceWorker' in navigator) || !window.isSecureContext || /(^|\.)githack\.com$/i.test(location.hostname)) return;
+  navigator.serviceWorker.register('sw.js').catch(e => console.error('service worker', e));
+  navigator.serviceWorker.addEventListener('message', e => { const u = e.data && e.data.aller; if(typeof u === 'string' && /^#\/[\w/?=&%.-]*$/.test(u)) location.hash = u; });
 }
 demarrer();
