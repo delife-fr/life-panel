@@ -13,6 +13,7 @@ import {construireCoquille, rendre, brancherActions, brancherClavier, fermerFich
 import './noyau/capture.js';   /* « Noter » (bouton +, touche C) */
 import './noyau/glisser.js';
 import './noyau/tableau.js';
+import './noyau/mentions.js';   /* « @ » et « # » dans le journal */
 import {demarrerSynchro} from './noyau/synchro.js';
 import RUBRIQUES from './modules/liste.js';
 

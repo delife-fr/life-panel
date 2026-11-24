@@ -82,9 +82,13 @@ export function fermerFiche({depuisHistorique = false} = {}){
   if(fiche.avant && document.contains(fiche.avant)) fiche.avant.focus();
 }
 
-/* --- Une ligne pour ajouter vite : une phrase, Entrée. action = nom d'une action du registre, appelée avec le texte --- */
-export const champAjout = (action, texte, {id = '', donnees = {}} = {}) => `<form class="ajout" data-ajout="${esc(action)}"${Object.entries(donnees).map(([k, v]) => ` data-${esc(k)}="${esc(v)}"`).join('')} autocomplete="off">${ico('plus', 16, 2)}
-  <input type="text" name="texte" ${id ? `id="${esc(id)}"` : ''} placeholder="${esc(texte)}" aria-label="${esc(texte)}" enterkeyhint="done"></form>`;
+/* --- Une ligne pour ajouter vite : une phrase, Entrée. action = nom d'une action du registre, appelée avec le texte.
+   mentions : « @ » propose les contacts et « # » les tags pendant la frappe (noyau/mentions.js), pour le journal --- */
+export const champAjout = (action, texte, {id = '', donnees = {}, mentions = false} = {}) => {
+  const f = `<form class="ajout" data-ajout="${esc(action)}"${Object.entries(donnees).map(([k, v]) => ` data-${esc(k)}="${esc(v)}"`).join('')} autocomplete="off">${ico('plus', 16, 2)}
+  <input type="text" name="texte" ${id ? `id="${esc(id)}"` : ''} placeholder="${esc(texte)}" aria-label="${esc(texte)}" enterkeyhint="done"${mentions ? ' data-mentions' : ''}></form>`;
+  return mentions ? `<div class="avec-suggestions">${f}<ul class="suggestions" role="listbox" hidden></ul></div>` : f;
+};
 
 /* --- Confirmation (calme, au centre) : renvoie true ou false --- */
 export function confirmer({titre, texte = '', oui = 'Confirmer', non = 'Annuler', danger = false}){

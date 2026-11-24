@@ -4,7 +4,7 @@
      navigateur : rien n'est envoyé nulle part. Le thème se change par l'icône jour/nuit de la barre du haut, pas ici.
    - Corbeille : ce qui a été supprimé depuis moins de 30 jours, à remettre ou à supprimer pour de bon.
    Plus d'archives en v5 : une tâche faite reste visible barrée, un dossier dont on n'a plus besoin est « fermé ». */
-import {esc, aujourdhui, dateCourte, jourDe, maintenant, heureTexte} from '../../noyau/outils.js';
+import {esc, aujourdhui, dateCourte, jourDe, maintenant, heureTexte, pluriel} from '../../noyau/outils.js';
 import {DB, remplacer, compter, resume, FORMES, LIENS_PROJET, modifie, nettoyerTags} from '../../noyau/donnees.js';
 import {exemples} from './exemples.js';
 import {dossier, nomDossier} from '../../noyau/calculs.js';
@@ -54,7 +54,8 @@ const quand = d => d ? esc(dateCourte(jourDe(d)) + (jourDe(d).slice(0, 4) !== au
 
 /* --- Corbeille --- */
 function pageCorbeille(){
-  return entete('Corbeille', {sur:'Réglages'}) + `<div class="page-reglages"><p class="doux">Ce qui est supprimé reste ici 30 jours.</p>${tableau({id:'corbeille', lignes:DB.corbeille, cle:e => e.id,
+  const vider = DB.corbeille.length ? `<button type="button" class="btn discret" data-action="corbeille-vider">${ico('corbeille', 16, 1.8)}<span>Vider la corbeille</span></button>` : '';
+  return entete('Corbeille', {sur:'Réglages', actions:vider}) + `<div class="page-reglages"><p class="doux">Ce qui est supprimé reste ici 30 jours.</p>${tableau({id:'corbeille', lignes:DB.corbeille, cle:e => e.id,
     tri:{col:'quand', sens:-1}, recherche:e => [titreElement(e.type, e.element), nomDe(e.type, e.element)], texteRecherche:'Chercher dans la corbeille', vide:'La corbeille est vide.', colonnes:[
       {id:'type', titre:'Type', valeur:e => nomDe(e.type, e.element), html:e => puceType(e.type, e.element)},
       {id:'titre', titre:'Titre', tel:'titre', valeur:e => titreElement(e.type, e.element), html:e => esc(titreElement(e.type, e.element) || '—')},
@@ -173,6 +174,10 @@ export default {
     'corbeille-effacer':async el => { const e = DB.corbeille.find(y => y.id === el.dataset.id); if(!e) return;
       if(!await confirmer({titre:'Supprimer pour de bon ?', texte:'« ' + (titreElement(e.type, e.element) || 'Sans titre') + ' » ne pourra plus être remis.', oui:'Supprimer', danger:true})) return;
       DB.corbeille = DB.corbeille.filter(y => y !== e); modifie('effacer'); toast('Supprimé pour de bon.'); },
+    'corbeille-vider':async () => { const n = DB.corbeille.length; if(!n) return;
+      if(!await confirmer({titre:'Vider la corbeille ?', texte:pluriel(n, 'élément') + ' ne pourr' + (n > 1 ? 'ont' : 'a') + ' plus être remis.', oui:'Vider', danger:true})) return;
+      const avant = DB.corbeille; DB.corbeille = []; modifie('vider corbeille');
+      toast('Corbeille vidée.', [['Annuler', () => { DB.corbeille = avant; modifie('annuler'); }]]); },
     'importer-donnees':() => { const f = document.getElementById('fichier-donnees'); if(f) f.click(); },
     'exporter-donnees':exporter,
     'synchro-connecter':el => { const v = k => (document.getElementById('sy-' + k) || {}).value || '';
