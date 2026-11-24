@@ -127,8 +127,12 @@ sur « Chargement… ».
 - **Finance** : le tableau des mouvements, « Par catégorie » et « Mois par mois » se plient (flèche) ; Comptes : colonne
   « Pointé : oui / non » (la case de la v4.9 qui laisse un compte, ex. l'épargne, hors des totaux) ; la couleur d'une
   catégorie se choisit sur des pastilles. Les calculs et l'anneau sont dans noyau/finance.js (Finance et Aujourd'hui).
-- **Plus tard, dans une autre session** (ne rien faire avant) : un sous-menu « Google Drive » dans Documents ; ce jour-là,
-  déplacer tous les documents à la racine du Drive, l'utilisateur les renomme et les range ensuite selon ses chemins.
+- **Google Drive** (24/11, noyau/drive.js) : connexion au compte Google (OAuth « token », projet Google Cloud « LIFE PANEL »
+  en statut Test, client ID dans drive.js, accès d'une heure gardé dans ce navigateur, « Reconnecter » ensuite). Pas de
+  sous-menu à part : **Carnet › Documents** montre aussi tous les fichiers du Drive (source « Drive », hors dossiers et
+  corbeille, seulement les siens) ; « Pas encore rangés » = fichiers Drive sans dossier. Ranger un fichier (dossier dans sa
+  fiche, ou Ctrl + clic puis « Dossier… ») crée un document lié (`driveId`) ; un nom changé dans la fiche change dans
+  Drive, un nom changé dans Drive revient ici. L'utilisateur range ses fichiers lui-même (ou avec Claude, autre session).
 - **Plus d'archives** (23/11) : pas de page Archives. Une tâche faite reste visible, barrée, en bas du tableau ; notes,
   documents et contacts archivés en v4.9 sont affichés comme les autres (le drapeau reste dans les données).
 - **Contacts** (23/11) : plus d'« À lui dire », « À répondre », « Idées de cadeaux », « Nouvelles », « Dernier échange »,
@@ -162,8 +166,7 @@ sur « Chargement… ».
 - **Fiches au centre** : une grande tuile au milieu de l'écran, le site en arrière-plan (comme la modale de la v4.9) ;
   pas de panneau à droite. Sur téléphone, plein écran depuis le bas.
 - **Glisser-déposer partout où c'est naturel** (moteur du prototype, souris et doigt), toujours doublé d'un bouton.
-- **Documents et Drive** : « Mon Drive » dans le sous-menu de Documents, même tableau, « Suivre l'échéance » (à faire :
-  il faut la connexion à Drive). En attendant, un lien `drive:PERSO/…` ouvre la recherche de Google Drive sur ce nom.
+- **Documents et Drive** : voir « Google Drive » ; un ancien lien `drive:PERSO/…` (v4.9) ouvre la recherche de Google Drive.
 - **Journal** : nouvelle liste `journal` dans les données ({date, texte, contacts, tags, projet}) ; la seule différence avec
   la lecture de la v4.9 (vérifié par compare.js).
 - **Téléphone** : à décider par Claude, l'utilisateur pense d'abord au PC.
@@ -193,6 +196,7 @@ noyau/
   finance.js          comptes pointés, dépenses d'une période, l'anneau par catégorie (Finance et Aujourd'hui)
   fichiers.js         choisir un fichier sur l'appareil (texte décodé), en télécharger un, cellule CSV
   synchro.js          la synchro GitHub de la v4.9 (donnees.json), l'icône nuage
+  drive.js            Google Drive : connexion au compte Google, liste des fichiers, renommer
   colonnes.js         les colonnes de chaque type d'élément et le texte où chercher, communs à tous les tableaux
   glisser.js          le glisser-déposer (souris et doigt) : glisserType(type, {depot}), [data-glisser], [data-depot]
   fiches.js           la fiche de chaque type d'élément (TYPES_ELEMENT), avec dossier, tags et attributs libres

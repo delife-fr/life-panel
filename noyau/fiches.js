@@ -11,6 +11,7 @@ import {dossiersActifs, arbreChemins, lireChemin, couleurDossier, tousLesTags, l
 import {ouvrirFiche, fermerFiche, toast} from './interface.js';
 import {actionNoyau} from './modules.js';
 import {md, basculerCaseMd} from './markdown.js';
+import {renommerDrive, messageDrive} from './drive.js';
 
 const COMMUNS = [{c:'projet', t:'Dossier', k:'dossier'}, {c:'tags', t:'Tags', k:'tags'}, {c:'attributs', t:'Attributs', k:'attributs'}];
 export const TYPES_ELEMENT = {
@@ -199,6 +200,10 @@ export function ouvrirElement(liste, id, {nouveau = null, apresAjout = null, bou
     aLaFermeture:nouveau ? null : () => enregistrer(f, liste, x)});
 }
 
+/* Le nom d'un fichier de Google Drive changé dans sa fiche : il change aussi dans Drive (24/11) */
+function renommerDansDrive(id, nom){
+  renommerDrive(id, nom).catch(e => toast('Le nom n’a pas changé dans Google Drive : ' + messageDrive(e)));
+}
 /* Enregistre un élément existant (sans rien faire si rien n'a changé) */
 function enregistrer(f, liste, x){
   if(!document.querySelector(`[data-fiche="${f}"]`) || !DB[liste].includes(x)) return;
@@ -208,6 +213,7 @@ function enregistrer(f, liste, x){
   if(liste === 'taches' && n.fait !== x.fait){ n.faitLe = n.fait ? maintenant() : ''; if(!n.fait){ n.archive = false; n.archiveLe = ''; } }
   if(JSON.stringify(n) === avant) return;
   n.modif = maintenant();
+  if(liste === 'documents' && n.driveId && n.titre && n.titre !== x.titre) renommerDansDrive(n.driveId, n.titre);
   Object.keys(x).forEach(k => { delete x[k]; }); Object.assign(x, n);
   toucherDossier(x.projet);
   modifie('fiche');
@@ -248,6 +254,7 @@ function brancher(boite, f, liste, x, {nouveau, apresAjout}){
     if(e.target.closest('[data-fiche-ajouter]')){
       const v = lire(f, liste, null), cree = ajouter(liste, {...x, ...v, ...(liste === 'taches' && v.fait ? {faitLe:maintenant()} : {}), modif:maintenant(), ...(liste === 'notes' ? {cree:maintenant()} : {}), ...(liste === 'journal' ? {contacts:contactsCites(v.texte || '')} : {})});
       toucherDossier(cree.projet);
+      if(liste === 'documents' && cree.driveId && cree.titre && cree.titre !== x.titre) renommerDansDrive(cree.driveId, cree.titre);
       if(apresAjout) try { apresAjout(cree); } catch(err){ console.error(err); }
       modifie('ajout'); fermerFiche();
       toast(nomDe(liste, cree) + (FEMININ.has(liste) ? ' ajoutée.' : ' ajouté.'));

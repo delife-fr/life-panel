@@ -39,7 +39,9 @@ const COLONNES = {
     tags, dossier, {id:'modif', titre:'Modifiée', tel:'droite', valeur:n => n.modif, html:n => quand(n.modif)}],
   documents:() => [
     {id:'titre', titre:'Document', tel:'titre', valeur:x => x.titre, html:x => esc(x.titre)},
-    {id:'lien', titre:'Lien', html:x => lienDocument(x.url) || '—'},
+    /* un fichier de Google Drive (24/11) : la source le dit, le lien l'ouvre dans Drive */
+    {id:'source', titre:'Source', valeur:x => x.driveId ? 'Drive' : '', html:x => x.driveId ? `<span class="source-drive">${ico('drive', 14)}Drive</span>` : ''},
+    {id:'lien', titre:'Lien', html:x => x.driveId && x.url ? `<a class="lien-externe" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${ico('externe', 13)}<span>Ouvrir dans Drive</span></a>` : lienDocument(x.url) || '—'},
     {id:'echeance', titre:'Échéance', valeur:x => x.echeance, html:x => { if(!x.echeance) return '—'; const e = etatDocument(x);
       return `<span class="${e.etat === 'expire' ? 'retard' : e.etat === 'preavis' ? 'attention' : ''}" title="${esc(texteEcheance(e.jours))}">${quand(x.echeance)}</span>`; }},
     dossier, tags],
