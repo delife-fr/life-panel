@@ -1,8 +1,8 @@
 /* LIFE PANEL v5 · noyau/capture.js
    Noter en une phrase (bouton +, touche C, « Noter ») : la phrase est lue et rangée toute seule, mêmes règles que la v4.9 :
    « essence 45 » → dépense · « Dentiste jeudi 14h30 » → rendez-vous · « Appeler le garage vendredi » → tâche ·
-   « Paul 06 12 34 56 78 » → contact · un lien → document · le reste → note. On peut aussi choisir le type, ou « Idée »
-   pour la garder telle quelle dans Idées. Le message qui suit propose « Modifier » et « Annuler ».
+   « Paul 06 12 34 56 78 » → contact · un lien → document · le reste → note, quand « Auto » est choisi. Par défaut, la
+   fenêtre « Noter » choisit « Idée » (24/11) : la phrase va telle quelle dans Idées, Entrée et c'est noté. Le message qui suit propose « Modifier » et « Annuler ».
    Ranger une idée de la page Idées passe par les mêmes règles (rangerIdee). */
 import {esc, norm, majuscule, aujourdhui, decaleJour, moisCourant, decaleMois, joursDansMois, pad, maintenant, eur, jourCourt, heureTexte} from './outils.js';
 import {ico} from './icones.js';
@@ -145,19 +145,19 @@ export function noterJournal(texte, {projet = null} = {}){
 }
 
 /* --- La fenêtre « Noter » : une phrase, ce qu'elle va devenir en direct, Entrée --- */
-let typeChoisi = 'auto';
+let typeChoisi = 'idee';
 function apercu(t){
   if(!t.trim()) return '<span class="faible">Tape une phrase : « essence 45 », « Dentiste jeudi 14h30 », « Appeler le garage vendredi »…</span>';
   const c = lireCapture(t, typeChoisi), [nom] = TYPES_CAPTURE[c.type];
   return `${ico(ICONES[c.type], 16)}<span><b>${esc(nom)}</b> · ${esc(c.titre)}${c.puces.length ? ' · ' + esc(c.puces.join(' · ')) : ''}${c.complet ? '' : ' <span class="faible">(à compléter)</span>'}</span>`;
 }
 export function ouvrirCapture(texte = ''){
-  typeChoisi = 'auto';
-  const types = [['auto', 'Deviner'], ...Object.entries(TYPES_CAPTURE).map(([k, [n]]) => [k, n])];
+  typeChoisi = 'idee';
+  const types = [['idee', 'Idée'], ['auto', 'Auto'], ...Object.entries(TYPES_CAPTURE).filter(([k]) => k !== 'idee').map(([k, [n]]) => [k, n])];
   ouvrirFiche({titre:'Noter', html:`<form class="capture" data-capture autocomplete="off">
       <textarea id="capture-texte" rows="2" placeholder="Une phrase, puis Entrée" aria-label="Ce que tu veux noter" autofocus>${esc(texte)}</textarea>
       <p class="capture-apercu" id="capture-apercu" aria-live="polite">${apercu(texte)}</p>
-      <div class="puces-choix" role="radiogroup" aria-label="Type">${types.map(([k, n]) => `<button type="button" role="radio" class="puce-choix${k === 'auto' ? ' actif' : ''}" aria-checked="${k === 'auto'}" data-capture-type="${k}">${esc(n)}</button>`).join('')}</div>
+      <div class="puces-choix" role="radiogroup" aria-label="Type">${types.map(([k, n]) => `<button type="button" role="radio" class="puce-choix${k === typeChoisi ? ' actif' : ''}" aria-checked="${k === typeChoisi}" data-capture-type="${k}">${esc(n)}</button>`).join('')}</div>
     </form>`,
     pied:`<span class="faible petit masque-tel">Entrée : ranger · Maj + Entrée : à la ligne</span><div class="droite"><button type="button" class="btn plein" data-capture-ranger>${ico('check', 15, 2)}<span>Ranger</span></button></div>`,
     apres:boite => {
