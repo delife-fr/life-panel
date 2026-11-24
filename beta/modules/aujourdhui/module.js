@@ -57,7 +57,8 @@ function page(){
   const ym = j.slice(0, 7), dep = depenses(dans(ym)), t = somme(dep);
   const finance = `<section class="bloc finance-jour"><div class="bloc-tete"><h2>Finance</h2><a href="${lien('finance')}">Ouvrir Finance ${ico('fleche', 14)}</a></div>
     <p class="gros-chiffre"><b>${esc(eur(t))}</b> dépensés ce mois-ci</p>${t ? parCategorie(dep, ym, {cliquable:false, max:6}) : ''}</section>`;
-  return entete(jourEtMois(aujourdhui())) + `<div class="grille-jour"><div class="col-principale">${jour}${finance}</div><div class="col-cote">${ranger}${venir}</div></div>`;
+  /* PC : Aujourd'hui | Finance | À ranger et À venir ; téléphone : les uns sous les autres, dans cet ordre (24/11) */
+  return entete(jourEtMois(aujourdhui())) + `<div class="grille-jour">${jour}${finance}<div class="col-cote">${ranger}${venir}</div></div>`;
 }
 
 export default {

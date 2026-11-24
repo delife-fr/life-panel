@@ -4,6 +4,7 @@
      le tableau (le curseur reste dans le champ) ;
    - des colonnes triables d'un clic (nouveau clic : sens inverse ; les cases vides toujours en dernier), tri gardé sur cet
      appareil ; une colonne vide sur toutes les lignes n'est pas affichée (sauf garder:true) ;
+   - outils : des boutons dans la barre, à droite (outilsCote : juste après la recherche) ;
    - une case à cocher par ligne si la section en a besoin (tâche faite), un clic sur la ligne ouvre l'élément ;
    - les lignes s'affichent par paquets de 50 ; sur téléphone, chaque ligne devient une carte.
 
@@ -68,8 +69,9 @@ export function tableau(cfg){
   const e = etat(cfg.id), c = corps(cfg);
   const barre = (cfg.recherche || cfg.outils) ? `<div class="tableau-barre">
     ${cfg.recherche ? `<label class="tableau-recherche">${ico('chercher', 16)}<input type="search" data-tableau-q="${esc(cfg.id)}" value="${esc(e.q)}" placeholder="${esc(cfg.texteRecherche || 'Chercher')}" aria-label="${esc(cfg.texteRecherche || 'Chercher')}" autocomplete="off"></label>` : ''}
+    ${cfg.outilsCote && cfg.outils ? `<div class="tableau-outils cote">${cfg.outils}</div>` : ''}
     <span class="tableau-compte" data-tableau-compte="${esc(cfg.id)}">${esc(c.compte)}</span>
-    <div class="tableau-outils">${cfg.outils || ''}</div></div>` : '';
+    ${cfg.outilsCote ? '' : `<div class="tableau-outils">${cfg.outils || ''}</div>`}</div>` : '';
   const plie = cfg.pliable && reglage(cfg).plie;
   const titre = cfg.pliable ? `<button type="button" class="tableau-plier" data-tableau-plier="${esc(cfg.id)}" aria-expanded="${!plie}">${ico('bas', 16, 2)}<span>${esc(cfg.pliable)}</span><span class="n">${cfg.lignes.length}</span></button>` : '';
   return `<div class="tableau${plie ? ' plie' : ''}" data-tableau="${esc(cfg.id)}">${titre}${barre}<div class="tableau-corps">${c.html}</div></div>`;
