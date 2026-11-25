@@ -43,3 +43,5 @@
   .releve-liste li > input{grid-area:c} .releve-liste .r-corps{grid-area:corps} .releve-liste .r-montant{grid-area:m}
   .releve-liste .r-date{grid-area:d} .releve-liste li > select, .releve-liste li > .faible{grid-area:sel}
 }
+/* À catégoriser : la liste « Autre… » à côté du bouton bleu de la catégorie proposée */
+.choix-categorie{width:auto;min-height:30px;padding:3px 8px;font-size:12.5px;max-width:170px}
