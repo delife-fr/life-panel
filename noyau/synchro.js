@@ -58,6 +58,8 @@ export function erreurStatut(r){
   if(r.statut === 401) return new ErreurGitHub('cle', 'GitHub refuse la clé (mal copiée ou expirée).');
   if(r.statut === 403 && /rate limit/i.test(r.texte)) return new ErreurGitHub('limite', 'Trop de demandes à GitHub : nouvel essai dans quelques minutes.');
   if(r.statut === 403 || r.statut === 404) return new ErreurGitHub('acces', 'GitHub refuse l’accès : vérifie le dépôt et que la clé a le droit « Contents : Read and write ».');
+  /* 500, 502, 503… : une panne chez GitHub (25/11), pas une erreur de LIFE PANEL ; la lecture toutes les 30 s réessaie seule */
+  if(r.statut >= 500) return new ErreurGitHub('panne', 'GitHub a une panne passagère, de son côté : rien n’est perdu, la synchro réessaie toute seule.');
   return new ErreurGitHub('reponse', 'Réponse inattendue de GitHub (' + r.statut + ').');
 }
 /* Un fichier texte du dépôt privé, à côté des données (notifications/…) : {sha, texte} ou null ; écrire renvoie false

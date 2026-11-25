@@ -5,13 +5,15 @@ d'assemblage. Servie par GitHub Pages. Les données vivent dans le dépôt priv�
 
 ## Branches
 
-- `main` : la **v5**, en service depuis la bascule du 24/11 (https://panel.alexishocini.fr/). L'ancienne **v4.9** est gardée
-  dans le dossier `v49/` (…/v49/), sans synchro : ses données sont à part (base « lifepanel-v49 ») et elle refuse d'écrire
-  un donnees.json de VERSION 24.
-- `beta` : la branche de travail de la v5 ; on la fusionne dans `main` pour publier. Le dossier `beta/` de `main` (la bêta
-  en ligne pendant la refonte) est supprimé.
-- Référence v4.9 pour reprendre du code : `git show origin/main:index.html` (sections A à Q : données, utilitaires, calculs,
-  pages, routeur, fenêtres, actions, focus, palette, recherche, fichiers, Drive, synchro GitHub, notifications).
+- `main` : la **v5**, en service depuis la bascule du 24/11 (https://panel.alexishocini.fr/) ; GitHub Pages publie tout
+  ce qui arrive sur `main`. L'ancienne **v4.9** est gardée dans le dossier `v49/` (…/v49/), sans synchro : ses données
+  sont à part (base « lifepanel-v49 ») et elle refuse d'écrire un donnees.json de VERSION 24.
+- On travaille sur une branche (`beta`, ou la branche `claude/…` d'une session), puis on la fusionne dans `main` pour
+  publier. Toujours partir de `main` à jour : des changements y arrivent parfois directement (le 24-25/11, ceux faits
+  avec Grok : case Drive, nouvel arbre des chemins).
+- Référence v4.9 pour reprendre du code : **`v49/index.html`** (sections A à Q : données, utilitaires, calculs, pages,
+  routeur, fenêtres, actions, focus, palette, recherche, fichiers, Drive, synchro GitHub, notifications).
+  Attention : depuis la bascule, `index.html` à la racine de `main` est la coquille de la v5.
 - Le suivi de la refonte (décisions, lots, retours) est dans le document Claude Docs « Refonte LIFE PANEL » :
   https://claude.ai/artifact/6RU7D8ZMBrSZAmAgBwtZyG — on le relit (commentaires compris) avant de commencer un lot.
 
@@ -25,14 +27,13 @@ python3 -m http.server 8765
 
 puis http://127.0.0.1:8765/
 
-**En ligne** : https://panel.alexishocini.fr/ (la v5, branche `main`). La synchro lit et écrit `donnees.json`. Pendant la
-bêta (23-24/11), la v5 vivait dans …/beta/ avec `donnees-v5.json` ; à la bascule, `donnees.json` a repris son contenu (rien
-n'avait changé côté v4.9), puis `donnees-v5.json` a été supprimé : **un seul fichier de données**, `donnees.json`.
+**En ligne** : https://panel.alexishocini.fr/ (la v5, branche `main`). La synchro lit et écrit **un seul fichier de
+données**, `donnees.json` (le `donnees-v5.json` de la bêta a été supprimé à la bascule).
 
 Aperçu sans synchro : **toujours l'adresse figée sur un commit**,
-`https://raw.githack.com/delife-fr/life-panel/<commit complet>/index.html`, à donner après chaque push. L'adresse de branche
-(`…/beta/index.html`) sert des fichiers de versions différentes (cache de raw.githack) : les imports échouent, la page reste
-sur « Chargement… ».
+`https://raw.githack.com/delife-fr/life-panel/<commit complet>/index.html`, à donner après chaque push. L'adresse d'une
+branche (`…/main/index.html`) sert des fichiers de versions différentes (cache de raw.githack) : les imports échouent, la
+page reste sur « Chargement… ».
 
 ## Les sections (décidées au tour 1)
 
@@ -56,7 +57,7 @@ sur « Chargement… ».
   doit tenir en entier jusqu'à 360 px de large.
 - **Thème** : nuit par défaut ou jour, seulement par l'icône en haut à droite (pas de thème automatique, rien dans Réglages).
 
-## Autres décisions du tour 1 (à appliquer dans les lots)
+## Autres décisions (tour 1 et retours suivants, datés)
 
 - Tout ce qui existe en v4.9 est gardé, sauf : priorités, Focus 25 min, tout budget (dossiers, comptes, catégories : les
   champs restent dans les données, jamais affichés), lien vers le Wiki (plus tard).
@@ -67,10 +68,10 @@ sur « Chargement… ».
   v3.13, et `parent` n'est plus utilisé). Les vrais dossiers sont au bout du chemin, l'utilisateur choisit leur chemin
   (fiche « Chemin » : une liste déroulante de l'arbre ; ou glisser le dossier sur un chemin de l'arbre). Page Dossiers :
   l'arbre des chemins à gauche (où créer, où ranger ; « Nouveau chemin… »), le tableau des dossiers de ce chemin. L'arbre de
-  départ est la hiérarchie validée le 24/11 dans le document de la refonte, où **chaque nom est un chemin** (CHEMINS_DEPART,
-  calculs.js) ; dès qu'on
-  ajoute un chemin il est recopié dans les données (`DB.chemins`). Dans un dossier, le sous-menu compte chaque type. Un dossier ouvert : le sous-menu passe aux types, chacun le même tableau que dans
-  sa section. Un dossier dont on n'a plus besoin est **fermé** (drapeau `archive`) et reste visible dans « Fermés ».
+  départ est la hiérarchie du 25/11 (voir « Hiérarchie des dossiers »), où **chaque nom est un chemin** (CHEMINS_DEPART,
+  calculs.js) ; dès qu'on touche à l'arbre, il est recopié dans les données (`DB.chemins`). Un dossier ouvert : le
+  sous-menu passe aux types (chacun compté), chacun le même tableau que dans sa section. Un dossier dont on n'a plus
+  besoin est **fermé** (drapeau `archive`) et reste visible dans « Fermés ».
 - **Idées** = l'Inbox : ni tags, ni dossier, ni archives ; une idée ne va nulle part, elle devient une tâche, une note,
   une dépense… ou elle est supprimée.
 - **Tags** : la fenêtre Tags s'ouvre en haut à droite (étiquette) ou par la touche T, pas dans Réglages. Supprimer un tag
@@ -94,15 +95,17 @@ sur « Chargement… ».
 - **Synchro GitHub** (lot 1, noyau/synchro.js) : celle de la v4.9 (lecture à l'ouverture, au retour, toutes les 30 s ;
   écriture 2,5 s après une modification ; fusion à trois ; une fiche ouverte retarde ce qui vient d'ailleurs). Une icône
   nuage dans la barre du haut quand elle est active (clic = synchroniser). Jamais sur raw.githack (adresse partagée),
-  jamais pendant les exemples (`reglages.demo`), jamais un envoi de données vides. Réglages › Données : se connecter
-  (avec la clé de la v4.9 en un clic), changer la clé, arrêter.
-  Une clé gardée par l'ancienne bêta (base « lifepanel-v5-beta ») est proposée en un clic (cleV49, nom historique).
+  jamais pendant les exemples (`reglages.demo`), jamais un envoi de données vides. Réglages › Données : se connecter,
+  changer la clé, arrêter. La clé de la v4.9 est reprise telle quelle (mêmes noms de stockage) ; une clé gardée par
+  l'ancienne bêta (base « lifepanel-v5-beta ») est proposée en un clic (cleV49, nom historique). Une erreur 5xx de GitHub
+  (panne de son côté, ex. le 25/11) : message « panne passagère », la synchro réessaie toute seule toutes les 30 s ; rien
+  n'est perdu, les modifications restent dans le navigateur.
 - **Rappels et notifications** (24/11, noyau/notifications.js) : le moteur ne change pas (robot du dépôt privé, lancé
   toutes les 30 min par cron-job.org, push du navigateur : rien à laisser ouvert ; précision ± 30 min, suffisante).
   Réglages › Données › Notifications : activer sur cet appareil, mode (tout, résumé, rien), essayer, désactiver. Un
-  appareil est reconnu par son **abonnement push**, porté par le service worker de la racine du site (la v4.9 pendant la
-  bêta, la v5 ensuite) : même inscription avant et après la bascule, jamais de doublon. La clé (cle-publique.txt) existe
-  déjà : pas de « Préparer les notifications » en v5.
+  appareil est reconnu par son **abonnement push**, porté par le service worker de la racine du site (celui de la v5 a
+  remplacé celui de la v4.9 sans changer l'inscription) : jamais de doublon. La clé (cle-publique.txt) existe déjà : pas
+  de « Préparer les notifications » en v5.
 - **Service worker v5** (sw.js) : le réseau d'abord (revalidé), la copie sans réseau ; cache « lp5-site » (la v4.9
   efface les « lifepanel-… ») ; push et clic sur une notification comme la v4.9. **Manifeste** : raccourcis « Nouvelle
   idée » (`?action=inbox` → Noter, Idée) et « Nouvelle dépense » (`?action=depense`), « Partager → LIFE PANEL » (Noter).
@@ -124,15 +127,18 @@ sur « Chargement… ».
   Employeurs (UMS), Candidatures, Documentation. Perso : Administratif (Identité, État civil, Diplômes, Juridique,
   Protection sociale : Sécurité sociale, Chômage), Finances (Banques, Placements, Crédits, Impôts, Assurances, Retraite),
   Logements, Abonnements, Transports, Santé, Numérique (Appareils, Logiciels et licences), Loisirs (JDR, Jeux, Livres),
-  Voyages. L'arbre du 24/11 déjà copié dans les données est repris une fois (`arbre: 2`) : les branches qui n'existent
-  plus disparaissent, un chemin ajouté à la main reste, et le chemin d'un dossier déjà créé n'est pas déplacé.
+  Voyages. L'arbre du 24/11 déjà copié dans les données est repris une fois (`DB.arbre = 2`, adopterArbre dans calculs.js,
+  appelé après chaque remplacer()) : les branches qui n'existent plus disparaissent, un chemin ajouté à la main reste, et
+  le chemin d'un dossier déjà créé n'est pas déplacé. Fait sur les vraies données le 25/11. Pour changer encore la
+  hiérarchie de départ : nouveau CHEMINS_DEPART, l'actuel gardé pour le reconnaître, et `arbre: 3`.
 - **Couleurs** des catégories et des dossiers : 14 teintes (les 9 de la v4.9 + cyan, brun, olive, indigo, gris) et 13
   rayées (TEINTES, COULEURS_CAT dans donnees.js).
 - **Finance** : le tableau des mouvements, « Par catégorie » et « Mois par mois » se plient (flèche) ; Comptes : colonne
   « Pointé : oui / non » (la case de la v4.9 qui laisse un compte, ex. l'épargne, hors des totaux) ; la couleur d'une
   catégorie se choisit sur des pastilles. Les calculs et l'anneau sont dans noyau/finance.js (Finance et Aujourd'hui).
 - **Google Drive** (24/11, noyau/drive.js) : connexion au compte Google (OAuth « token », projet Google Cloud « LIFE PANEL »
-  en statut Test, client ID dans drive.js, accès d'une heure gardé dans ce navigateur, « Reconnecter » ensuite). Pas de
+  en statut Test, client ID dans drive.js, accès d'une heure gardé dans ce navigateur, « Reconnecter » ensuite ; en statut
+  Test, Google redemande l'accord 7 jours après l'avoir donné). Se connecter recharge la page (aller-retour chez Google). Pas de
   sous-menu à part : **Carnet › Documents** montre aussi tous les fichiers du Drive (source « Drive », hors dossiers et
   corbeille, seulement les siens) ; « Pas encore rangés » = fichiers Drive sans dossier. Ranger un fichier (dossier dans sa
   fiche, ou Ctrl + clic puis « Dossier… ») crée un document lié (`driveId`) ; un nom changé dans la fiche change dans
@@ -146,8 +152,9 @@ sur « Chargement… ».
   « À relancer » ni « Je lui ai parlé aujourd'hui » à l'écran (gardés dans les données) ; la fiche montre les lignes du
   journal qui citent le contact (@Nom).
 - **La puce d'un dossier** est un lien vers le dossier, partout.
-- **Exemples** : Réglages › Données › « Charger des exemples » (modules/reglages/exemples.js) remplace les données de la
-  bêta par des données fictives ; à enrichir quand une fonction arrive.
+- **Exemples** : Réglages › Données › « Charger des exemples » (modules/reglages/exemples.js) remplace les données de ce
+  navigateur par des données fictives (synchro coupée tant qu'elles sont là, « Annuler » dans le message) ; à enrichir
+  quand une fonction arrive.
 - **Tags sur tout élément** sauf les idées ; la fenêtre Tags de la v4.7 pour les gérer (en haut à droite).
 - **Capture rapide dans chaque section** : une ligne, Entrée, c'est créé, les détails après. Le bouton + (« Noter ») :
   **« Idée » choisi par défaut** (24/11), Entrée et c'est dans Idées ; « Auto » (l'ancien « Deviner ») garde la phrase
@@ -175,7 +182,7 @@ sur « Chargement… ».
 - **Glisser-déposer partout où c'est naturel** (moteur du prototype, souris et doigt), toujours doublé d'un bouton.
 - **Documents et Drive** : voir « Google Drive » ; un ancien lien `drive:PERSO/…` (v4.9) ouvre la recherche de Google Drive.
 - **Journal** : nouvelle liste `journal` dans les données ({date, texte, contacts, tags, projet}) ; la seule différence avec
-  la lecture de la v4.9 (vérifié par compare.js).
+  la lecture de la v4.9 (vérifié avant la bascule).
 - **Téléphone** : à décider par Claude, l'utilisateur pense d'abord au PC.
 - **Recherche** : pour chercher, pas pour créer ; Entrée ouvre la page de résultats de la v4.9, tous types, #tag compris.
 - **Finance** : celle de la v4.9, dont le graphique par catégorie et le clic qui retire une catégorie du calcul.
@@ -203,7 +210,8 @@ noyau/
   finance.js          comptes pointés, dépenses d'une période, l'anneau par catégorie (Finance et Aujourd'hui)
   fichiers.js         choisir un fichier sur l'appareil (texte décodé), en télécharger un, cellule CSV
   synchro.js          la synchro GitHub de la v4.9 (donnees.json), l'icône nuage
-  drive.js            Google Drive : connexion au compte Google, liste des fichiers, renommer
+  notifications.js    les rappels sur cet appareil : abonnement push, mode (tout, résumé, rien), essai, désinscription
+  drive.js            Google Drive : connexion au compte Google, liste des fichiers, renommer, type (PDF, Docs…)
   colonnes.js         les colonnes de chaque type d'élément et le texte où chercher, communs à tous les tableaux
   glisser.js          le glisser-déposer (souris et doigt) : glisserType(type, {depot}), [data-glisser], [data-depot]
   fiches.js           la fiche de chaque type d'élément (TYPES_ELEMENT), avec dossier, tags et attributs libres
@@ -221,6 +229,9 @@ modules/
                       aide/ (« ? ») ne sont pas des sections ; reglages/exemples.js = les données fictives,
                       finance/releve.js = l'import d'un relevé, contacts/vcard.js = l'import vCard
 sw.js, manifest.webmanifest   hors ligne, installation, notifications, raccourcis Android (lot 1)
+icons/                les icônes de l'appli et des raccourcis Android
+v49/                  l'ancienne v4.9 (index.html, sw.js, manifeste), sans synchro ; la référence pour reprendre du code
+CNAME                 panel.alexishocini.fr (GitHub Pages)
 ```
 
 Les modules ne s'importent **jamais** entre eux : ils passent par le noyau. Une page est une fonction qui renvoie du HTML
@@ -228,8 +239,8 @@ Les modules ne s'importent **jamais** entre eux : ils passent par le noyau. Une 
 
 ## Règles
 
-- **Économiser** (demande de l'utilisateur) : reprendre le code de la v4.9 (`git show origin/main:index.html`) et du
-  prototype plutôt que réécrire ; tests et captures d'écran seulement là où ça change.
+- **Économiser** (demande de l'utilisateur) : reprendre le code de la v4.9 (`v49/index.html`) et du prototype plutôt que
+  réécrire ; tests et captures d'écran seulement là où ça change.
 
 - **Données : rien n'est perdu.** `FORMES` garde les champs inconnus (`{...x, champs vérifiés}`), `normaliser` garde les
   clés inconnues et reste idempotent. Toute nouvelle donnée passe par `FORMES` (lecture comme création).
