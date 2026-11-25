@@ -9,7 +9,7 @@ const AIDE = [
   ['Glisser-déposer', [['Idée', 'sur l’onglet d’une section (Tâches, Calendrier, Finance, Carnet, Contacts) : elle devient une tâche, un rendez-vous…'],
     ['Tâche', 'sur un jour du Calendrier, sur l’onglet Calendrier (choisir le jour) ou sur une liste'], ['Rendez-vous', 'sur un autre jour du Calendrier'],
     ['Dossier', 'sur un chemin de l’arbre (page Dossiers) : il y est rangé'],
-    ['Chemin', 'sur un autre chemin : il passe dessous, avec ses dossiers ; sur « Tous les dossiers » : à la racine ; la croix le supprime'], ['Dépense', 'sur une catégorie (Idées › dépenses sans catégorie)'],
+    ['Chemin', 'sur un autre chemin : il passe dessous, avec ses dossiers ; sur « Tous les dossiers » : à la racine ; la croix le supprime'],
     ['Plusieurs', 'glisser une ligne choisie (Ctrl + clic) emporte toutes celles choisies'], ['Doigt', 'appui long, puis glisser']]],
   ['Tableaux', [['Clic sur un titre', 'trier (nouveau clic : l’autre sens) ; ex. Dossier dans le Journal : un dossier dans l’ordre'],
     ['Ctrl + clic · Maj + clic', 'choisir plusieurs lignes (Tâches), puis la barre du bas'], ['Carré de couleur', 'un clic sur le dossier d’une ligne ouvre ce dossier'],

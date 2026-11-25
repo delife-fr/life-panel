@@ -4,23 +4,28 @@
      (ex. un virement entre ses propres comptes) ; un nouveau clic la remet. Les cases des comptes choisissent ce qui est
      compté dans les statistiques (Cash, compte joint…), comme en v4.9.
    - Mouvements : tous, dans un tableau ; « Importer un relevé » (CSV de la banque, releve.js). Comptes et Catégories : un tableau chacun, une ligne pour en ajouter.
+   - À catégoriser (25/11, venu d'Idées) : les dépenses sans catégorie ; le bouton bleu met la catégorie proposée (l'habitude
+     du même libellé, puis les mots-clés), « Autre… » en choisit une autre, « Accepter les propositions » pour toutes.
+     Pas de glisser-déposer sur des catégories (la rangée de catégories prenait trop de place).
    - Une ligne pour ajouter vite : « essence 45 » devient une dépense rangée dans sa catégorie. */
 import {esc, eur, aujourdhui, moisCourant, decaleMois, nomMois, joursDansMois, dateCourte, pluriel, maintenant, propreNom, cleNom, pad, jourDe} from '../../noyau/outils.js';
 import {ico} from '../../noyau/icones.js';
 import {DB, modifie, assurerCategorie, assurerCompte, COULEURS_CAT} from '../../noyau/donnees.js';
-import {couleurCategorie, nomDossier} from '../../noyau/calculs.js';
+import {couleurCategorie, nomDossier, sansCategorie, categorieProposee, categoriesFrequentes, toucherDossier} from '../../noyau/calculs.js';
 import {puceDossier, puceTags} from '../../noyau/affichage.js';
 import {entete, champAjout, toast, ouvrirFiche, fermerFiche, confirmer, rendre, blocPliable} from '../../noyau/interface.js';
 import {lien} from '../../noyau/adresses.js';
 import {tableau} from '../../noyau/tableau.js';
-import {colonnes, recherche} from '../../noyau/colonnes.js';
+import {colonnes, recherche, quand} from '../../noyau/colonnes.js';
 import {nuancier} from '../../noyau/fiches.js';
 import {enregistrerCapture} from '../../noyau/capture.js';
 import {ouvrirElement} from '../../noyau/fiches.js';
 import {importerReleve, choisirReleve, cocherReleve, validerReleve} from './releve.js';
 import {somme, unCompte, dansStats, depenses, revenus, dans, teinte, parCategorie, basculerRetiree} from '../../noyau/finance.js';
 
-const SOUS = [['', 'Mois'], ['annee', 'Année'], ['mouvements', 'Mouvements'], ['comptes', 'Comptes'], ['categories', 'Catégories']];
+/* « À catégoriser » montre combien de dépenses attendent leur catégorie (pastille ronde, comme dans un dossier) */
+const sousMenu = () => [['', 'Mois'], ['annee', 'Année'], ['mouvements', 'Mouvements'], ['a-categoriser', 'À catégoriser', sansCategorie().length],
+  ['comptes', 'Comptes'], ['categories', 'Catégories']];
 const ajout = () => champAjout('finance-ajouter', 'Ajouter une dépense (ex. essence 45)…');
 
 /* --- Les comptes pointés : ceux que les totaux regardent (cases, comme en v4.9) --- */
@@ -77,6 +82,33 @@ function pageAnnee(ctx){
 
 /* --- Mouvements, Comptes, Catégories --- */
 const pageMouvements = () => entete('Mouvements', {sur:'Finance', actions:`<button type="button" class="btn" data-action="releve-importer">${ico('importer', 16)}<span>Importer un relevé</span></button>`}) + `<div class="page-finance">${ajout()}${tableMouvements('mouvements', DB.mouvements, {vide:'Aucun mouvement. Ajoute une dépense juste au-dessus.'})}</div>`;
+
+/* --- À catégoriser : les dépenses sans catégorie, la proposée en un clic (bouton bleu) ou une autre dans la liste --- */
+function pageACategoriser(){
+  const deps = sansCategorie(), props = deps.filter(m => categorieProposee(m)), cats = categoriesFrequentes();
+  return entete('À catégoriser', {sur:'Finance'}) + `<div class="page-finance">${tableau({id:'depenses-a-categoriser', lignes:deps, cle:m => m.id,
+    ouvrir:'mouvement-ouvrir', tri:{col:'date', sens:-1}, recherche:m => [m.libelle, m.compte, m.note], texteRecherche:'Chercher une dépense',
+    vide:'Toutes les dépenses ont une catégorie.',
+    outils:props.length ? `<button type="button" class="btn plein compact" data-action="depenses-accepter">${ico('check', 14, 2)}<span>${props.length > 1 ? 'Accepter les ' + props.length + ' propositions' : 'Accepter la proposition'}</span></button>` : '',
+    colonnes:[
+      {id:'date', titre:'Date', tel:'sous', valeur:m => m.date, html:m => quand(m.date)},
+      {id:'libelle', titre:'Libellé', tel:'titre', valeur:m => m.libelle, html:m => esc(m.libelle || 'Sans libellé') + (m.note ? `<span class="extrait">${esc(m.note)}</span>` : '')},
+      {id:'montant', titre:'Montant', num:true, tel:'droite', valeur:m => m.montant, html:m => '−' + esc(eur(m.montant))},
+      {id:'compte', titre:'Compte', valeur:m => m.compte, html:m => esc(m.compte || '—')},
+      {id:'categorie', titre:'Catégorie', tel:'actions', html:m => { const p = categorieProposee(m), d = `data-id="${esc(m.id)}"`;
+        return `<div class="actions-ligne">${p ? `<button type="button" class="btn plein compact" data-action="depense-categorie" ${d} data-cat="${esc(p)}" title="Catégorie proposée">${ico('check', 14, 2)}<span>${esc(p)}</span></button>` : ''}
+          <select class="choix-categorie" ${d} aria-label="Catégorie de ${esc(m.libelle || 'cette dépense')}"><option value="">${p ? 'Autre…' : 'Choisir…'}</option>${cats.map(c => `<option>${esc(c)}</option>`).join('')}</select></div>`; }}]})}</div>`;
+}
+function categoriser(liste, quoi){
+  const avant = liste.map(([m]) => [m, m.categorie, m.modif]);
+  liste.forEach(([m, c]) => { m.categorie = c; m.modif = maintenant(); toucherDossier(m.projet); });
+  modifie('categorie');
+  toast(quoi, [['Annuler', () => { avant.forEach(([m, c, mo]) => { m.categorie = c; m.modif = mo; }); modifie('annuler'); }]]);
+}
+const resume = m => '« ' + (m.libelle || 'Dépense').slice(0, 40) + ' »';
+/* La liste « Autre… » (branchée une fois : la page est redessinée à chaque changement) */
+document.addEventListener('change', e => { const s = e.target.closest && e.target.closest('.choix-categorie'); if(!s || !s.value) return;
+  const m = DB.mouvements.find(y => y.id === s.dataset.id); if(m) categoriser([[m, s.value]], resume(m) + ' → ' + s.value); });
 
 function pageComptes(){
   const mois = moisCourant();
@@ -141,15 +173,20 @@ function ouvrirCategorie(nom){
     }});
 }
 
+const PAGES = {annee:pageAnnee, mouvements:pageMouvements, 'a-categoriser':pageACategoriser, comptes:pageComptes, categories:pageCategories};
+
 export default {
-  id:'finance', nom:'Finance', icone:'argent', couleur:'herbe', menu:60, onglet:40, depot:'idee', sousMenu:SOUS, styles:true,
-  titre:ctx => ({annee:'Finance · année', mouvements:'Mouvements', comptes:'Comptes', categories:'Catégories'})[ctx.arg] || 'Finance',
-  pages:{finance:ctx => ({annee:pageAnnee, mouvements:pageMouvements, comptes:pageComptes, categories:pageCategories})[ctx.arg] ? ({annee:pageAnnee, mouvements:pageMouvements, comptes:pageComptes, categories:pageCategories})[ctx.arg](ctx) : pageMois(ctx)},
+  id:'finance', nom:'Finance', icone:'argent', couleur:'herbe', menu:60, onglet:40, depot:'idee', sousMenu, styles:true,
+  titre:ctx => ({annee:'Finance · année', mouvements:'Mouvements', 'a-categoriser':'À catégoriser', comptes:'Comptes', categories:'Catégories'})[ctx.arg] || 'Finance',
+  pages:{finance:ctx => (PAGES[ctx.arg] || pageMois)(ctx)},
   actions:{
     'finance-ajouter':texte => { enregistrerCapture(texte, 'depense'); },
     'releve-importer':() => importerReleve(), 'releve-fichier':() => choisirReleve(), 'releve-valider':() => validerReleve(),
     'releve-tout':() => cocherReleve(true), 'releve-rien':() => cocherReleve(false),
     'mouvement-ouvrir':tr => ouvrirElement('mouvements', tr.dataset.id),
+    'depense-categorie':el => { const m = DB.mouvements.find(y => y.id === el.dataset.id); if(m) categoriser([[m, el.dataset.cat]], resume(m) + ' → ' + el.dataset.cat); },
+    'depenses-accepter':() => { const l = sansCategorie().map(m => [m, categorieProposee(m)]).filter(([, c]) => c);
+      if(l.length) categoriser(l, pluriel(l.length, 'dépense') + ' rangée' + (l.length > 1 ? 's' : '') + ' dans la catégorie proposée.'); },
     'finance-retirer':el => { basculerRetiree(el.dataset.periode, el.dataset.cat); rendre(); },
     'compte-stats':el => {
       if(el.dataset.sans) DB.reglages.sansCompteStats = DB.reglages.sansCompteStats === false;

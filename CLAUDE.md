@@ -40,11 +40,11 @@ page reste sur « Chargement… ».
 | Section | Dossier | Couleur | Téléphone | Sous-menu |
 | --- | --- | --- | --- | --- |
 | Aujourd'hui | `aujourdhui` | bleu | onglet | — |
-| Idées (l'Inbox de la v4.9, avec À trier) | `idees` | jaune | Plus (+ icône en haut) | — (on range ou on supprime, pas d'archives) |
+| Idées (l'Inbox de la v4.9) | `idees` | jaune | Plus (+ icône en haut) | — (on range ou on supprime, pas d'archives) |
 | Calendrier | `calendrier` | violet | onglet | 2 semaines · Mois · Agenda |
 | Tâches | `taches` | vert | onglet | — (toutes les tâches ; les listes en puces qui filtrent) |
 | Dossiers (les « projets » des données) | `dossiers` | orange | Plus | Ouverts · Fermés ; dans un dossier : ‹ Dossiers · Tâches · Rendez-vous · Notes · Documents · Dépenses · Contacts · Journal |
-| Finance | `finance` | herbe | onglet | Mois · Année · Mouvements · Comptes · Catégories |
+| Finance | `finance` | herbe | onglet | Mois · Année · Mouvements · À catégoriser · Comptes · Catégories |
 | Carnet | `carnet` | rose | Plus | Notes · Journal · Documents |
 | Contacts | `contacts` | prune | Plus | — (filtres de la v4.8 en boutons au-dessus du tableau) |
 | Réglages (icône en haut à droite) | `reglages` | gris | Plus (+ icône en haut) | Données · Corbeille |
@@ -136,6 +136,11 @@ page reste sur « Chargement… ».
 - **Finance** : le tableau des mouvements, « Par catégorie » et « Mois par mois » se plient (flèche) ; Comptes : colonne
   « Pointé : oui / non » (la case de la v4.9 qui laisse un compte, ex. l'épargne, hors des totaux) ; la couleur d'une
   catégorie se choisit sur des pastilles. Les calculs et l'anneau sont dans noyau/finance.js (Finance et Aujourd'hui).
+- **À catégoriser** (Finance, 25/11 ; avant, en bas de Idées) : les dépenses sans catégorie, leur nombre dans une pastille
+  du sous-menu. Le bouton bleu met la catégorie proposée (categorieProposee : l'habitude du même libellé, puis les
+  mots-clés ; l'utilisateur y tient), « Autre… » en choisit une autre, « Accepter les propositions » pour toutes.
+  **Pas de glisser-déposer sur des catégories** (la rangée de catégories prenait trop de place). Aujourd'hui › À ranger
+  mène aux idées et à cette page.
 - **Google Drive** (24/11, noyau/drive.js) : connexion au compte Google (OAuth « token », projet Google Cloud « LIFE PANEL »
   en statut Test, client ID dans drive.js, accès d'une heure gardé dans ce navigateur, « Reconnecter » ensuite ; en statut
   Test, Google redemande l'accord 7 jours après l'avoir donné). Se connecter recharge la page (aller-retour chez Google). Pas de

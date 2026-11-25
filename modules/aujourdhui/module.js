@@ -43,8 +43,9 @@ function page(){
   </section>`;
 
   const idees = ideesOuvertes().length, deps = sansCategorie().length;
-  const ranger = idees || deps ? `<section class="bloc a-ranger"><div class="bloc-tete"><h2>À ranger</h2><a href="${lien('idees')}">Ouvrir Idées ${ico('fleche', 14)}</a></div>
-    <p>${[idees ? pluriel(idees, 'idée') : '', deps ? pluriel(deps, 'dépense') + ' sans catégorie' : ''].filter(Boolean).map(esc).join(' · ')}</p></section>` : '';
+  /* Les idées mènent à Idées, les dépenses sans catégorie à Finance › À catégoriser (25/11) */
+  const ranger = idees || deps ? `<section class="bloc a-ranger"><div class="bloc-tete"><h2>À ranger</h2></div>
+    <p>${[idees ? `<a href="${lien('idees')}">${esc(pluriel(idees, 'idée'))}</a>` : '', deps ? `<a href="${lien('finance', 'a-categoriser')}">${esc(pluriel(deps, 'dépense') + ' sans catégorie')}</a>` : ''].filter(Boolean).join(' · ')}</p></section>` : '';
 
   const annivs = anniversaires(30), docs = documentsARenouveler();
   const venir = annivs.length || docs.length ? `<section class="bloc a-venir"><div class="bloc-tete"><h2>À venir</h2></div><ul class="liste-venir">
