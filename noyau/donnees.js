@@ -261,6 +261,9 @@ export let versionDB = 0;   /* augmente à chaque changement : sert à savoir qu
 const ecouteurs = new Set();
 export const ecouterChangements = f => { ecouteurs.add(f); return () => ecouteurs.delete(f); };
 const prevenir = raison => { versionDB++; ecouteurs.forEach(f => { try { f(raison); } catch(e){ console.error(e); } }); };
+/* L'arbre des dossiers se met à jour ici, après chaque remplacement, sans que ce fichier importe calculs.js */
+let apresRemplacement = () => false;
+export const definirApresRemplacement = f => { apresRemplacement = f; };
 
 /* Une modification faite par toi : datée, puis enregistrée et affichée */
 export function modifie(raison = 'modification'){
@@ -272,7 +275,10 @@ export function modifie(raison = 'modification'){
 export function remplacer(brut, {raison = 'remplacement', enregistrer = true} = {}){
   DB = normaliser(brut);
   entretien();
-  if(enregistrer) prevenir(raison); else versionDB++;
+  const migre = apresRemplacement() === true;
+  if(enregistrer) prevenir(raison);
+  else if(migre) modifie('arbre');
+  else versionDB++;
 }
 /* Crée un élément complet dans la liste voulue (en tête pour l'Inbox) et le renvoie */
 export function ajouter(liste, brut){

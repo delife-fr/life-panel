@@ -2,7 +2,7 @@
    Les calculs dont plusieurs sections ont besoin (Aujourd'hui, Idées, Tâches, Calendrier, Finance…), repris de la v4.9
    (section D) sans changement de sens : une seule définition de « aujourd'hui » pour les tâches, les dates d'un événement
    qui se répète, les anniversaires, l'échéance des documents, les catégories de dépenses. */
-import {DB} from './donnees.js';
+import {DB, definirApresRemplacement} from './donnees.js';
 import {aujourdhui, versDate, ecartJours, pad, joursDansMois, norm, cleNom, unique, maintenant, pluriel, hachage, propreNom, heureTexte} from './outils.js';
 
 export const nonArchives = l => l.filter(x => !x.archive);
@@ -18,8 +18,20 @@ export const cheminDe = p => (p && Array.isArray(p.chemin) ? p.chemin : []);
 export const cheminDossier = id => { const p = dossier(id); return p ? [...cheminDe(p), p.nom] : []; };
 export const lireChemin = t => String(t || '').split(/\s*(?:›|>|\/)\s*/).map(propreNom).filter(Boolean);
 /* L'arbre des chemins : ceux qu'on a créés (DB.chemins, « Perso/Finances/Assurances »), ceux des dossiers et leurs débuts.
-   Tant que l'utilisateur n'a rien créé, l'arbre de départ est sa hiérarchie (document de la refonte, validée le 24/11). */
-export const CHEMINS_DEPART = [   /* la hiérarchie validée le 24/11 dans le document de la refonte : chaque nom est un chemin */
+   Tant que rien n'est enregistré, l'arbre de départ s'affiche. Chaque nom est un chemin, pas un dossier. */
+export const CHEMINS_DEPART = [   /* arbre demandé le 25/11 ; l'ordre est celui de l'affichage */
+  'À trier', 'Archives',
+  'Aviation/Licences/EASA', 'Aviation/Licences/FAA', 'Aviation/Médical', 'Aviation/Formations', 'Aviation/Carnet de vol',
+  'Aviation/Employeurs/UMS', 'Aviation/Candidatures', 'Aviation/Documentation',
+  'Perso/Administratif/Identité', 'Perso/Administratif/État civil', 'Perso/Administratif/Diplômes', 'Perso/Administratif/Juridique',
+  'Perso/Administratif/Protection sociale/Sécurité sociale', 'Perso/Administratif/Protection sociale/Chômage',
+  'Perso/Finances/Banques', 'Perso/Finances/Placements', 'Perso/Finances/Crédits', 'Perso/Finances/Impôts',
+  'Perso/Finances/Assurances', 'Perso/Finances/Retraite',
+  'Perso/Logements', 'Perso/Abonnements', 'Perso/Transports', 'Perso/Santé',
+  'Perso/Numérique/Appareils', 'Perso/Numérique/Logiciels et licences',
+  'Perso/Loisirs/JDR', 'Perso/Loisirs/Jeux', 'Perso/Loisirs/Livres', 'Perso/Voyages'];
+/* L'arbre du 24/11, seulement pour le reconnaître une fois et le remplacer (un chemin ajouté à la main n'y est pas). */
+const CHEMINS_ANCIENS = [
   'Aviation/Licences/EASA', 'Aviation/Licences/FAA', 'Aviation/Médical', 'Aviation/Formations', 'Aviation/Carnet de vol',
   'Aviation/Employeurs', 'Aviation/Candidatures', 'Aviation/Documentation',
   'Perso/Administratif/Identité', 'Perso/Administratif/État civil', 'Perso/Administratif/Diplômes',
@@ -27,6 +39,18 @@ export const CHEMINS_DEPART = [   /* la hiérarchie validée le 24/11 dans le do
   'Perso/Finances/Assurances', 'Perso/Finances/Retraite', 'Perso/Finances/Chômage',
   'Perso/Logements', 'Perso/Transports', 'Perso/Santé', 'Perso/Famille', 'Perso/Numérique/Abonnements et télécom',
   'Perso/Loisirs/JDR', 'Perso/Loisirs/Jeux', 'Perso/Loisirs/Livres', 'Perso/Loisirs/Tableaux', 'Perso/Voyages'];
+const cleChemin = t => lireChemin(t).map(cleNom).join('/');
+const etendre = liste => { const s = new Set();
+  liste.forEach(t => { const l = lireChemin(t); l.forEach((_, i) => s.add(l.slice(0, i + 1).map(cleNom).join('/'))); }); return s; };
+const ARBRE_ANCIEN = etendre(CHEMINS_ANCIENS), ARBRE_NOUVEAU = etendre(CHEMINS_DEPART);
+/* Une seule fois : l'arbre déjà copié dans les données prend la nouvelle hiérarchie. Un chemin qui n'était pas dans
+   l'ancien arbre reste (ajouté à la main). Le chemin d'un dossier n'est pas touché : il réapparaît avec le dossier. */
+export function adopterArbre(){
+  if(DB.arbre === 2) return false;
+  if(Array.isArray(DB.chemins)) DB.chemins = [...CHEMINS_DEPART, ...DB.chemins.filter(t => { const k = cleChemin(t); return k && !ARBRE_NOUVEAU.has(k) && !ARBRE_ANCIEN.has(k); })];
+  DB.arbre = 2;
+  return true;
+}
 export function arbreChemins(){
   const vus = new Map(), mettre = l => l.forEach((_, i) => { const c = l.slice(0, i + 1); vus.set(c.map(cleNom).join('/'), c); });
   (Array.isArray(DB.chemins) ? DB.chemins : CHEMINS_DEPART).forEach(t => mettre(lireChemin(t)));
@@ -234,3 +258,4 @@ export function contactsCites(texte){
   DB.contacts.slice().sort((a, b) => b.nom.length - a.nom.length).forEach(c => { const k = '@' + norm(c.nom); if(k.length > 2 && t.includes(k) && !ids.includes(c.id)) ids.push(c.id); });
   return ids;
 }
+definirApresRemplacement(adopterArbre);

@@ -119,9 +119,13 @@ sur « Chargement… ».
   croix à droite du nom pour le supprimer (ses dossiers remontent dans le parent), « Annuler » dans le message
   (supprimerChemin, deplacerChemin dans calculs.js).
 - **Dossiers sur téléphone** : l'arbre des chemins se replie (flèche « Chemins »), replié au départ, retenu sur l'appareil.
-- **Hiérarchie des dossiers** (validée le 24/11, bloc de code de « Vrac » du document) : tous ses noms sont des chemins,
-  les dossiers se créent au bout ; « À trier » et « Archives » de sa racine ne sont pas repris (ils servent pour Google
-  Drive). « Abonnements et télécom » est rangé sous Numérique.
+- **Hiérarchie des dossiers** (changée le 25/11, à la demande) : tous ses noms sont des chemins, les dossiers se créent au
+  bout. Racine : À trier, Archives, Aviation, Perso. Aviation : Licences (EASA, FAA), Médical, Formations, Carnet de vol,
+  Employeurs (UMS), Candidatures, Documentation. Perso : Administratif (Identité, État civil, Diplômes, Juridique,
+  Protection sociale : Sécurité sociale, Chômage), Finances (Banques, Placements, Crédits, Impôts, Assurances, Retraite),
+  Logements, Abonnements, Transports, Santé, Numérique (Appareils, Logiciels et licences), Loisirs (JDR, Jeux, Livres),
+  Voyages. L'arbre du 24/11 déjà copié dans les données est repris une fois (`arbre: 2`) : les branches qui n'existent
+  plus disparaissent, un chemin ajouté à la main reste, et le chemin d'un dossier déjà créé n'est pas déplacé.
 - **Couleurs** des catégories et des dossiers : 14 teintes (les 9 de la v4.9 + cyan, brun, olive, indigo, gris) et 13
   rayées (TEINTES, COULEURS_CAT dans donnees.js).
 - **Finance** : le tableau des mouvements, « Par catégorie » et « Mois par mois » se plient (flèche) ; Comptes : colonne
