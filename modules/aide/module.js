@@ -9,6 +9,7 @@ const AIDE = [
   ['Glisser-déposer', [['Idée', 'sur l’onglet d’une section (Tâches, Calendrier, Finance, Carnet, Contacts) : elle devient une tâche, un rendez-vous…'],
     ['Tâche', 'sur un jour du Calendrier, sur l’onglet Calendrier (choisir le jour) ou sur une liste'], ['Rendez-vous', 'sur un autre jour du Calendrier'],
     ['Dossier', 'sur un chemin de l’arbre (page Dossiers) : il y est rangé'],
+    ['Fichier du Drive', 'sur un dossier de l’arbre ou du tableau (Carnet › Documents) : il y est déplacé dans Google Drive ; un dossier du Drive aussi'],
     ['Chemin', 'sur un autre chemin : il passe dessous, avec ses dossiers ; sur « Tous les dossiers » : à la racine ; la croix le supprime'],
     ['Plusieurs', 'glisser une ligne choisie (Ctrl + clic) emporte toutes celles choisies'], ['Doigt', 'appui long, puis glisser']]],
   ['Tableaux', [['Clic sur un titre', 'trier (nouveau clic : l’autre sens) ; ex. Dossier dans le Journal : un dossier dans l’ordre'],

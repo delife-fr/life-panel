@@ -20,7 +20,8 @@
      ouvrir:'tache-ouvrir',                 action appelée avec la ligne (data-id) au clic ou par Entrée
      coche:{action:'tache-cocher', etat:x => x.fait, titre:'Fait'},
      glisser:'tache',                       les lignes se glissent (noyau/glisser.js)
-     depot:'dossier',                       on peut déposer ce type sur une ligne (ex. un dossier dans un autre)
+     depot:'dossier',                       on peut déposer ce type sur une ligne (ex. un dossier dans un autre) ;
+                                            ou x => 'type' | '' pour certaines lignes seulement (ex. les dossiers du Drive)
      enBas:x => x.fait,                     ces lignes restent en dessous des autres, quel que soit le tri
      toutes:[…],                            facultatif : quand on cherche, on cherche dans ces lignes-là (plus large)
      rechercheDe:'taches',                  pas de champ à soi : ce tableau suit la recherche du tableau nommé (26/11 : un
@@ -120,9 +121,9 @@ function corps(cfg){
       ? `<button type="button" data-tableau-tri="${esc(cfg.id)}" data-col="${esc(c.id)}">${esc(c.titre)}${actif ? ico(r.sens > 0 ? 'haut' : 'bas', 13, 2) : ''}</button>` : esc(c.titre)}</th>`; };
   const td = (c, x) => { const h = c.html(x) ?? ''; const vide = h === '' || h === '—';
     return `<td class="col-${esc(c.id)}${c.num ? ' num' : ''} t-${c.tel || 'sous'}${vide ? ' t-vide' : ''}" data-label="${esc(c.titre)}">${h}</td>`; };
-  const ligne = x => { const id = esc(cfg.cle(x)), choisie = choisies.has(String(cfg.cle(x))), cl = [cfg.classe ? cfg.classe(x) || '' : '', choisie ? 'choisie' : ''].filter(Boolean).join(' ');
+  const ligne = x => { const depot = typeof cfg.depot === 'function' ? cfg.depot(x) : cfg.depot, id = esc(cfg.cle(x)), choisie = choisies.has(String(cfg.cle(x))), cl = [cfg.classe ? cfg.classe(x) || '' : '', choisie ? 'choisie' : ''].filter(Boolean).join(' ');
     const coche = cfg.coche ? `<td class="t-coche"><input type="checkbox" class="coche" data-action="${esc(cfg.coche.action)}" data-id="${id}"${cfg.coche.etat(x) ? ' checked' : ''} aria-label="${esc(cfg.coche.titre || 'Cocher')}"></td>` : '';
-    return `<tr data-tableau-ligne="${esc(cfg.id)}" data-id="${id}"${cfg.ouvrir ? ' tabindex="0"' : ''}${cfg.glisser ? ` data-glisser="${esc(cfg.glisser)}"` : ''}${cfg.depot ? ` data-depot="${esc(cfg.depot)}"` : ''}${cl ? ` class="${esc(cl)}"` : ''}${cfg.selection ? ` aria-selected="${choisie}"` : ''}>${coche}${cols.map(c => td(c, x)).join('')}<td class="t-saut" aria-hidden="true"></td></tr>`; };
+    return `<tr data-tableau-ligne="${esc(cfg.id)}" data-id="${id}"${cfg.ouvrir ? ' tabindex="0"' : ''}${cfg.glisser ? ` data-glisser="${esc(cfg.glisser)}"` : ''}${depot ? ` data-depot="${esc(depot)}"` : ''}${cl ? ` class="${esc(cl)}"` : ''}${cfg.selection ? ` aria-selected="${choisie}"` : ''}>${coche}${cols.map(c => td(c, x)).join('')}<td class="t-saut" aria-hidden="true"></td></tr>`; };
   return {compte, n:l.length, html:`<div class="defile-tableau"><table><thead><tr>${cfg.coche ? `<th class="t-coche"><span class="sr">${esc(cfg.coche.titre || 'Cocher')}</span></th>` : ''}${cols.map(th).join('')}</tr></thead>
     <tbody>${montrees.map(ligne).join('')}</tbody></table></div>
     ${l.length > montrees.length ? `<div class="tableau-plus"><button type="button" class="btn" data-tableau-plus="${esc(cfg.id)}">Voir ${Math.min(PAQUET, l.length - montrees.length)} de plus</button></div>` : ''}

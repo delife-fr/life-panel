@@ -1,4 +1,5 @@
-/* LIFE PANEL v5 · noyau/drive.js — Google Drive (24/11) : lister tous les fichiers du Drive, en renommer un.
+/* LIFE PANEL v5 · noyau/drive.js — Google Drive (24/11) : lister les dossiers et les fichiers du Drive, et les gérer
+   (26/11 : déplacer, créer un dossier, renommer, mettre à la corbeille de Google Drive, l'en sortir pour « Annuler »).
    Connexion : la page de Google (OAuth 2.0, « token » : rien à garder de secret), qui renvoie sur LIFE PANEL avec un accès
    valable une heure, gardé dans ce navigateur seulement (jamais dans les données ni sur GitHub). Après une heure, un clic
    « Reconnecter » suffit (Google se souvient de l'accord). L'identifiant d'appli (client ID) n'est pas un secret : il dit
@@ -11,12 +12,14 @@ export const CLIENT_ID = '990794844085-lpcf137s0i5e1f6ghn6vavasj78o93a8.apps.goo
 const PORTEE = 'https://www.googleapis.com/auth/drive';   /* lire et renommer (le nom se change aussi dans Drive) */
 const API = 'https://www.googleapis.com/drive/v3';
 const CLE = 'lifepanel.drive', CLE_ETAT = 'lifepanel.drive-etat';
-export const drive = {fichiers:null, lu:0, enCours:null, erreur:''};
+export const drive = {fichiers:null, dossiers:null, racine:'', lu:0, enCours:null, erreur:''};
+export const DOSSIER_DRIVE = 'application/vnd.google-apps.folder';
 
 export class ErreurDrive extends Error { constructor(code, statut = 0){ super(code); this.code = code; this.statut = statut; } }
 export const messageDrive = e => !(e instanceof ErreurDrive) ? String((e && e.message) || e)
   : e.code === 'jeton' ? 'la connexion à Google a expiré : reconnecte-toi.'
   : e.code === 'reseau' ? 'pas de réseau.'
+  : e.code === 'absent' ? 'il n’est plus dans le Drive (actualise la liste).'
   : e.statut === 403 ? 'Google refuse l’accès (API Drive activée ? compte ajouté comme utilisateur test ?).'
   : 'réponse inattendue de Google (' + e.statut + ').';
 
@@ -53,7 +56,7 @@ export function lireRetourGoogle(){
   drive.lu = 0;
   return 'ok';
 }
-export function deconnecterDrive(){ try { localStorage.removeItem(CLE); } catch(e){} drive.fichiers = null; drive.lu = 0; }
+export function deconnecterDrive(){ try { localStorage.removeItem(CLE); } catch(e){} drive.fichiers = drive.dossiers = null; drive.racine = ''; drive.lu = 0; }
 
 async function appel(chemin, {method = 'GET', corps = null} = {}){
   const j = jeton(); if(!j) throw new ErreurDrive('jeton');
@@ -64,22 +67,25 @@ async function appel(chemin, {method = 'GET', corps = null} = {}){
   if(!r.ok) throw new ErreurDrive('reponse', r.status);
   return r.json();
 }
-/* Tous les fichiers de mon Drive (pas les dossiers, pas la corbeille, pas ce qu'on m'a partagé), où qu'ils soient.
-   Gardés 2 minutes ; renvoie true si la liste vient d'être relue (la page se redessine alors). */
+/* Tous les dossiers et fichiers de mon Drive (pas la corbeille, pas ce qu'on m'a partagé), avec leur dossier parent :
+   l'arbre se construit ici, sans une requête par dossier. Gardés 2 minutes ; renvoie true si la liste vient d'être relue
+   (la page se redessine alors). */
 export async function listerDrive(force = false){
   if(!driveConnecte()) return false;
   if(drive.enCours) return drive.enCours;
   if(!force && drive.fichiers && Date.now() - drive.lu < 120000) return false;
   drive.enCours = (async () => {
     try {
+      if(!drive.racine) drive.racine = (await appel('/files/root?fields=id')).id;   /* « Mon Drive » */
       const l = []; let page = '';
       do {
-        const p = new URLSearchParams({q:"trashed = false and 'me' in owners and mimeType != 'application/vnd.google-apps.folder'",
-          fields:'nextPageToken,files(id,name,mimeType,modifiedTime,webViewLink)', pageSize:'1000', orderBy:'name'});
+        const p = new URLSearchParams({q:"trashed = false and 'me' in owners",
+          fields:'nextPageToken,files(id,name,mimeType,modifiedTime,webViewLink,parents)', pageSize:'1000', orderBy:'name'});
         if(page) p.set('pageToken', page);
         const r = await appel('/files?' + p); l.push(...(r.files || [])); page = r.nextPageToken || '';
       } while(page && l.length < 20000);
-      drive.fichiers = l; drive.lu = Date.now(); drive.erreur = '';
+      drive.dossiers = l.filter(f => f.mimeType === DOSSIER_DRIVE); drive.fichiers = l.filter(f => f.mimeType !== DOSSIER_DRIVE);
+      drive.lu = Date.now(); drive.erreur = '';
       majNoms();
       return true;
     } catch(e){ drive.erreur = messageDrive(e); drive.lu = Date.now(); return true; }
@@ -93,10 +99,40 @@ function majNoms(){
   DB.documents.forEach(d => { const f = d.driveId && parId.get(d.driveId); if(f && f.name !== d.titre){ d.titre = f.name; n++; } });
   if(n) modifie('noms drive');
 }
-/* Renommer dans Drive (depuis la fiche du document) */
+/* Un dossier ou un fichier du Drive (d'après la dernière liste lue), et son dossier parent (« Mon Drive » sinon) */
+export const elementDrive = id => (drive.dossiers || []).find(x => x.id === id) || (drive.fichiers || []).find(x => x.id === id) || null;
+export const parentDrive = f => (f && Array.isArray(f.parents) && f.parents[0]) || drive.racine;
+const chemin = id => '/files/' + encodeURIComponent(id);
+/* Renommer dans Drive (un fichier ou un dossier ; aussi depuis la fiche d'un document lié) */
 export async function renommerDrive(id, nom){
-  await appel('/files/' + encodeURIComponent(id) + '?fields=id,name', {method:'PATCH', corps:{name:nom}});
-  const f = drive.fichiers && drive.fichiers.find(x => x.id === id); if(f) f.name = nom;
+  await appel(chemin(id) + '?fields=id,name', {method:'PATCH', corps:{name:nom}});
+  const f = elementDrive(id); if(f) f.name = nom;
+}
+/* Déplacer dans un autre dossier ; renvoie les anciens parents (pour « Annuler ») */
+export async function deplacerDrive(id, vers){
+  const f = elementDrive(id); if(!f) throw new ErreurDrive('absent');
+  const avant = Array.isArray(f.parents) ? f.parents.slice() : [];
+  if(avant.length === 1 && avant[0] === vers) return avant;
+  const p = new URLSearchParams({addParents:vers, fields:'id,parents'}); if(avant.length) p.set('removeParents', avant.join(','));
+  const r = await appel(chemin(id) + '?' + p, {method:'PATCH', corps:{}});
+  f.parents = r.parents || [vers];
+  return avant;
+}
+/* Un nouveau dossier dans un dossier du Drive */
+export async function creerDossierDrive(nom, parent){
+  const f = await appel('/files?fields=id,name,mimeType,modifiedTime,webViewLink,parents', {method:'POST', corps:{name:nom, mimeType:DOSSIER_DRIVE, parents:[parent || drive.racine]}});
+  (drive.dossiers || (drive.dossiers = [])).push(f);
+  return f;
+}
+/* Dans la corbeille de Google Drive (30 jours), ou en dehors (« Annuler » : relire ensuite la liste, listerDrive(true),
+   pour retrouver tout ce qu'il contenait) ; un dossier y emporte tout ce qu'il contient */
+export async function corbeilleDrive(id, dedans = true){
+  await appel(chemin(id) + '?fields=id,trashed', {method:'PATCH', corps:{trashed:dedans}});
+  if(!dedans) return;
+  const partis = new Set([id]); let encore = true;
+  while(encore){ encore = false; (drive.dossiers || []).forEach(d => { if(!partis.has(d.id) && partis.has(parentDrive(d))){ partis.add(d.id); encore = true; } }); }
+  drive.dossiers = (drive.dossiers || []).filter(d => !partis.has(d.id));
+  drive.fichiers = (drive.fichiers || []).filter(f => !partis.has(f.id) && !partis.has(parentDrive(f)));
 }
 export const lienFichier = f => f.webViewLink || 'https://drive.google.com/file/d/' + encodeURIComponent(f.id) + '/view';
 /* Libellés courts d'un fichier Drive (colonne Type). Rien n'est écrit dans les données : le type se calcule à l'affichage. */
