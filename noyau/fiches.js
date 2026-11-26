@@ -185,6 +185,8 @@ function lire(f, liste, x){
 let numero = 0;
 /* Ouvre la fiche d'un élément existant (id), ou d'un nouveau (nouveau = valeurs de départ).
    apresAjout(x) : après « Ajouter » (ex. retirer l'idée qui vient d'être rangée). boutons : [[texte, action, {plein}]] en plus. */
+/* Un document relié à un fichier Google Drive : le supprimer ici défait seulement le lien (26/11), le fichier reste dans le Drive */
+const lienDrive = (liste, x) => liste === 'documents' && !!(x && x.driveId);
 export function ouvrirElement(liste, id, {nouveau = null, apresAjout = null, boutons = []} = {}){
   const T = TYPES_ELEMENT[liste]; if(!T) return;
   const x = nouveau ? {...nouveau} : DB[liste].find(y => y.id === id);
@@ -195,7 +197,7 @@ export function ouvrirElement(liste, id, {nouveau = null, apresAjout = null, bou
   const extra = [...(T.boutons && !nouveau ? T.boutons(x) : []), ...boutons].map(([t, a, o = {}]) => `<button type="button" class="btn${o.plein ? ' plein' : ''}" data-action="${esc(a)}" data-liste="${esc(liste)}" data-id="${esc(x.id || '')}">${esc(t)}</button>`).join('');
   const pied = nouveau
     ? `<div class="droite"><button type="button" class="btn" data-action="fermer-fiche">Annuler</button><button type="button" class="btn plein" data-fiche-ajouter="${f}">${ico('plus', 15, 2)}<span>Ajouter</span></button></div>`
-    : `<button type="button" class="btn discret" data-fiche-supprimer="${f}">${ico('corbeille', 15)}<span>Supprimer</span></button><div class="droite">${extra}<button type="button" class="btn" data-action="fermer-fiche">Fermer</button></div>`;
+    : `<button type="button" class="btn discret" data-fiche-supprimer="${f}">${ico('corbeille', 15)}<span>${lienDrive(liste, x) ? 'Retirer le lien' : 'Supprimer'}</span></button><div class="droite">${extra}<button type="button" class="btn" data-action="fermer-fiche">Fermer</button></div>`;
   ouvrirFiche({titre, large:!!T.large, html:`<form class="formulaire" data-fiche="${f}" novalidate>${champs}</form>`, pied, apres:boite => brancher(boite, f, liste, x, {nouveau, apresAjout}),
     aLaFermeture:nouveau ? null : () => enregistrer(f, liste, x)});
 }
@@ -263,7 +265,8 @@ function brancher(boite, f, liste, x, {nouveau, apresAjout}){
     if(e.target.closest('[data-fiche-supprimer]')){
       const remettre = retirer(liste, x); toucherDossier(x.projet); modifie('suppression');
       fermerFiche();
-      toast(nomDe(liste, x) + (FEMININ.has(liste) ? ' mise' : ' mis') + ' à la corbeille.', [['Annuler', () => { remettre(); modifie('annuler suppression'); }]]);
+      toast(lienDrive(liste, x) ? 'Lien retiré : le fichier reste dans ton Drive.' : nomDe(liste, x) + (FEMININ.has(liste) ? ' mise' : ' mis') + ' à la corbeille.',
+        [['Annuler', () => { remettre(); modifie('annuler suppression'); }]]);
     }
   });
 }

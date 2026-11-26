@@ -143,14 +143,20 @@ page reste sur « Chargement… ».
   mène aux idées et à cette page.
 - **Google Drive** (24/11, noyau/drive.js) : connexion au compte Google (OAuth « token », projet Google Cloud « LIFE PANEL »
   en statut Test, client ID dans drive.js, accès d'une heure gardé dans ce navigateur, « Reconnecter » ensuite ; en statut
-  Test, Google redemande l'accord 7 jours après l'avoir donné). Se connecter recharge la page (aller-retour chez Google). Pas de
-  sous-menu à part : **Carnet › Documents** montre aussi tous les fichiers du Drive (source « Drive », hors dossiers et
-  corbeille, seulement les siens) ; « Pas encore rangés » = fichiers Drive sans dossier. Ranger un fichier (dossier dans sa
-  fiche, ou Ctrl + clic puis « Dossier… ») crée un document lié (`driveId`) ; un nom changé dans la fiche change dans
-  Drive, un nom changé dans Drive revient ici. L'utilisateur range ses fichiers lui-même (ou avec Claude, autre session).
-  **Afficher** (24/11) : une case « Drive », comme celles du calendrier, retenue sur cet appareil (`documents.afficher`) :
-  décochée, les fichiers Drive disparaissent du tableau (les fiches créées ici restent). Colonne **Type** (triable) : PDF,
-  JPG, Docs… d'après le type Drive ; un tiret pour une fiche créée dans LIFE PANEL. Le type n'est pas enregistré.
+  Test, Google redemande l'accord 7 jours après l'avoir donné). Se connecter recharge la page (aller-retour chez Google).
+  **Carnet › Documents = l'explorateur du Drive** (26/11, comme celui de Windows) : à gauche l'arbre des dossiers du Drive
+  (« Mon Drive », flèches pour déplier, retenues sur l'appareil `documents.ouverts` ; replié sur téléphone), à droite le
+  contenu du dossier choisi (`#/carnet/documents?d=ID`) : sous-dossiers puis fichiers dans le tableau commun (Nom, Type,
+  Dossier LIFE PANEL, Modifié ; la recherche regarde le dossier et tous ses sous-dossiers). **Tout se fait vraiment dans le
+  Drive** (drive.js : deplacerDrive, creerDossierDrive, renommerDrive, corbeilleDrive) : glisser un fichier ou un dossier
+  sur un dossier (arbre ou tableau) le déplace, « Nouveau dossier… », renommer dans la fiche, « Supprimer dans Drive » =
+  la corbeille de Google Drive (30 jours) ; « Annuler » après chaque geste. **Deux arbres séparés** : celui des Dossiers
+  LIFE PANEL (section Dossiers) ne sert qu'à voir les dossiers ; celui du Drive vient du Drive. Un fichier peut être
+  **relié** à un dossier LIFE PANEL (fiche du fichier ou Ctrl + clic › « Dossier LIFE PANEL… ») : une fiche document liée
+  (`driveId`), visible dans la page du dossier. **Supprimer cette fiche dans l'appli défait seulement le lien** (bouton
+  « Retirer le lien »), jamais le fichier ; un fichier supprimé dans le Drive emporte sa fiche liée (« Annuler » remet
+  tout). Les documents créés dans LIFE PANEL (sans fichier Drive, ex. passeport avec échéance) : l'entrée « Créés dans
+  LIFE PANEL » en haut de l'arbre, s'il y en a. Plus de case « Drive » ni de « Pas encore rangés » (26/11).
 - **Plus d'archives** (23/11) : pas de page Archives. Une tâche faite reste visible, barrée, en bas du tableau ; notes,
   documents et contacts archivés en v4.9 sont affichés comme les autres (le drapeau reste dans les données).
 - **Contacts** (23/11) : plus d'« À lui dire », « À répondre », « Idées de cadeaux », « Nouvelles », « Dernier échange »,
@@ -216,7 +222,7 @@ noyau/
   fichiers.js         choisir un fichier sur l'appareil (texte décodé), en télécharger un, cellule CSV
   synchro.js          la synchro GitHub de la v4.9 (donnees.json), l'icône nuage
   notifications.js    les rappels sur cet appareil : abonnement push, mode (tout, résumé, rien), essai, désinscription
-  drive.js            Google Drive : connexion au compte Google, liste des fichiers, renommer, type (PDF, Docs…)
+  drive.js            Google Drive : connexion, dossiers et fichiers (parents), déplacer, créer, renommer, corbeille, type
   colonnes.js         les colonnes de chaque type d'élément et le texte où chercher, communs à tous les tableaux
   glisser.js          le glisser-déposer (souris et doigt) : glisserType(type, {depot}), [data-glisser], [data-depot]
   fiches.js           la fiche de chaque type d'élément (TYPES_ELEMENT), avec dossier, tags et attributs libres
