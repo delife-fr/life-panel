@@ -50,6 +50,14 @@ const visibles = cfg => cfg.visibles || cfg.colonnes;
 const requete = cfg => etat(cfg.rechercheDe || cfg.id).q;
 const suivi = id => [...CONFIGS.values()].some(c => c.rechercheDe === id);
 const large = cfg => !!cfg.toutes && !cfg.rechercheDe && !suivi(cfg.id);   /* « Faites » ne cherche que dans les tâches faites */
+/* Replié ? Le choix gardé sur l'appareil ; mais pendant une recherche qui y trouve quelque chose, un tableau replié s'ouvre
+   tout seul (26/11), sans changer ce choix : le champ vidé, il se replie. Replié à la main pendant la recherche, il le reste. */
+function estPlie(cfg, n){
+  if(!cfg.pliable) return false;
+  const e = etat(cfg.id);
+  if(!requete(cfg)){ e.plieMain = false; return reglage(cfg).plie; }
+  return e.plieMain || (reglage(cfg).plie && !n);
+}
 export const rechercheTableau = id => etat(id).q;
 /* Les lignes choisies (Ctrl + clic), parmi celles qui existent encore */
 export function choixTableau(id){
@@ -80,7 +88,7 @@ export function tableau(cfg){
     ${cfg.outilsCote && cfg.outils ? `<div class="tableau-outils cote">${cfg.outils}</div>` : ''}
     <span class="tableau-compte" data-tableau-compte="${esc(cfg.id)}">${esc(c.compte)}</span>
     ${cfg.outilsCote ? '' : `<div class="tableau-outils">${cfg.outils || ''}</div>`}</div>` : '';
-  const plie = cfg.pliable && reglage(cfg).plie;
+  const plie = estPlie(cfg, c.n);
   const titre = cfg.pliable ? `<button type="button" class="tableau-plier" data-tableau-plier="${esc(cfg.id)}" aria-expanded="${!plie}">${ico('bas', 16, 2)}<span>${esc(cfg.pliable)}</span><span class="n">${c.n}</span></button>` : '';
   return `<div class="tableau${plie ? ' plie' : ''}" data-tableau="${esc(cfg.id)}">${titre}${barre}<div class="tableau-corps">${c.html}</div></div>`;
 }
@@ -135,7 +143,11 @@ function redessiner(id){
   if(!cfg || !boite) return;
   const c = corps(cfg), compte = document.querySelector(`[data-tableau-compte="${CSS.escape(id)}"]`);
   boite.innerHTML = c.html; if(compte) compte.textContent = c.compte;
-  const n = document.querySelector(`[data-tableau-plier="${CSS.escape(id)}"] .n`); if(n) n.textContent = c.n;   /* « Faites 2 » pendant une recherche */
+  const plier = document.querySelector(`[data-tableau-plier="${CSS.escape(id)}"]`);
+  if(plier){   /* « Faites 2 » pendant une recherche, ouvert s'il a des résultats */
+    const n = plier.querySelector('.n'), plie = estPlie(cfg, c.n); if(n) n.textContent = c.n;
+    boite.closest('.tableau').classList.toggle('plie', plie); plier.setAttribute('aria-expanded', !plie);
+  }
 }
 
 /* --- Les gestes, branchés une fois pour tous les tableaux --- */
@@ -153,7 +165,9 @@ document.addEventListener('click', e => {
   if(plus){ const s = etat(plus.dataset.tableauPlus); s.n += PAQUET; redessiner(plus.dataset.tableauPlus); return; }
   const plier = e.target.closest('[data-tableau-plier]');
   if(plier){ const id = plier.dataset.tableauPlier, boite = plier.closest('.tableau'), plie = !boite.classList.contains('plie');
-    boite.classList.toggle('plie', plie); plier.setAttribute('aria-expanded', !plie); changerPref('tableau.' + id, {...(pref('tableau.' + id, null) || {}), plie}); return; }
+    boite.classList.toggle('plie', plie); plier.setAttribute('aria-expanded', !plie); changerPref('tableau.' + id, {...(pref('tableau.' + id, null) || {}), plie});
+    const cfg = CONFIGS.get(id); if(cfg && requete(cfg)) etat(id).plieMain = plie;   /* replié à la main pendant une recherche : il le reste */
+    return; }
   const tout = e.target.closest('[data-tableau-tout]');
   if(tout){ const id = tout.dataset.tableauTout, cfg = CONFIGS.get(id); if(cfg) lignesFiltrees(cfg).forEach(x => etat(id).choix.add(String(cfg.cle(x)))); redessiner(id); return; }
   const aucun = e.target.closest('[data-tableau-aucun]');

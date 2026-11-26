@@ -176,7 +176,7 @@ page reste sur « Chargement… ».
   montrer (`garder:true` pour l'afficher quand même, ex. la Date des tâches).
 - **Ne rien ajouter qui n'a pas été demandé** (23/11) : pas de raccourcis « Aujourd'hui, Demain, Samedi », pas de bande
   de dépôt, pas de texte d'aide en plus. La date d'une tâche se donne dans sa fiche ou en la glissant sur le Calendrier.
-- **Tâches au plus simple** (24/11 : les tâches faites dans un second tableau « Faites », qui se replie, retenu sur l'appareil ; pareil dans la page d'un dossier depuis le 26/11 ; un seul champ de recherche pour les deux tableaux, option `rechercheDe` du tableau) : un tableau, une colonne Date (un tiret sans date), aucun regroupement par jour, ni statut,
+- **Tâches au plus simple** (24/11 : les tâches faites dans un second tableau « Faites », qui se replie, retenu sur l'appareil ; pareil dans la page d'un dossier depuis le 26/11 ; un seul champ de recherche pour les deux tableaux, option `rechercheDe` du tableau ; « Faites » replié s'ouvre tout seul pendant une recherche qui y trouve quelque chose, et se replie champ vidé, sans changer le choix gardé) : un tableau, une colonne Date (un tiret sans date), aucun regroupement par jour, ni statut,
   ni notation, **sans sous-menu** : toutes les tâches, celles des listes comprises (colonne Liste triable) ; une tâche
   faite reste barrée en bas. Les listes en puces au-dessus : un clic filtre (`#/taches?liste=ID`, l'adresse de la v4.9),
   « Nouvelle liste… » en une ligne ; chaque puce reçoit les tâches glissées. Étapes dans la fiche (« 1/3 » dans le tableau).
