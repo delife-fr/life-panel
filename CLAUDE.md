@@ -270,3 +270,8 @@ Les modules ne s'importent **jamais** entre eux : ils passent par le noyau. Une 
 - Raccourcis Android du manifeste : `?action=inbox` et `?action=depense` (app.js, ouvertureDepuisAndroid).
 - Le robot (`life-panel-donnees/notifications/rappels.js`) lit `donnees.json` : toute nouvelle forme d'événement ou de tâche
   qui doit déclencher un rappel doit y être ajoutée aussi.
+- La **compétence Claude « life-panel »** (SKILL.md + ajout.py, gardée sur le compte Claude de l'utilisateur, dans aucun
+  dépôt ; mise à jour pour la v5 le 26/11) écrit aussi `donnees.json` : ce que l'utilisateur dicte sur son téléphone
+  (journal avec @, dépenses, tâches, rendez-vous, notes, documents, contacts, idées, dossiers), avec les formes de
+  `FORMES`. Elle refuse d'écrire une VERSION plus récente que la sienne (`VERSION_MAX = 24`) : une nouvelle VERSION ou
+  une nouvelle forme d'élément → lui faire suivre (nouveau zip, que l'utilisateur recharge dans l'appli Claude).
