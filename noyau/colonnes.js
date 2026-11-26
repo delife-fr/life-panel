@@ -19,6 +19,9 @@ export const puceCategorie = nom => nom ? `<span class="puce"><i class="pastille
 
 const dossier = {id:'dossier', titre:'Dossier', valeur:x => cheminDossier(x.projet).join(' › '), html:x => puceDossier(x.projet) || '—'};
 const tags = {id:'tags', titre:'Tags', valeur:x => (x.tags || []).join(' '), html:x => puceTags(x.tags) || '—'};
+/* Les personnes d'un rendez-vous (champ Personnes) ou d'une entrée du journal (citées avec « @ ») : même colonne, triable */
+export const personnes = ids => ({id:'personnes', titre:'Personnes', valeur:x => nomsContacts(ids(x)).join(', '),
+  html:x => nomsContacts(ids(x)).map(n => `<span class="puce">@${esc(n)}</span>`).join('') || '—'});
 const texteNote = n => extrait(String(n.contenu || '').replace(/[#*_>`~[\]()-]+/g, ' '), 140);
 
 const COLONNES = {
@@ -33,7 +36,7 @@ const COLONNES = {
     {id:'titre', titre:'Rendez-vous', tel:'titre', valeur:e => e.titre, html:e => esc(e.titre) + (e.recurrence && e.recurrence.freq ? ` <span class="faible" title="Se répète">${ico('repeter', 13)}</span>` : '')},
     {id:'date', titre:'Date', tel:'droite', garder:true, valeur:e => e.date + ' ' + (e.heure || ''), html:e => quand(e.date)},
     {id:'heure', titre:'Heure', html:e => e.heure ? esc(texteHeures(e, e.date)) : '—'},
-    {id:'lieu', titre:'Lieu', valeur:e => e.lieu, html:e => esc(e.lieu) || '—'}, dossier, tags],
+    {id:'lieu', titre:'Lieu', valeur:e => e.lieu, html:e => esc(e.lieu) || '—'}, personnes(e => e.contacts), dossier, tags],
   notes:() => [
     {id:'titre', titre:'Titre', tel:'titre', valeur:n => n.titre, html:n => esc(n.titre)},
     {id:'extrait', titre:'Extrait', html:n => texteNote(n) ? `<span class="extrait">${esc(texteNote(n))}</span>` : '—'},
@@ -66,14 +69,13 @@ const COLONNES = {
   journal:() => [
     {id:'date', titre:'Date', garder:true, tel:'droite', valeur:j => j.date + ' ' + (j.cree || ''), html:j => esc(majuscule(jourCourt(j.date)) + annee(j.date))},
     {id:'texte', titre:'Ce qui s’est passé', tel:'titre', valeur:j => j.texte, html:j => esc(j.texte)},
-    {id:'personnes', titre:'Personnes', html:j => nomsContacts(j.contacts).map(n => `<span class="puce">@${esc(n)}</span>`).join('') || '—'},
-    tags, dossier]
+    personnes(j => j.contacts), tags, dossier]
 };
 export const colonnes = (liste, lignes, {sansDossier = false, ...opts} = {}) =>
   [...COLONNES[liste](opts).filter(c => !(sansDossier && c.id === 'dossier')), ...colonnesAttributs(lignes)];
 /* Le texte où la recherche d'un tableau regarde, type par type */
 export const textes = {
-  taches:t => [t.nom, texteDateTache(t), nomListe(t.liste), ...t.etapes.map(e => e.t)], evenements:e => [e.titre, e.lieu, e.note],
+  taches:t => [t.nom, texteDateTache(t), nomListe(t.liste), ...t.etapes.map(e => e.t)], evenements:e => [e.titre, e.lieu, e.note, ...nomsContacts(e.contacts)],
   notes:n => [n.titre, n.contenu], documents:x => [x.titre, x.url, x.note, typeDocument(x)],
   mouvements:m => [m.libelle, m.categorie, m.compte, m.note, String(m.montant).replace('.', ','), dateCourte(m.date)],
   contacts:c => [c.nom, c.telephone, c.autreTelephone, c.email, c.adresse, ...DB.journal.filter(j => j.contacts.includes(c.id)).map(j => j.texte)],

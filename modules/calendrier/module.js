@@ -14,6 +14,7 @@ import {pref, changerPref} from '../../noyau/preferences.js';
 import {depenses, somme} from '../../noyau/finance.js';
 import {DB, modifie, ajouter} from '../../noyau/donnees.js';
 import {occurrences, trierTaches, nomDossier, cheminDossier, heureIci, texteHeures} from '../../noyau/calculs.js';
+import {nomsContacts, personnes} from '../../noyau/colonnes.js';
 import {puceDossier, puceTags} from '../../noyau/affichage.js';
 import {entete, champAjout, toast, ouvrirFiche, fermerFiche, rendre} from '../../noyau/interface.js';
 import {lien} from '../../noyau/adresses.js';
@@ -98,7 +99,7 @@ function pageAgenda(){
     if(it.type === 'depenses') it.liste.forEach(x => lignes.push({type:'mouvement', x, j:it.j, heure:''})); else lignes.push(it); }));
   const quand = it => majuscule(jourCourt(it.j));
   return entete('Calendrier', {sur:'Agenda'}) + `<div class="page-cal">${ajout()}${tableau({id:'agenda', lignes, cle:it => it.type[0] + '|' + it.x.id + '|' + it.j, outils:afficher(), outilsCote:true,
-    ouvrir:'agenda-ouvrir', tri:{col:'date', sens:1}, recherche:it => [it.x.titre || it.x.nom, it.x.lieu || '', it.x.note || '', cheminDossier(it.x.projet).join(' ')], tags:it => it.x.tags,
+    ouvrir:'agenda-ouvrir', tri:{col:'date', sens:1}, recherche:it => [it.x.titre || it.x.nom, it.x.lieu || '', it.x.note || '', cheminDossier(it.x.projet).join(' '), ...nomsContacts(it.x.contacts)], tags:it => it.x.tags,
     texteRecherche:'Chercher dans l’agenda', vide:'Rien de prévu. Ajoute un rendez-vous juste au-dessus.',
     colonnes:[
       {id:'date', titre:'Date', garder:true, tel:'droite', valeur:it => it.j + ' ' + (it.heure || ''), html:it => esc(quand(it))},
@@ -107,6 +108,7 @@ function pageAgenda(){
       {id:'type', titre:'Type', valeur:it => it.type, html:it => { const [nom, c] = {tache:['Tâche', 'vert'], evenement:['Rendez-vous', 'violet'], mouvement:['Dépense', 'herbe']}[it.type];
         return `<span class="puce type" style="--c:var(--c-${c})">${nom}</span>`; }},
       {id:'lieu', titre:'Lieu', valeur:it => it.x.lieu || '', html:it => esc(it.x.lieu || '') || '—'},
+      personnes(it => it.type === 'evenement' ? it.x.contacts : []),
       {id:'dossier', titre:'Dossier', valeur:it => nomDossier(it.x.projet), html:it => puceDossier(it.x.projet) || '—'},
       {id:'tags', titre:'Tags', html:it => puceTags(it.x.tags) || '—'}
     ]})}</div>`;

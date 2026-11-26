@@ -5,6 +5,7 @@ import {esc, correspond, dateCourte, jourDe, aujourdhui} from '../../noyau/outil
 import {ico} from '../../noyau/icones.js';
 import {DB} from '../../noyau/donnees.js';
 import {nomDossier, cheminDossier, nomListe} from '../../noyau/calculs.js';
+import {nomsContacts} from '../../noyau/colonnes.js';
 import {puceDossier, puceTags} from '../../noyau/affichage.js';
 import {entete, ouvrirFiche, fermerFiche} from '../../noyau/interface.js';
 import {lien, aller} from '../../noyau/adresses.js';
@@ -14,7 +15,7 @@ import {ouvrirElement, titreElement, nomDe} from '../../noyau/fiches.js';
 const COULEUR = {taches:'vert', evenements:'violet', mouvements:'herbe', notes:'rose', documents:'rose', contacts:'prune', journal:'rose', inbox:'jaune', projets:'orange'};
 /* Les textes où chercher, type par type */
 const TEXTES = {
-  taches:x => [x.nom, nomListe(x.liste), ...x.etapes.map(e => e.t)], evenements:x => [x.titre, x.lieu, x.note], mouvements:x => [x.libelle, x.categorie, x.compte, x.note, String(x.montant).replace('.', ',')],
+  taches:x => [x.nom, nomListe(x.liste), ...x.etapes.map(e => e.t)], evenements:x => [x.titre, x.lieu, x.note, ...nomsContacts(x.contacts)], mouvements:x => [x.libelle, x.categorie, x.compte, x.note, String(x.montant).replace('.', ',')],
   notes:x => [x.titre, x.contenu], documents:x => [x.titre, x.url, x.note], contacts:x => [x.nom, x.telephone, x.autreTelephone, x.email, x.adresse, x.nouvelles],
   journal:x => [x.texte], inbox:x => [x.text], projets:x => [x.nom, x.resume]
 };
