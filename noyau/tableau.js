@@ -23,6 +23,9 @@
      depot:'dossier',                       on peut déposer ce type sur une ligne (ex. un dossier dans un autre)
      enBas:x => x.fait,                     ces lignes restent en dessous des autres, quel que soit le tri
      toutes:[…],                            facultatif : quand on cherche, on cherche dans ces lignes-là (plus large)
+     rechercheDe:'taches',                  pas de champ à soi : ce tableau suit la recherche du tableau nommé (26/11 : un
+                                            seul champ pour « Tâches » et « Faites ») ; celui-ci ne cherche alors plus
+                                            dans toutes, puisque le tableau lié montre le reste
      selection:{un:'tâche choisie', plusieurs:'tâches choisies', actions:'<button…>'},
                                             PC : Ctrl + clic et Maj + clic choisissent des lignes ; une barre en bas propose
                                             les actions (elles lisent choixTableau(id), puis appellent viderChoix(id))
@@ -43,6 +46,10 @@ const reglage = cfg => { const r = pref('tableau.' + cfg.id, null) || {}; return
 /* Les colonnes qui ont quelque chose à montrer sur au moins une ligne (calculé une fois par affichage du tableau) */
 const pleine = (c, lignes) => c.garder || lignes.some(x => { const h = c.html(x); return h !== '' && h !== '—' && h !== null && h !== undefined; });
 const visibles = cfg => cfg.visibles || cfg.colonnes;
+/* Recherche partagée : le texte cherché est celui du tableau suivi ; un tableau suivi garde ses propres lignes */
+const requete = cfg => etat(cfg.rechercheDe || cfg.id).q;
+const suivi = id => [...CONFIGS.values()].some(c => c.rechercheDe === id);
+const large = cfg => !!cfg.toutes && !cfg.rechercheDe && !suivi(cfg.id);   /* « Faites » ne cherche que dans les tâches faites */
 export const rechercheTableau = id => etat(id).q;
 /* Les lignes choisies (Ctrl + clic), parmi celles qui existent encore */
 export function choixTableau(id){
@@ -67,21 +74,22 @@ export function tableau(cfg){
   cfg.visibles = cfg.colonnes.filter(c => pleine(c, toutes));
   CONFIGS.set(cfg.id, cfg);
   const e = etat(cfg.id), c = corps(cfg);
-  const barre = (cfg.recherche || cfg.outils) ? `<div class="tableau-barre">
-    ${cfg.recherche ? `<label class="tableau-recherche">${ico('chercher', 16)}<input type="search" data-tableau-q="${esc(cfg.id)}" value="${esc(e.q)}" placeholder="${esc(cfg.texteRecherche || 'Chercher')}" aria-label="${esc(cfg.texteRecherche || 'Chercher')}" autocomplete="off"></label>` : ''}
+  const champ = cfg.recherche && !cfg.rechercheDe;
+  const barre = (champ || cfg.outils) ? `<div class="tableau-barre">
+    ${champ ? `<label class="tableau-recherche">${ico('chercher', 16)}<input type="search" data-tableau-q="${esc(cfg.id)}" value="${esc(e.q)}" placeholder="${esc(cfg.texteRecherche || 'Chercher')}" aria-label="${esc(cfg.texteRecherche || 'Chercher')}" autocomplete="off"></label>` : ''}
     ${cfg.outilsCote && cfg.outils ? `<div class="tableau-outils cote">${cfg.outils}</div>` : ''}
     <span class="tableau-compte" data-tableau-compte="${esc(cfg.id)}">${esc(c.compte)}</span>
     ${cfg.outilsCote ? '' : `<div class="tableau-outils">${cfg.outils || ''}</div>`}</div>` : '';
   const plie = cfg.pliable && reglage(cfg).plie;
-  const titre = cfg.pliable ? `<button type="button" class="tableau-plier" data-tableau-plier="${esc(cfg.id)}" aria-expanded="${!plie}">${ico('bas', 16, 2)}<span>${esc(cfg.pliable)}</span><span class="n">${cfg.lignes.length}</span></button>` : '';
+  const titre = cfg.pliable ? `<button type="button" class="tableau-plier" data-tableau-plier="${esc(cfg.id)}" aria-expanded="${!plie}">${ico('bas', 16, 2)}<span>${esc(cfg.pliable)}</span><span class="n">${c.n}</span></button>` : '';
   return `<div class="tableau${plie ? ' plie' : ''}" data-tableau="${esc(cfg.id)}">${titre}${barre}<div class="tableau-corps">${c.html}</div></div>`;
 }
 
 
 function lignesFiltrees(cfg){
-  const e = etat(cfg.id), r = reglage(cfg);
-  let l = e.q && cfg.toutes ? cfg.toutes : cfg.lignes;
-  if(e.q && cfg.recherche) l = l.filter(x => correspond(e.q, cfg.tags ? cfg.tags(x) : [], cfg.recherche(x)));
+  const q = requete(cfg), r = reglage(cfg);
+  let l = q && large(cfg) ? cfg.toutes : cfg.lignes;
+  if(q && cfg.recherche) l = l.filter(x => correspond(q, cfg.tags ? cfg.tags(x) : [], cfg.recherche(x)));
   const col = cfg.colonnes.find(c => c.id === r.tri && c.valeur);
   if(col){
     const videV = v => v === '' || v === null || v === undefined;
@@ -94,9 +102,10 @@ function lignesFiltrees(cfg){
 }
 
 function corps(cfg){
-  const e = etat(cfg.id), r = reglage(cfg), cols = visibles(cfg), l = lignesFiltrees(cfg), montrees = l.slice(0, e.n);
-  const compte = cfg.recherche && e.q && l.length ? `${l.length} sur ${(cfg.toutes || cfg.lignes).length}` : '';
-  if(!l.length) return {compte, html:`<div class="tableau-vide">${esc(e.q ? 'Rien ne correspond à « ' + e.q + ' ».' : cfg.vide || 'Rien pour l’instant.')}</div>`};
+  const e = etat(cfg.id), q = requete(cfg), r = reglage(cfg), cols = visibles(cfg), l = lignesFiltrees(cfg), montrees = l.slice(0, e.n);
+  const compte = cfg.recherche && q && l.length ? `${l.length} sur ${(large(cfg) ? cfg.toutes : cfg.lignes).length}` : '';
+  if(!l.length) return {compte, n:0, html:q && cfg.rechercheDe ? '' :   /* « Faites 0 » suffit : le champ est au-dessus de l'autre tableau */
+    `<div class="tableau-vide">${esc(q ? 'Rien ne correspond à « ' + q + ' ».' : cfg.vide || 'Rien pour l’instant.')}</div>`};
   const choisies = new Set(choixTableau(cfg.id));
   const th = c => { const actif = r.tri === c.id, sens = actif ? (r.sens > 0 ? 'ascending' : 'descending') : 'none';
     return `<th class="col-${esc(c.id)}${c.num ? ' num' : ''}" ${c.valeur ? `aria-sort="${sens}"` : ''}>${c.valeur
@@ -106,7 +115,7 @@ function corps(cfg){
   const ligne = x => { const id = esc(cfg.cle(x)), choisie = choisies.has(String(cfg.cle(x))), cl = [cfg.classe ? cfg.classe(x) || '' : '', choisie ? 'choisie' : ''].filter(Boolean).join(' ');
     const coche = cfg.coche ? `<td class="t-coche"><input type="checkbox" class="coche" data-action="${esc(cfg.coche.action)}" data-id="${id}"${cfg.coche.etat(x) ? ' checked' : ''} aria-label="${esc(cfg.coche.titre || 'Cocher')}"></td>` : '';
     return `<tr data-tableau-ligne="${esc(cfg.id)}" data-id="${id}"${cfg.ouvrir ? ' tabindex="0"' : ''}${cfg.glisser ? ` data-glisser="${esc(cfg.glisser)}"` : ''}${cfg.depot ? ` data-depot="${esc(cfg.depot)}"` : ''}${cl ? ` class="${esc(cl)}"` : ''}${cfg.selection ? ` aria-selected="${choisie}"` : ''}>${coche}${cols.map(c => td(c, x)).join('')}<td class="t-saut" aria-hidden="true"></td></tr>`; };
-  return {compte, html:`<div class="defile-tableau"><table><thead><tr>${cfg.coche ? `<th class="t-coche"><span class="sr">${esc(cfg.coche.titre || 'Cocher')}</span></th>` : ''}${cols.map(th).join('')}</tr></thead>
+  return {compte, n:l.length, html:`<div class="defile-tableau"><table><thead><tr>${cfg.coche ? `<th class="t-coche"><span class="sr">${esc(cfg.coche.titre || 'Cocher')}</span></th>` : ''}${cols.map(th).join('')}</tr></thead>
     <tbody>${montrees.map(ligne).join('')}</tbody></table></div>
     ${l.length > montrees.length ? `<div class="tableau-plus"><button type="button" class="btn" data-tableau-plus="${esc(cfg.id)}">Voir ${Math.min(PAQUET, l.length - montrees.length)} de plus</button></div>` : ''}
     ${barreChoix(cfg, choisies.size, l.length)}`};
@@ -126,12 +135,14 @@ function redessiner(id){
   if(!cfg || !boite) return;
   const c = corps(cfg), compte = document.querySelector(`[data-tableau-compte="${CSS.escape(id)}"]`);
   boite.innerHTML = c.html; if(compte) compte.textContent = c.compte;
+  const n = document.querySelector(`[data-tableau-plier="${CSS.escape(id)}"] .n`); if(n) n.textContent = c.n;   /* « Faites 2 » pendant une recherche */
 }
 
 /* --- Les gestes, branchés une fois pour tous les tableaux --- */
 document.addEventListener('input', e => {
   const q = e.target.closest && e.target.closest('[data-tableau-q]'); if(!q) return;
-  const s = etat(q.dataset.tableauQ); s.q = q.value; s.n = PAQUET; redessiner(q.dataset.tableauQ);
+  const id = q.dataset.tableauQ, s = etat(id); s.q = q.value; s.n = PAQUET; redessiner(id);
+  CONFIGS.forEach(c => { if(c.rechercheDe === id){ etat(c.id).n = PAQUET; redessiner(c.id); } });   /* « Faites » suit le même champ */
 });
 document.addEventListener('click', e => {
   const tri = e.target.closest('[data-tableau-tri]');

@@ -36,8 +36,8 @@ const actionsChoix = id => [['taches-choix-cocher', 'Cocher', 'check'], ['taches
   ['taches-choix-dossier', 'Dossier…', 'dossier'], ['taches-choix-supprimer', 'Supprimer', 'corbeille']]
   .map(([a, t, i]) => `<button type="button" class="btn petit" data-action="${a}" data-tableau="${esc(id)}">${ico(i, 14)}<span>${t}</span></button>`).join('');
 
-function tableTaches({id, lignes, toutes = null, liste = true, vide, outils = '', pliable = '', tri = {col:'date', sens:1}}){
-  return tableau({id, lignes, toutes, cle:t => t.id, pliable, vide, colonnes:colonnes('taches', toutes || lignes, {liste}), ouvrir:'tache-ouvrir', glisser:'tache',
+function tableTaches({id, lignes, toutes = null, liste = true, vide, outils = '', pliable = '', tri = {col:'date', sens:1}, rechercheDe = null}){
+  return tableau({id, lignes, toutes, cle:t => t.id, pliable, vide, rechercheDe, colonnes:colonnes('taches', toutes || lignes, {liste}), ouvrir:'tache-ouvrir', glisser:'tache',
     coche:{action:'tache-cocher', etat:t => t.fait, titre:'Faite'}, enBas:t => t.fait, classe:t => t.fait ? 'fait' : '',
     recherche:recherche('taches'), tags:t => t.tags, tri,
     selection:{un:'tâche choisie', plusieurs:'tâches choisies', actions:actionsChoix(id)},
@@ -60,7 +60,7 @@ function page(ctx){
     ${champAjout('tache-ajouter', l ? 'Ajouter à « ' + l.nom + ' »…' : 'Ajouter une tâche (ex. appeler Paul demain 15h)…', l ? {donnees:{liste:l.id}} : {})}
     ${tableTaches({id:'taches', lignes:toutes.filter(t => !t.fait), toutes, liste:!l,
       vide:l ? 'Rien à faire dans cette liste : écris une tâche juste au-dessus.' : 'Rien à faire. Écris une tâche juste au-dessus, puis Entrée.'})}
-    ${faites.length ? tableTaches({id:'taches-faites', lignes:faites, toutes, liste:!l, pliable:'Faites', tri:{col:'date', sens:-1}, vide:''}) : ''}</div>`;
+    ${faites.length ? tableTaches({id:'taches-faites', lignes:faites, toutes, liste:!l, pliable:'Faites', tri:{col:'date', sens:-1}, vide:'', rechercheDe:'taches'}) : ''}</div>`;
 }
 
 /* --- Créer, renommer, supprimer une liste --- */

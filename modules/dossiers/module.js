@@ -69,7 +69,7 @@ function pageDossier(ctx){
   if(!p) return entete('Dossier') + `<div class="vide">Ce dossier n’existe plus. <a href="${lien('dossiers')}">Tous les dossiers</a></div>`;
   const [l, nom, capture, texte] = TYPES.find(t => t[0] === type0) || TYPES[0], lignes = DB[l].filter(x => x.projet === id), taches = l === 'taches';
   /* Les tâches faites dans un second tableau « Faites », qui se replie, comme dans la section Tâches (26/11) ; les deux
-     tableaux ont les mêmes colonnes (calculées sur toutes les tâches du dossier) */
+     tableaux ont les mêmes colonnes (calculées sur toutes les tâches du dossier) et un seul champ de recherche */
   const faites = taches ? lignes.filter(x => x.fait) : [];
   const table = (tid, ls, plus = {}) => tableau({id:tid, lignes:ls, toutes:lignes, cle:x => x.id, ouvrir:'dossier-element',
     tri:{col:l === 'notes' ? 'modif' : l === 'contacts' ? 'nom' : 'date', sens:taches || l === 'evenements' || l === 'contacts' ? 1 : -1},
@@ -80,7 +80,7 @@ function pageDossier(ctx){
     `<div class="page-dossiers" style="--section:var(--c-${couleurDossier(id)})">${p.resume ? `<p class="doux">${esc(p.resume)}</p>` : ''}
     ${champAjout('dossier-noter', texte + '…', {donnees:{dossier:id, type:capture}, mentions:l === 'journal'})}
     ${taches ? table('dossier-taches', lignes.filter(x => !x.fait), faites.length ? {vide:'Rien à faire dans ce dossier.'} : {}) : table('dossier-' + l, lignes)}
-    ${faites.length ? table('dossier-taches-faites', faites, {pliable:'Faites', tri:{col:'date', sens:-1}, vide:''}) : ''}</div>`;
+    ${faites.length ? table('dossier-taches-faites', faites, {pliable:'Faites', tri:{col:'date', sens:-1}, vide:'', rechercheDe:'dossier-taches'}) : ''}</div>`;
 }
 
 /* Le sous-menu : Ouverts / Fermés, ou, dans un dossier, ses types */
