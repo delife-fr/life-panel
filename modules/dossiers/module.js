@@ -68,13 +68,19 @@ function pageDossier(ctx){
   const [id, type0] = ctx.arg.split('/'), p = dossier(id);
   if(!p) return entete('Dossier') + `<div class="vide">Ce dossier n’existe plus. <a href="${lien('dossiers')}">Tous les dossiers</a></div>`;
   const [l, nom, capture, texte] = TYPES.find(t => t[0] === type0) || TYPES[0], lignes = DB[l].filter(x => x.projet === id), taches = l === 'taches';
+  /* Les tâches faites dans un second tableau « Faites », qui se replie, comme dans la section Tâches (26/11) ; les deux
+     tableaux ont les mêmes colonnes (calculées sur toutes les tâches du dossier) */
+  const faites = taches ? lignes.filter(x => x.fait) : [];
+  const table = (tid, ls, plus = {}) => tableau({id:tid, lignes:ls, toutes:lignes, cle:x => x.id, ouvrir:'dossier-element',
+    tri:{col:l === 'notes' ? 'modif' : l === 'contacts' ? 'nom' : 'date', sens:taches || l === 'evenements' || l === 'contacts' ? 1 : -1},
+    classe:x => taches && x.fait ? 'fait' : '', coche:taches ? {action:'tache-cocher', etat:x => x.fait, titre:'Faite'} : null,
+    recherche:recherche(l), tags:x => x.tags || [], texteRecherche:'Chercher dans ' + nom.toLowerCase(), vide:'Rien ici pour l’instant.',
+    colonnes:colonnes(l, lignes, {sansDossier:true}), ...plus});
   return entete(p.nom + (p.archive ? ' (fermé)' : ''), {sur:esc(cheminDe(p).join(' › ') || 'Dossier'), actions:bouton('Modifier', 'dossier-modifier', {icone:'modifier', attrs:`data-id="${esc(id)}"`})}) +
     `<div class="page-dossiers" style="--section:var(--c-${couleurDossier(id)})">${p.resume ? `<p class="doux">${esc(p.resume)}</p>` : ''}
     ${champAjout('dossier-noter', texte + '…', {donnees:{dossier:id, type:capture}, mentions:l === 'journal'})}
-    ${tableau({id:'dossier-' + l, lignes, cle:x => x.id, ouvrir:'dossier-element', tri:{col:l === 'notes' ? 'modif' : l === 'contacts' ? 'nom' : 'date', sens:taches || l === 'evenements' || l === 'contacts' ? 1 : -1},
-      classe:x => taches && x.fait ? 'fait' : '', enBas:taches ? x => x.fait : null, coche:taches ? {action:'tache-cocher', etat:x => x.fait, titre:'Faite'} : null,
-      recherche:recherche(l), tags:x => x.tags || [], texteRecherche:'Chercher dans ' + nom.toLowerCase(), vide:'Rien ici pour l’instant.',
-      colonnes:colonnes(l, lignes, {sansDossier:true})})}</div>`;
+    ${taches ? table('dossier-taches', lignes.filter(x => !x.fait), faites.length ? {vide:'Rien à faire dans ce dossier.'} : {}) : table('dossier-' + l, lignes)}
+    ${faites.length ? table('dossier-taches-faites', faites, {pliable:'Faites', tri:{col:'date', sens:-1}, vide:''}) : ''}</div>`;
 }
 
 /* Le sous-menu : Ouverts / Fermés, ou, dans un dossier, ses types */
@@ -130,7 +136,7 @@ export default {
       const c = [...((f && f.dataset.chemin) || '').split('/').filter(Boolean), nom]; ajouterChemin(c); modifie('chemin');
       toast('Chemin créé : ' + c.join(' › '), [['Y aller', () => aller('dossiers', '', {chemin:c.join('/')})]]); },
     'dossier-modifier':el => ouvrirElement('projets', el.dataset.id),
-    'dossier-element':tr => { const l = (tr.dataset.tableauLigne || '').replace(/^dossier-/, ''); ouvrirElement(l, tr.dataset.id); },
+    'dossier-element':tr => { const l = (tr.dataset.tableauLigne || '').replace(/^dossier-/, '').replace(/-faites$/, ''); ouvrirElement(l, tr.dataset.id); },
     'dossier-noter':(texte, f) => { const id = f && f.dataset.dossier; if(!dossier(id)) return false;
       if(f.dataset.type === 'journal'){ if(!noterJournal(texte, {projet:id})) return false; return; }
       enregistrerCapture(texte, f.dataset.type, {projet:id}); toucherDossier(id); }
