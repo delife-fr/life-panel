@@ -4,7 +4,7 @@
      « Ajouter ». Supprimer = corbeille (30 jours), avec « Annuler » dans le message.
    - Sur tout élément : son dossier (le « super tag »), ses tags et des attributs libres (un nom, une valeur inventés).
    Les sections enrichiront leur fiche dans leur lot ; celle-ci sert partout dès maintenant (capture, Idées, Aujourd'hui). */
-import {esc, dateISO, maintenant, aujourdhui, propreNom, cleNom, dateCourte, versDate, iso} from './outils.js';
+import {esc, dateISO, maintenant, aujourdhui, propreNom, cleNom, dateCourte, versDate, iso, norm} from './outils.js';
 import {ico} from './icones.js';
 import {DB, FORMES, ajouter, modifie, retirer, assurerCategorie, assurerCompte, TEINTES} from './donnees.js';
 import {dossiersActifs, arbreChemins, lireChemin, couleurDossier, tousLesTags, listesTriees, categoriesFrequentes, compteParDefaut, toucherDossier, cocherTache, etatDocument, FUSEAUX, nomFuseau, contactsCites} from './calculs.js';
@@ -129,15 +129,16 @@ function champ(f, d, x, liste){
     case 'liste': html = select(id, [['', '— aucune —'], ...listesTriees().map(l => [l.id, l.nom])], v || ''); break;
     case 'categorie': html = `<input type="text" ${attrs} value="${esc(v || '')}" list="${id}-l" placeholder="— sans catégorie —"><datalist id="${id}-l">${categoriesFrequentes().map(c => `<option value="${esc(c)}">`).join('')}</datalist>`; break;
     case 'compte': html = `<input type="text" ${attrs} value="${esc(v || '')}" list="${id}-l"><datalist id="${id}-l">${DB.comptes.map(c => `<option value="${esc(c.nom)}">`).join('')}</datalist>`; break;
-    case 'tags': html = `<div class="avec-suggestions"><input type="text" ${attrs} data-suggerer-tags value="${esc((v || []).join(', '))}" placeholder="séparés par des virgules" autocomplete="off">
+    case 'tags': html = `<div class="avec-suggestions"><input type="text" ${attrs} data-suggerer="tags" value="${esc((v || []).join(', '))}" placeholder="séparés par des virgules" autocomplete="off">
       <ul class="suggestions" role="listbox" hidden></ul></div>`; break;
     case 'journal': { const l = x.id ? DB.journal.filter(j => j.contacts.includes(x.id)).sort((a, b) => (b.date + b.cree).localeCompare(a.date + a.cree)) : [];
       return `<div class="champ"><span class="etiquette">${esc(d.t)}</span>${l.length ? `<ul class="journal-fiche">${l.map(j => `<li><b>${esc(dateCourte(j.date))}</b> ${esc(j.texte)}</li>`).join('')}</ul>`
         : '<p class="faible">Rien pour l’instant : écris une ligne avec @' + esc(x.nom || 'son nom') + ' dans Carnet › Journal.</p>'}</div>`; }
     case 'cases': html = `<div class="etapes" id="${id}">${(v || []).map(ligneEtape).join('')}</div>
       <button type="button" class="btn discret petit" data-etape-ajouter="${id}">${ico('plus', 14)}<span>Ajouter</span></button>`; break;
-    case 'personnes': html = `<input type="text" ${attrs} value="${esc((v || []).map(i => (DB.contacts.find(c => c.id === i) || {}).nom).filter(Boolean).join(', '))}" list="${id}-l" placeholder="noms séparés par des virgules">
-      <datalist id="${id}-l">${DB.contacts.filter(c => !c.archive).map(c => `<option value="${esc(c.nom)}">`).join('')}</datalist>`; break;
+    /* 26/11 : les contacts proposés pendant la frappe, après chaque virgule, sans tenir compte des accents (comme les tags) */
+    case 'personnes': html = `<div class="avec-suggestions"><input type="text" ${attrs} data-suggerer="personnes" value="${esc((v || []).map(i => (DB.contacts.find(c => c.id === i) || {}).nom).filter(Boolean).join(', '))}" placeholder="noms séparés par des virgules" autocomplete="off">
+      <ul class="suggestions" role="listbox" hidden></ul></div>`; break;
     case 'attributs': html = `<div class="attributs" id="${id}">${(v || []).map(ligneAttribut).join('')}</div>
       <button type="button" class="btn discret petit" data-attribut-ajouter="${id}">${ico('plus', 14)}<span>Ajouter un attribut</span></button>`; break;
     default: html = `<input type="text" ${attrs} value="${esc(v || '')}">`;
@@ -167,7 +168,7 @@ function lire(f, liste, x){
       case 'liste': r[d.c] = e.value || null; break;
       case 'categorie': r[d.c] = propreNom(e.value) ? assurerCategorie(e.value) : ''; break;
       case 'compte': r[d.c] = propreNom(e.value) ? assurerCompte(e.value) : ''; break;
-      case 'personnes': r[d.c] = e.value.split(',').map(n => DB.contacts.find(c => cleNom(c.nom) === cleNom(n))).filter(Boolean).map(c => c.id); break;
+      case 'personnes': r[d.c] = [...new Set(e.value.split(',').map(contactDit).filter(Boolean).map(c => c.id))]; break;
       case 'cases': r[d.c] = [...e.querySelectorAll('.etape')].map(l => ({t:propreNom(l.querySelector('.e-t').value), ok:l.querySelector('.e-ok').checked})).filter(x => x.t); break;
       case 'attributs': r[d.c] = [...e.querySelectorAll('.attribut')].map(l => ({nom:l.querySelector('.a-nom').value, valeur:l.querySelector('.a-valeur').value})); break;
       default: r[d.c] = e.value;
@@ -295,14 +296,30 @@ actionNoyau('document-tache', el => { const x = DB.documents.find(d => d.id === 
 actionNoyau('mouvement-repeter', el => { const m = DB.mouvements.find(y => y.id === el.dataset.id); if(!m) return;
   ouvrirElement('mouvements', null, {nouveau:{type:m.type, montant:m.montant, libelle:m.libelle, categorie:m.categorie, compte:m.compte, projet:m.projet, note:m.note, tags:[...(m.tags || [])], date:aujourdhui()}}); });
 
-/* --- Les tags proposés pendant la frappe, après chaque virgule (comme la v4.9) --- */
+/* --- Ce qui est proposé pendant la frappe, après chaque virgule : les tags (comme la v4.9) et les personnes d'un rendez-vous
+   (26/11). Sans tenir compte des accents ni des majuscules ; pour une personne, le début de n'importe quel mot du nom
+   (« letis » trouve « Létis Martin », « martin » aussi), comme la liste « @ » du journal. --- */
+const motsQuiCommencent = (nom, q) => norm(nom).split(' ').some((_, i, a) => a.slice(i).join(' ').startsWith(q));
+const SOURCES = {
+  tags:{liste:q => tousLesTags().filter(t => norm(t).startsWith(q)), texte:t => '#' + t},
+  personnes:{liste:q => DB.contacts.map(c => c.nom).filter(n => n && motsQuiCommencent(n, q))
+    .sort((a, b) => (norm(b).startsWith(q) - norm(a).startsWith(q)) || a.localeCompare(b, 'fr')), texte:n => n}
+};
+/* Une personne écrite à la main (sans choisir dans la liste) : le nom exact, sinon le seul contact qui correspond */
+function contactDit(n){
+  const k = cleNom(n); if(!k) return null;
+  const exact = DB.contacts.find(c => cleNom(c.nom) === k); if(exact) return exact;
+  const l = DB.contacts.filter(c => c.nom && motsQuiCommencent(c.nom, norm(propreNom(n))));
+  return l.length === 1 ? l[0] : null;
+}
 let propositions = [], choisie = 0;
 const morceau = champ => { const avant = champ.value.slice(0, champ.selectionStart), i = avant.lastIndexOf(','); return {debut:i + 1, texte:avant.slice(i + 1).trim().replace(/^#/, '')}; };
 function proposer(champ){
-  const boite = champ.nextElementSibling, m = morceau(champ), deja = new Set(champ.value.split(',').map(t => t.trim().toLowerCase()));
-  propositions = m.texte ? tousLesTags().filter(t => t.toLowerCase().startsWith(m.texte.toLowerCase()) && !deja.has(t.toLowerCase())).slice(0, 6) : [];
+  const boite = champ.nextElementSibling, src = SOURCES[champ.dataset.suggerer], m = morceau(champ), q = norm(propreNom(m.texte));
+  const deja = new Set(champ.value.split(',').map(t => cleNom(t.replace(/^#/, ''))));
+  propositions = src && q ? src.liste(q).filter(t => !deja.has(cleNom(t))).slice(0, 8) : [];
   choisie = 0; boite.hidden = !propositions.length;
-  boite.innerHTML = propositions.map((t, i) => `<li role="option" data-tag-propose="${i}"${i ? '' : ' class="active"'}>#${esc(t)}</li>`).join('');
+  boite.innerHTML = propositions.map((t, i) => `<li role="option" data-propose="${i}"${i ? '' : ' class="active"'}>${esc(src.texte(t))}</li>`).join('');
 }
 function inserer(champ, i){
   const m = morceau(champ), t = propositions[i]; if(t === undefined) return;
@@ -311,13 +328,13 @@ function inserer(champ, i){
   const pos = champ.value.length - apres.replace(/^,\s*/, '').length; champ.setSelectionRange(pos, pos); champ.focus();
   propositions = []; champ.nextElementSibling.hidden = true;
 }
-document.addEventListener('input', e => { if(e.target.matches && e.target.matches('[data-suggerer-tags]')) proposer(e.target); });
+document.addEventListener('input', e => { if(e.target.matches && e.target.matches('[data-suggerer]')) proposer(e.target); });
 document.addEventListener('keydown', e => {
-  if(!(e.target.matches && e.target.matches('[data-suggerer-tags]')) || !propositions.length) return;
+  if(!(e.target.matches && e.target.matches('[data-suggerer]')) || !propositions.length) return;
   const boite = e.target.nextElementSibling;
   if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault(); choisie = (choisie + (e.key === 'ArrowDown' ? 1 : -1) + propositions.length) % propositions.length;
     boite.querySelectorAll('li').forEach((li, i) => li.classList.toggle('active', i === choisie)); }
   else if(e.key === 'Enter' || e.key === 'Tab'){ e.preventDefault(); inserer(e.target, choisie); }
   else if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); propositions = []; boite.hidden = true; }
 }, true);
-document.addEventListener('mousedown', e => { const li = e.target.closest && e.target.closest('[data-tag-propose]'); if(!li) return; e.preventDefault(); inserer(li.closest('.avec-suggestions').querySelector('input'), Number(li.dataset.tagPropose)); });
+document.addEventListener('mousedown', e => { const li = e.target.closest && e.target.closest('[data-propose]'); if(!li) return; e.preventDefault(); inserer(li.closest('.avec-suggestions').querySelector('input'), Number(li.dataset.propose)); });
